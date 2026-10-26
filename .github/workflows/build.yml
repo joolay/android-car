@@ -9,26 +9,44 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-24.04 ships with the Android SDK preinstalled
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Works both ways: the full project in the repo, or just CarLauncher.zip uploaded from a phone
       - name: Find project
         run: |
-          if [ -f CarLauncher.zip ]; then
+          if [ -f CarLauncher.zip ] && [ ! -f settings.gradle ]; then
             mkdir -p src && unzip -q -o CarLauncher.zip -d src
             echo "DIR=src" >> "$GITHUB_ENV"
           else
             echo "DIR=." >> "$GITHUB_ENV"
           fi
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      - name: Prepare Android SDK
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          if [ ! -d "$SDK/platforms" ]; then
+            echo "No preinstalled SDK found - installing command-line tools"
+            SDK="$HOME/android-sdk"
+            mkdir -p "$SDK/cmdline-tools"
+            curl -sSL -o /tmp/clt.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+            unzip -q /tmp/clt.zip -d "$SDK/cmdline-tools"
+            mv "$SDK/cmdline-tools/cmdline-tools" "$SDK/cmdline-tools/latest"
+          fi
+          SDKM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKM" ] || SDKM="$(ls -d "$SDK"/cmdline-tools/*/bin/sdkmanager | head -1)"
+          yes | "$SDKM" --sdk_root="$SDK" --licenses > /dev/null || true
+          "$SDKM" --sdk_root="$SDK" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "sdk.dir=$SDK" > "$DIR/local.properties"
 
       - name: Build APK
         run: |
@@ -37,7 +55,7 @@ jobs:
           ./gradlew assembleDebug --no-daemon --stacktrace
           cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/CarLauncher.apk"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: CarLauncher-apk
           path: CarLauncher.apk
