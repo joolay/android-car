@@ -1,0 +1,50 @@
+name: Build Car Launcher APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Works both ways: the full project in the repo, or just CarLauncher.zip uploaded from a phone
+      - name: Find project
+        run: |
+          if [ -f CarLauncher.zip ]; then
+            mkdir -p src && unzip -q -o CarLauncher.zip -d src
+            echo "DIR=src" >> "$GITHUB_ENV"
+          else
+            echo "DIR=." >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Build APK
+        run: |
+          cd "$DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/CarLauncher.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CarLauncher-apk
+          path: CarLauncher.apk
+
+      # Also publish it as a Release so the APK is a direct download link
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Car Launcher build ${{ github.run_number }}
+          files: CarLauncher.apk
