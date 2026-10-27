@@ -417,7 +417,7 @@ final class SettingsPanels {
             boolean on = BackButtonService.enabled(c);
             if (!on) b.addView(step(c, 1, "Allow restricted settings", "Tap Turn on below first (Android will block it), then come back here: App info → ⋮ (top right) → Allow restricted settings",
                     "App info", false, () -> Apps.appInfo(c, c.getPackageName())), top(10));
-            b.addView(step(c, on ? 1 : 2, "Turn on \"Car Launcher back button\"", "In Android's Accessibility list. Leave its \"shortcut\" switch OFF, or Android adds a blue tab that turns the button off.",
+            b.addView(step(c, on ? 1 : 2, "Turn on \"Car Launcher back button\"", "In Android's Accessibility list. Its \"shortcut\" switch adds a blue tab on the screen edge: tap it for the shortcut circle (Back in the middle).",
                     on ? "Done" : "Turn on", on, () -> Status.open(c, Settings.ACTION_ACCESSIBILITY_SETTINGS)), on ? top(10) : U.lp(U.MATCH, U.WRAP));
             boolean ov = BackButtonService.overlay(c);
             b.addView(step(c, on ? 2 : 3, "Allow display over other apps", "So the hold-menu shortcuts can open apps while another app is on screen",

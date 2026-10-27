@@ -35,6 +35,18 @@ public class BackButtonService extends AccessibilityService {
         Apps.init(this);
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         build();
+        // Android's own floating accessibility button (the blue tab on the screen edge): tap it for
+        // the shortcut circle with Back in the middle, so it works even when our round button doesn't show
+        try {
+            getAccessibilityButtonController().registerAccessibilityButtonCallback(new android.accessibilityservice.AccessibilityButtonController.AccessibilityButtonCallback() {
+                @Override
+                public void onClicked(android.accessibilityservice.AccessibilityButtonController controller) {
+                    if (menu != null) closeMenu();
+                    else openMenu(true);
+                }
+            });
+        } catch (Exception ignored) {
+        }
     }
 
     static int sizeDu() {
@@ -191,15 +203,23 @@ public class BackButtonService extends AccessibilityService {
 
     /** 3–8 buttons in a circle around the back button. */
     private void openMenu() {
+        openMenu(false);
+    }
+
+    private boolean fromTab;
+
+    /** fromTab: opened by Android's accessibility tab, so centre on the screen and put Back in the middle. */
+    private void openMenu(boolean tab) {
         closeMenu();
+        fromTab = tab;
         U.ui.removeCallbacks(sleep); // keep the back button up while the menu is open
         android.graphics.Point screen = new android.graphics.Point();
         wm.getDefaultDisplay().getRealSize(screen);
         int item = U.u(64), radius = U.u(118), reach = radius + item / 2 + U.u(26);
         int size = U.u(sizeDu());
         // centre on the back button, pulled in from the edges so the whole circle fits
-        int cx = Math.max(reach, Math.min(screen.x - reach, lp.x + size / 2));
-        int cy = Math.max(reach, Math.min(screen.y - reach, lp.y + size / 2));
+        int cx = Math.max(reach, Math.min(screen.x - reach, tab ? screen.x / 2 : lp.x + size / 2));
+        int cy = Math.max(reach, Math.min(screen.y - reach, tab ? screen.y / 2 : lp.y + size / 2));
 
         menu = new FrameLayout(this);
         menu.setBackgroundColor(0x8C000000);
@@ -239,8 +259,11 @@ public class BackButtonService extends AccessibilityService {
         android.graphics.drawable.GradientDrawable cbg = U.oval(0xFF171C24);
         cbg.setStroke(U.u(2), 0x59FFFFFF);
         close.setBackground(cbg);
-        close.addView(U.icon(this, R.drawable.ic_x, U.TEXT), new FrameLayout.LayoutParams(U.u(26), U.u(26), Gravity.CENTER));
-        close.setOnClickListener(v -> closeMenu());
+        close.addView(U.icon(this, tab ? R.drawable.ic_back : R.drawable.ic_x, U.TEXT), new FrameLayout.LayoutParams(U.u(26), U.u(26), Gravity.CENTER));
+        close.setOnClickListener(v -> {
+            closeMenu();
+            if (fromTab) performGlobalAction(GLOBAL_ACTION_BACK); // middle = Back when opened from the tab
+        });
         FrameLayout.LayoutParams cl = new FrameLayout.LayoutParams(U.u(60), U.u(60), Gravity.TOP | Gravity.START);
         cl.leftMargin = cx - U.u(30);
         cl.topMargin = cy - U.u(30);
