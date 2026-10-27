@@ -383,7 +383,7 @@ final class SettingsPanels {
 
     private static View check(Context c, int icon, int color, String title, String sub, String btn, boolean done, Runnable click) {
         LinearLayout r = U.row(c);
-        r.setMinimumHeight(U.u(62));
+        r.setMinimumHeight(U.u(54));
         FrameLayout ic = new FrameLayout(c);
         ic.setBackground(U.round(done ? U.DGREEN : color, 10));
         ic.addView(U.icon(c, done ? R.drawable.ic_check : icon, U.TEXT), U.flpu(20, 20, Gravity.CENTER));
