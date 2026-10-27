@@ -63,6 +63,10 @@ public class MainActivity extends Activity {
         // splash next; hotspot settings and auto-start apps only once it has closed
         if (!Splash.maybeShow(this, "start", () -> Actions.afterSplash(this))) Actions.afterSplash(this);
         U.ui.post(() -> handleOpen(getIntent()));
+        // the launcher can be restarted when it becomes the Home app: carry on with the checklist
+        U.ui.postDelayed(() -> {
+            if (SettingsPanels.backFromChecklist()) SettingsPanels.reopenChecklist();
+        }, 400);
     }
 
     private void build() {
@@ -355,6 +359,11 @@ public class MainActivity extends Activity {
         // Home pressed while already home: close any panel and leave edit mode
         Keyboard.hide();
         if (handleOpen(i)) return;
+        // Android sends Home after you pick Car Launcher as the Home app: go back to the checklist
+        if (SettingsPanels.backFromChecklist()) {
+            U.ui.post(SettingsPanels::reopenChecklist);
+            return;
+        }
         PhoneScreen.hide();
         if (Sheets.open()) Sheets.close();
         if (tiles.editing()) tiles.setEditing(false);

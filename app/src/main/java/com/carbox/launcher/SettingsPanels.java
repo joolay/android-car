@@ -539,11 +539,29 @@ final class SettingsPanels {
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
         tl.setMargins(U.u(14), 0, U.u(12), 0);
         r.addView(t, tl);
-        r.addView(U.button(c, btn, !done, click));
+        r.addView(U.button(c, btn, !done, () -> {
+            // remember we left the checklist for an Android page, so coming back reopens it
+            Store.put("setup_return", System.currentTimeMillis());
+            click.run();
+        }));
         LinearLayout w = U.col(c);
         w.addView(U.hr(c));
         w.addView(r);
         return w;
+    }
+
+    /** True once if we've just come back from an Android page opened by the checklist (within 10 min). */
+    static boolean backFromChecklist() {
+        long at = Store.lng("setup_return", 0);
+        if (at == 0) return false;
+        Store.put("setup_return", 0L);
+        return System.currentTimeMillis() - at < 600000;
+    }
+
+    /** Show the checklist again (or refresh it if it's already up). */
+    static void reopenChecklist() {
+        if (Sheets.open() && Sheets.top() == setupPage) Sheets.refresh();
+        else setupChecklist();
     }
 
     static void androidSettings() {
