@@ -76,6 +76,10 @@ final class Rail {
         // Settings now lives in All apps; the rail keeps just the voice button at the bottom
         View mic = circle(R.drawable.ic_mic, U.RED, 48, 26);
         mic.setOnClickListener(v -> Actions.assistant(c));
+        mic.setOnLongClickListener(v -> { // hold: pick another assistant
+            InfoPanels.assistants();
+            return true;
+        });
         LinearLayout.LayoutParams mlp = U.lpu(48, 48);
         mlp.gravity = Gravity.CENTER_HORIZONTAL;
         view.addView(mic, mlp);

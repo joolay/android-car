@@ -2,6 +2,8 @@ package com.carbox.launcher;
 
 import android.content.Context;
 import android.content.Intent;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
@@ -341,12 +343,12 @@ final class InfoPanels {
         b.addView(r, top(18));
 
         LinearLayout hours = U.row(c);
-        for (int i = 0; i < Math.min(8, Weather.hours.size()); i++) {
+        for (int i = 0; i < Math.min(12, Weather.hours.size()); i++) {
             double[] h = Weather.hours.get(i);
             LinearLayout cell = U.col(c);
             cell.setGravity(Gravity.CENTER_HORIZONTAL);
             cell.setBackground(U.round(i == 0 ? U.CARD3 : U.CARD2, 12));
-            U.pad(cell, 0, 10, 0, 10);
+            U.pad(cell, 8, 10, 8, 10);
             cell.addView(U.text(c, i == 0 ? "Now" : clockShort((int) h[0]), 11, U.SUB, false));
             LinearLayout.LayoutParams il = U.lpu(28, 28);
             il.topMargin = U.u(6);
@@ -355,11 +357,14 @@ final class InfoPanels {
             cell.addView(tt, top(6));
             TextView rp = U.text(c, (int) h[3] + "%", 10, (int) h[3] >= 40 ? U.ACCENT_SOFT : U.MUTED, false);
             cell.addView(rp, top(3));
-            LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-            if (i > 0) cl.leftMargin = U.u(6);
+            LinearLayout.LayoutParams cl = U.lpu(62, U.WRAP); // same width each, never squashed
+            if (i > 0) cl.leftMargin = U.u(8);
             hours.addView(cell, cl);
         }
-        b.addView(hours, top(22));
+        android.widget.HorizontalScrollView hsv = new android.widget.HorizontalScrollView(c); // swipe for later hours
+        hsv.setHorizontalScrollBarEnabled(false);
+        hsv.addView(hours);
+        b.addView(hsv, top(18));
     }
 
     static String clockShort(int hour) {
@@ -462,6 +467,61 @@ final class InfoPanels {
 
     static void quick(String id) {
         Sheets.showCard(() -> quickCard(id));
+    }
+
+    /** Pop-up beside the voice button: the box's assistant plus any installed ones (Claude, ChatGPT, Alexa…). */
+    static void assistants() {
+        Sheets.showCard(() -> {
+            Context c = Sheets.ctx();
+            LinearLayout card = U.col(c);
+            card.setBackground(U.round(U.CARD2, 16));
+            U.pad(card, 14, 12, 14, 12);
+            card.setLayoutParams(Sheets.anchored(260, -2, 88, 230));
+            card.addView(U.line(c, "Assistants", 15, U.TEXT, true));
+            java.util.List<String[]> list = new java.util.ArrayList<>();
+            list.add(new String[]{"", "Default assistant"});
+            for (String[] a : Actions.ASSISTANTS) if (Apps.installed(a[0])) list.add(a);
+            for (String[] a : list) {
+                LinearLayout r = U.row(c);
+                r.setMinimumHeight(U.u(48));
+                android.graphics.drawable.Drawable icon = null;
+                try {
+                    if (!a[0].isEmpty()) icon = c.getPackageManager().getApplicationIcon(a[0]);
+                } catch (Exception ignored) {
+                }
+                if (icon != null) {
+                    ImageView iv = new ImageView(c);
+                    iv.setImageDrawable(icon);
+                    r.addView(iv, U.lpu(30, 30));
+                } else {
+                    FrameLayout f = new FrameLayout(c);
+                    f.setBackground(U.oval(U.RED));
+                    f.addView(U.icon(c, R.drawable.ic_mic, U.TEXT), U.flpu(16, 16, Gravity.CENTER));
+                    r.addView(f, U.lpu(30, 30));
+                }
+                TextView t = U.line(c, a[1], 14, U.TEXT, false);
+                LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+                tl.leftMargin = U.u(12);
+                r.addView(t, tl);
+                r.setOnClickListener(v -> {
+                    Sheets.close();
+                    if (a[0].isEmpty()) {
+                        for (String act : new String[]{Intent.ACTION_VOICE_COMMAND, Intent.ACTION_ASSIST}) {
+                            try {
+                                c.startActivity(new Intent(act).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                                return;
+                            } catch (Exception ignored) {
+                            }
+                        }
+                    } else Apps.launchPkg(c, a[0]);
+                });
+                U.press(r);
+                card.addView(U.hr(c), top(4));
+                card.addView(r);
+            }
+            if (list.size() == 1) card.addView(U.text(c, "Install Claude, ChatGPT, Alexa or another assistant and it shows here.", 11, U.SUB, false), top(6));
+            return card;
+        });
     }
 
     private static View quickCard(String id) {

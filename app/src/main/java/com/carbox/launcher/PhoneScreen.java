@@ -54,6 +54,10 @@ final class PhoneScreen {
         render();
     }
 
+    static boolean isShown() {
+        return shown != null;
+    }
+
     static boolean hide() {
         if (shown == null) return false;
         Keyboard.hide();
@@ -342,9 +346,10 @@ final class PhoneScreen {
         // left: the number, a contact match, then backspace and call
         LinearLayout left = U.col(c);
         left.setGravity(Gravity.CENTER);
-        display = U.line(c, "", 26, U.TEXT, true);
+        display = U.text(c, "", 26, U.TEXT, true);
         display.setGravity(Gravity.CENTER);
-        display.setHint("Enter a number");
+        display.setMaxLines(2); // the hint wraps instead of being cut off
+        display.setHint("Enter a\nnumber");
         display.setHintTextColor(U.MUTED);
         display.setEllipsize(android.text.TextUtils.TruncateAt.START);
         left.addView(display, U.lp(U.MATCH, U.WRAP));
@@ -426,6 +431,10 @@ final class PhoneScreen {
     private static void updateNumber(Context c) {
         if (display == null) return;
         display.setText(number.length() == 0 ? "" : number.toString());
+        int len = number.length(); // shrink long numbers so they fit on one line
+        display.setSingleLine(len > 0);
+        if (len == 0) display.setMaxLines(2);
+        display.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, U.uf(len == 0 ? 18 : len <= 8 ? 26 : len <= 11 ? 22 : 18));
         match.setText("");
         U.ui.removeCallbacks(matchLookup);
         if (number.length() >= 4 && c.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {

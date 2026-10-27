@@ -40,7 +40,10 @@ final class Dock {
         FrameLayout dial = new FrameLayout(a);
         dial.setBackground(U.oval(U.GREEN));
         dial.addView(U.icon(a, R.drawable.ic_call, U.TEXT), U.flpu(22, 22, Gravity.CENTER));
-        dial.setOnClickListener(v -> PhoneScreen.show(null));
+        dial.setOnClickListener(v -> { // press again to close
+            if (PhoneScreen.isShown()) PhoneScreen.hide();
+            else PhoneScreen.show(null);
+        });
         dial.setContentDescription("Phone");
         U.press(dial);
         view.addView(dial, U.lpu(42, 42));
