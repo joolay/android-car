@@ -44,6 +44,18 @@ final class Tiles {
         return col * ROWS + row;
     }
 
+    private final MainActivity a;
+    final Grid view;
+    private final List<Widgets.W> widgets = new ArrayList<>();
+    private boolean editing, running;
+
+    Tiles(MainActivity a) {
+        this.a = a;
+        view = new Grid(a);
+        Apps.listen(this::refresh);
+        refresh();
+    }
+
     static void addTile() {
         JSONArray s = specs();
         s.put(widget("none"));
