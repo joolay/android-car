@@ -183,9 +183,16 @@ final class Apps {
     }
 
     static void appInfo(Context c, String pkg) {
+        Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        // Car boxes often have their own cut-down settings app that answers this first and has no ⋮ menu
+        // (where Android 13 keeps "Allow restricted settings"). Ask Android's own Settings app first.
         try {
-            c.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            c.startActivity(new Intent(i).setPackage("com.android.settings"));
+            return;
+        } catch (Exception ignored) {
+        }
+        try {
+            c.startActivity(i);
         } catch (Exception ignored) {
         }
     }

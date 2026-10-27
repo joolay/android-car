@@ -415,7 +415,7 @@ final class SettingsPanels {
             LinearLayout b = U.col(c);
             b.addView(U.text(c, "A round back button that floats over other apps (never on the home screen). Tap goes back a page; at the app's first page it brings you home. Hold for a menu of shortcuts. Drag it to move it.", 13, U.SUB, false));
             boolean on = BackButtonService.enabled(c);
-            if (!on) b.addView(step(c, 1, "Allow restricted settings", "Android 13 asks this for apps installed from a file: App info → ⋮ → Allow restricted settings",
+            if (!on) b.addView(step(c, 1, "Allow restricted settings", "Tap Turn on below first (Android will block it), then come back here: App info → ⋮ (top right) → Allow restricted settings",
                     "App info", false, () -> Apps.appInfo(c, c.getPackageName())), top(10));
             b.addView(step(c, on ? 1 : 2, "Turn on \"Car Launcher back button\"", "In Android's Accessibility list. Leave its \"shortcut\" switch OFF, or Android adds a blue tab that turns the button off.",
                     on ? "Done" : "Turn on", on, () -> Status.open(c, Settings.ACTION_ACCESSIBILITY_SETTINGS)), on ? top(10) : U.lp(U.MATCH, U.WRAP));
