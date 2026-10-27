@@ -26,6 +26,11 @@ final class TileEditor {
     }
 
     static void open() {
+        // the separate editor is gone: the widget page now shows your tiles first, to drag and reorder
+        AppPanels.gallery(-1);
+    }
+
+    static void openOld() {
         page = TileEditor::build;
         Sheets.showFull(page); // the editor uses the whole screen
     }
@@ -139,6 +144,15 @@ final class TileEditor {
         private int edgeDir;
         private float lastRawX, lastRawY;
 
+        private boolean addSlot = true;
+
+        /** For the widget page: the home-screen tiles only, no "+" card. */
+        Board(Context c, HorizontalScrollView hs, boolean addSlot) {
+            this(c, hs);
+            this.addSlot = addSlot;
+            fill();
+        }
+
         Board(Context c, HorizontalScrollView hs) {
             super(c);
             this.hs = hs;
@@ -152,7 +166,7 @@ final class TileEditor {
             JSONArray s = Tiles.specs();
             count = s.length();
             for (int i = 0; i < count; i++) addView(cardFor(getContext(), i, s.optJSONObject(i)));
-            addView(addCard(getContext()));
+            if (addSlot) addView(addCard(getContext()));
         }
 
         private float gap() {
@@ -165,13 +179,13 @@ final class TileEditor {
 
         private float cellW() {
             // a bit narrower than the height so 5 columns show and you can see there are more
-            return Math.min(U.u(140), cellH() * 0.95f);
+            return Math.min(U.u(140), cellH() * 0.76f); // the shape of a home-screen tile
         }
 
         @Override
         protected void onMeasure(int ws, int hsSpec) {
             int h = MeasureSpec.getSize(hsSpec);
-            float ch = (h - gap()) / 2f, cw = Math.min(U.u(140), ch * 0.95f);
+            float ch = (h - gap()) / 2f, cw = Math.min(U.u(140), ch * 0.76f);
             int cols = (getChildCount() + 1) / 2;
             int w = Math.round(cols * cw + (cols - 1) * gap());
             setMeasuredDimension(Math.max(w, MeasureSpec.getSize(ws)), h);
