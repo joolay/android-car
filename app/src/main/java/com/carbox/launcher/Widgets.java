@@ -152,7 +152,7 @@ final class Widgets {
         FrameLayout box = new FrameLayout(c) {
             @Override
             protected void onMeasure(int ws, int hs) {
-                int w = MeasureSpec.getSize(ws), h = MeasureSpec.getMode(hs) == MeasureSpec.UNSPECIFIED ? Math.round(w * fh / (float) fw) : MeasureSpec.getSize(hs);
+                int w = MeasureSpec.getSize(ws), h = MeasureSpec.getMode(hs) == MeasureSpec.EXACTLY ? MeasureSpec.getSize(hs) : Math.round(w * fh / (float) fw); // keep the tile's shape
                 setMeasuredDimension(w, h);
                 live.measure(MeasureSpec.makeMeasureSpec(fw, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(fh, MeasureSpec.EXACTLY));
             }
