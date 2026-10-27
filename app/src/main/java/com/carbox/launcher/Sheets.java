@@ -125,6 +125,10 @@ final class Sheets {
         layer.addView(scrim, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         View page = stack.get(stack.size() - 1).build();
         page.setClickable(true); // swallow taps so they don't close the sheet
+        page.setOnTouchListener((v, e) -> {
+            touched();
+            return false;
+        });
         if (!full) page.setLayoutParams(new FrameLayout.LayoutParams(U.MATCH, U.MATCH)); // fill the tile area exactly
         else if (page.getLayoutParams() == null) page.setLayoutParams(centered(640, 440));
         layer.addView(page);
@@ -135,8 +139,26 @@ final class Sheets {
         stack.clear();
         stack.add(p);
         scrimColor = 0x59000000;
-        full = false;
+        full = true; // rail pop-ups sit next to the rail, over the whole screen, as before
         render();
+        // close by themselves after the set time (Settings → Right bar icons); a touch restarts it
+        U.ui.removeCallbacks(autoClose);
+        int secs = Store.num("card_secs", 8);
+        if (secs > 0) U.ui.postDelayed(autoClose, secs * 1000L);
+        cardPage = p;
+    }
+
+    private static Page cardPage;
+    private static final Runnable autoClose = () -> {
+        if (!stack.isEmpty() && stack.get(stack.size() - 1) == cardPage) close();
+    };
+
+    /** Restart a pop-up's timer (called on touch). */
+    static void touched() {
+        if (cardPage == null || stack.isEmpty() || stack.get(stack.size() - 1) != cardPage) return;
+        U.ui.removeCallbacks(autoClose);
+        int secs = Store.num("card_secs", 8);
+        if (secs > 0) U.ui.postDelayed(autoClose, secs * 1000L);
     }
 
     static FrameLayout.LayoutParams centered(float w, float h) {

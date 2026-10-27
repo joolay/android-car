@@ -116,7 +116,9 @@ final class PhoneScreen {
             sb.addView(U.icon(c, R.drawable.ic_search, U.SUB), U.lpu(20, 20));
             EditText e = Widgets.field("Search contacts", query, false, s -> {
                 query = s;
-                fill(c, results);
+                U.ui.removeCallbacks(search);
+                search = () -> fill(c, results);
+                U.ui.postDelayed(search, 250); // wait until typing pauses
             });
             e.setBackground(null);
             sb.addView(e, new LinearLayout.LayoutParams(0, U.WRAP, 1));
@@ -131,10 +133,16 @@ final class PhoneScreen {
 
         LinearLayout lr = U.row(c);
         lr.setGravity(Gravity.TOP);
-        ScrollView sv = new ScrollView(c);
-        sv.setVerticalScrollBarEnabled(false);
-        sv.addView(results);
-        lr.addView(sv, new LinearLayout.LayoutParams(0, U.MATCH, 1));
+        // a recycling list: only the rows on screen are built, so 800 contacts stay quick
+        list = new android.widget.ListView(c);
+        list.setDivider(new android.graphics.drawable.ColorDrawable(U.LINE));
+        list.setDividerHeight(1);
+        list.setVerticalScrollBarEnabled(false);
+        list.setSelector(new android.graphics.drawable.ColorDrawable(0));
+        FrameLayout area = new FrameLayout(c);
+        area.addView(list, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        area.addView(results, new FrameLayout.LayoutParams(U.MATCH, U.WRAP)); // messages (no contacts, permission…)
+        lr.addView(area, new LinearLayout.LayoutParams(0, U.MATCH, 1));
         if ("contacts".equals(tab)) {
             // A–Z strip: tap a letter to jump
             LinearLayout az = U.col(c);
@@ -145,9 +153,9 @@ final class PhoneScreen {
                 tl.setGravity(Gravity.CENTER);
                 tl.setOnClickListener(v -> {
                     for (char x = L; x <= 'Z'; x++) { // no one under this letter: next letter that has someone
-                        View target = results.findViewWithTag("L" + x);
-                        if (target != null) {
-                            sv.smoothScrollTo(0, target.getTop());
+                        Integer pos = letters.get(x);
+                        if (pos != null) {
+                            list.setSelection(pos);
                             break;
                         }
                     }
@@ -164,18 +172,34 @@ final class PhoneScreen {
         fill(c, results);
     }
 
+    private static android.widget.ListView list;
+    private static final java.util.Map<Character, Integer> letters = new java.util.HashMap<>();
+    private static Runnable search;
+    private static int fillSeq;
+
     private static void fill(Context c, LinearLayout results) {
         results.removeAllViews();
-        List<String[]> rows = new ArrayList<>(); // name, sub, number, photo
-        if (c.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
-            permission(c, results, "Allow contacts so they show here", Manifest.permission.READ_CONTACTS);
-            return;
-        }
+        if (list != null) list.setAdapter(null);
+        final int seq = ++fillSeq;
+        final String t = tab, q = query;
+        // read contacts / call log off the screen thread, then show them
+        Net.bg(() -> {
+            List<String[]> rows = new ArrayList<>();
+            String msg = load(c, rows, t, q);
+            U.ui.post(() -> {
+                if (seq != fillSeq || shown == null) return; // tab changed meanwhile
+                show(c, results, rows, msg, t, q);
+            });
+        });
+    }
+
+    /** Fills rows; returns a message to show instead (permission or empty), or null. "perm:…" asks for a permission. */
+    private static String load(Context c, List<String[]> rows, String tab, String query) {
+        if (c.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED)
+            return "perm:" + Manifest.permission.READ_CONTACTS + "|Allow contacts so they show here";
         if ("recents".equals(tab)) {
-            if (c.checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
-                permission(c, results, "Allow call history so recent calls show here", Manifest.permission.READ_CALL_LOG);
-                return;
-            }
+            if (c.checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED)
+                return "perm:" + Manifest.permission.READ_CALL_LOG + "|Allow call history so recent calls show here";
             try (Cursor cur = c.getContentResolver().query(CallLog.Calls.CONTENT_URI,
                     new String[]{CallLog.Calls.CACHED_NAME, CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DATE}, null, null, CallLog.Calls.DATE + " DESC")) {
                 while (cur != null && cur.moveToNext() && rows.size() < 60) {
@@ -188,7 +212,7 @@ final class PhoneScreen {
                 }
             } catch (Exception ignored) {
             }
-            if (rows.isEmpty()) note(c, results, "No recent calls on this box. Recent calls only show here if your phone shares its call history with the box over Bluetooth.");
+            if (rows.isEmpty()) return "No recent calls on this box. Recent calls only show here if your phone shares its call history with the box over Bluetooth.";
         } else {
             String sel = "favourites".equals(tab) ? ContactsContract.CommonDataKinds.Phone.STARRED + "=1" : null;
             String[] args = null;
@@ -206,21 +230,56 @@ final class PhoneScreen {
                 }
             } catch (Exception ignored) {
             }
-            if (rows.isEmpty()) note(c, results, "favourites".equals(tab)
+            if (rows.isEmpty()) return "favourites".equals(tab)
                     ? "No favourites yet. Star contacts on your phone (or in the box's contacts) and they show here."
-                    : query.isEmpty() ? "No contacts on this box yet. Most boxes copy them from your phone over Bluetooth once you allow it on the phone." : "No contacts match");
+                    : query.isEmpty() ? "No contacts on this box yet. Most boxes copy them from your phone over Bluetooth once you allow it on the phone." : "No contacts match";
         }
-        char last = 0;
-        for (String[] r : rows) {
+        return null;
+    }
+
+    private static void show(Context c, LinearLayout results, List<String[]> rows, String msg, String tab, String query) {
+        if (msg != null) {
+            if (msg.startsWith("perm:")) {
+                String[] pm = msg.substring(5).split("\\|", 2);
+                permission(c, results, pm[1], pm[0]);
+            } else note(c, results, msg);
+        }
+        letters.clear();
+        if ("contacts".equals(tab) && query.isEmpty())
+            for (int i = 0; i < rows.size(); i++) {
+                String n = rows.get(i)[0];
+                if (n.isEmpty()) continue;
+                char f = Character.toUpperCase(n.charAt(0));
+                if (f >= 'A' && f <= 'Z' && !letters.containsKey(f)) letters.put(f, i);
+            }
+        list.setAdapter(new android.widget.BaseAdapter() {
+            @Override
+            public int getCount() {
+                return rows.size();
+            }
+
+            @Override
+            public Object getItem(int i) {
+                return rows.get(i);
+            }
+
+            @Override
+            public long getItemId(int i) {
+                return i;
+            }
+
+            @Override
+            public View getView(int i, View old, android.view.ViewGroup parent) {
+                return row(c, rows.get(i));
+            }
+        });
+    }
+
+    private static View row(Context c, String[] r) {
+        {
             LinearLayout row = U.row(c);
             row.setMinimumHeight(U.u(60));
-            if ("contacts".equals(tab) && query.isEmpty() && !r[0].isEmpty()) {
-                char f = Character.toUpperCase(r[0].charAt(0));
-                if (f != last && f >= 'A' && f <= 'Z') {
-                    row.setTag("L" + f);
-                    last = f;
-                }
-            }
+            U.pad(row, 4, 6, 4, 6);
             Widgets.Person p = new Widgets.Person();
             p.name = r[0];
             p.number = r[2];
@@ -239,8 +298,7 @@ final class PhoneScreen {
             U.press(call);
             row.addView(call, U.lpu(48, 48));
             row.setOnClickListener(v -> dial(r[2]));
-            results.addView(row);
-            results.addView(U.hr(c));
+            return row;
         }
     }
 
@@ -276,6 +334,7 @@ final class PhoneScreen {
     // ------------------------------------------------------------------ keypad
 
     private static TextView display, match;
+    private static Runnable matchLookup;
 
     private static void keypad(Context c, LinearLayout body) {
         LinearLayout row = U.row(c);
@@ -368,9 +427,16 @@ final class PhoneScreen {
         if (display == null) return;
         display.setText(number.length() == 0 ? "" : number.toString());
         match.setText("");
+        U.ui.removeCallbacks(matchLookup);
         if (number.length() >= 4 && c.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-            String name = lookup(c, number.toString());
-            if (name != null) match.setText("Matches: " + name);
+            final String n = number.toString();
+            matchLookup = () -> Net.bg(() -> {
+                String name = lookup(c, n);
+                U.ui.post(() -> {
+                    if (match != null && name != null && n.equals(number.toString())) match.setText("Matches: " + name);
+                });
+            });
+            U.ui.postDelayed(matchLookup, 300);
         }
     }
 

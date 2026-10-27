@@ -791,10 +791,29 @@ final class Widgets {
         return o;
     }
 
+    private static final android.util.LruCache<String, Bitmap> photos = new android.util.LruCache<>(80);
+
+    /** A contact photo, shrunk to avatar size and cached (full-size photos made the phone screen slow and crash). */
     static Bitmap photo(Context c, String uri) {
         if (uri == null || uri.isEmpty()) return null;
-        try (InputStream in = c.getContentResolver().openInputStream(Uri.parse(uri))) {
-            return BitmapFactory.decodeStream(in);
+        Bitmap hit = photos.get(uri);
+        if (hit != null) return hit;
+        try {
+            BitmapFactory.Options o = new BitmapFactory.Options();
+            o.inJustDecodeBounds = true;
+            try (InputStream in = c.getContentResolver().openInputStream(Uri.parse(uri))) {
+                BitmapFactory.decodeStream(in, null, o);
+            }
+            int s = 1;
+            while (Math.max(o.outWidth, o.outHeight) / (s * 2) >= 160) s *= 2;
+            o = new BitmapFactory.Options();
+            o.inSampleSize = s;
+            Bitmap bm;
+            try (InputStream in = c.getContentResolver().openInputStream(Uri.parse(uri))) {
+                bm = BitmapFactory.decodeStream(in, null, o);
+            }
+            if (bm != null) photos.put(uri, bm);
+            return bm;
         } catch (Exception e) {
             return null;
         }
