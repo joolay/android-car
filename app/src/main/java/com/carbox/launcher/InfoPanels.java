@@ -48,8 +48,8 @@ final class InfoPanels {
         String primary = altView ? Cal.alt() : "gregorian";
 
         LinearLayout card = U.col(c);
-        card.setBackground(U.round(U.CARD, 22));
-        U.pad(card, 26, 22, 26, 20);
+        card.setBackground(U.round(U.CARD, 16));
+        U.pad(card, 18, 14, 18, 14);
         card.setLayoutParams(Sheets.centered(570, 360));
 
         LinearLayout body = U.row(c);
@@ -58,7 +58,7 @@ final class InfoPanels {
 
         // ---- month grid
         LinearLayout left = U.col(c);
-        body.addView(left, U.lpu(290, U.MATCH));
+        body.addView(left, new LinearLayout.LayoutParams(0, U.MATCH, 1.15f)); // month grid shares the width
 
         android.icu.util.Calendar cal = Cal.at(primary, System.currentTimeMillis());
         cal.add(android.icu.util.Calendar.MONTH, month[0]);
@@ -155,7 +155,7 @@ final class InfoPanels {
         View div = new View(c);
         div.setBackgroundColor(U.LINE);
         LinearLayout.LayoutParams dl = U.lpu(1, U.MATCH);
-        dl.setMargins(U.u(22), 0, U.u(22), 0);
+        dl.setMargins(U.u(14), U.u(4), U.u(14), U.u(4));
         body.addView(div, dl);
         LinearLayout right = U.col(c);
         body.addView(right, new LinearLayout.LayoutParams(0, U.MATCH, 1));
@@ -171,7 +171,12 @@ final class InfoPanels {
         }
         List<Cal.Event> up = Cal.upcoming(c, 5);
         LinearLayout list = U.col(c);
-        right.addView(list, top(10));
+        android.widget.ScrollView ls = new android.widget.ScrollView(c); // never clipped in the tile area
+        ls.setVerticalScrollBarEnabled(false);
+        ls.addView(list);
+        LinearLayout.LayoutParams lsl = new LinearLayout.LayoutParams(U.MATCH, 0, 1);
+        lsl.topMargin = U.u(10);
+        right.addView(ls, lsl);
         if (up.isEmpty()) list.addView(U.text(c, "Nothing coming up", 12, U.SUB, false));
         // explain why Google Calendar events are missing, with a button that fixes it
         String problem = null, fix = null;
@@ -217,23 +222,24 @@ final class InfoPanels {
         for (Cal.Event e : up) {
             LinearLayout r = U.row(c);
             r.setGravity(Gravity.TOP);
+            r.setBackground(U.round(U.CARD2, 12)); // each event on its own card
+            U.pad(r, 12, 10, 12, 10);
             View dot = new View(c);
             dot.setBackground(U.oval(e.special ? U.GREEN : U.ACCENT));
             LinearLayout.LayoutParams dotl = U.lpu(7, 7);
             dotl.topMargin = U.u(5);
             r.addView(dot, dotl);
             LinearLayout t = U.col(c);
-            t.addView(U.line(c, e.title, 13, U.TEXT2, false));
+            t.addView(U.line(c, e.title, 14, U.TEXT, false));
             String when = Cal.dayLabel(e.at) + (e.allDay ? "" : " · " + clock(hours(e.at)));
             t.addView(U.line(c, when, 11, U.SUB, false), top(2));
             LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-            tl.leftMargin = U.u(9);
+            tl.leftMargin = U.u(10);
             r.addView(t, tl);
             LinearLayout.LayoutParams rl = U.lp(U.MATCH, U.WRAP);
-            rl.bottomMargin = U.u(9);
+            rl.bottomMargin = U.u(8);
             list.addView(r, rl);
         }
-        right.addView(new View(c), U.weight(1, false));
         TextView open = U.text(c, "Open calendar ›", 13, U.ACCENT_SOFT, true);
         open.setOnClickListener(v -> {
             try {
@@ -245,7 +251,7 @@ final class InfoPanels {
                 Apps.launchPkg(c, "com.google.android.calendar");
             }
         });
-        right.addView(open);
+        right.addView(open, top(8));
         return card;
     }
 
