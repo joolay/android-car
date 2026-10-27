@@ -52,6 +52,7 @@ public class MainActivity extends Activity {
         Status.init(this);
         Loc.init(this);
         Rest.init(this);
+        Salah.start(this);
         build();
         immersive();
         askPermissions();

@@ -24,5 +24,8 @@ async def main():
             l = lang(p["orig"])
             if l: await say(p["orig"], VOICES[l], f"{OUT}/{p['id']}_orig.mp3", "-12%")  # a little slower for recitation
         await say(p["en"], VOICES["en"], f"{OUT}/{p['id']}_en.mp3", "-5%")
+    # salaah time announcements
+    for name in ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]:
+        await say(f"It's time for Salaah. {name}.", VOICES["en"], f"{OUT}/salah_{name.lower()}.mp3", "-5%")
 
 asyncio.run(main())

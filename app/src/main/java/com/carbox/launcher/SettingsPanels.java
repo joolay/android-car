@@ -1201,6 +1201,10 @@ final class SettingsPanels {
                 r.addView(U.seg(c, "+", false, () -> setAdj(k, v + 1)));
                 b.addView(r);
             }
+            b.addView(Sheets.section("At salaah times"));
+            b.addView(Sheets.switchRow(0, 0, "Pause playing audio", "Music or radio pauses at each salaah time", Store.flag(Salah.PAUSE, true), v -> Store.put(Salah.PAUSE, v)));
+            b.addView(Sheets.switchRow(0, 0, "Announce it", "Says \"It's time for Salaah\" and the prayer's name", Store.flag(Salah.ANNOUNCE, true), v -> Store.put(Salah.ANNOUNCE, v)));
+            b.addView(U.button(c, "Test", false, () -> Salah.fire("Dhuhr")), top(8));
             return Sheets.panel("Prayer times", b, 600, 444);
         });
     }
