@@ -304,7 +304,9 @@ public class MainActivity extends Activity {
         }
         long last = Store.lng("last_version", -1);
         Store.put("last_version", code);
-        if (last < 0 || last == code || isFinishing()) return; // first install (the checklist runs anyway) or no change
+        // no record yet: an older version that didn't keep one counts as an update (it had shown the checklist)
+        boolean updated = last < 0 ? Store.flag("setup_shown", false) : last != code;
+        if (!updated || isFinishing()) return; // first install (the checklist runs anyway) or no change
         if (Sheets.open() || CallState.state != CallState.NONE) return; // don't interrupt
         Sheets.show(() -> {
             android.content.Context c = Sheets.ctx();
