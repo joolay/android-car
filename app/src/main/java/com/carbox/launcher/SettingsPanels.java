@@ -495,6 +495,17 @@ final class SettingsPanels {
             boolean ov = BackButtonService.overlay(c);
             b.addView(step(c, on ? 2 : 3, "Allow display over other apps", "So the hold-menu shortcuts can open apps while another app is on screen",
                     ov ? "Done" : "Allow", ov, () -> overlaySettings(c)));
+            // is it actually running? (switched on in Android isn't the same as started)
+            String st = BackButtonService.I != null ? "Running" : on ? "Switched on but not running: switch it off and on again in Accessibility" : "Off";
+            TextView stv = U.text(c, "Status: " + st, 13, BackButtonService.I != null ? U.GREEN : U.AMBER, true);
+            b.addView(stv, top(8));
+            b.addView(Sheets.item("Put the button back on screen", "Resets its position", () -> {
+                Store.put("fb_x", U.u(14));
+                Store.put("fb_y", U.u(206));
+                Store.put("fb_on", true);
+                BackButtonService.refresh();
+                Sheets.refresh();
+            }), top(4));
             b.addView(Sheets.item("Hold menu", QuickActions.chosen().size() + " buttons", SettingsPanels::holdMenu), top(4));
             b.addView(U.hr(c));
             String sz = Store.str("fb_size", "m");

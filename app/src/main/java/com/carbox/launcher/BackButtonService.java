@@ -30,6 +30,7 @@ public class BackButtonService extends AccessibilityService {
     @Override
     protected void onServiceConnected() {
         I = this;
+        Store.put("fb_connected_at", System.currentTimeMillis()); // shows in Settings that it really started
         U.init((Context) this);
         Store.init(this);
         Apps.init(this);
@@ -75,8 +76,11 @@ public class BackButtonService extends AccessibilityService {
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                 PixelFormat.TRANSLUCENT);
         lp.gravity = Gravity.TOP | Gravity.START;
-        lp.x = Store.num("fb_x", U.u(14));
-        lp.y = Store.num("fb_y", U.u(206));
+        // keep it on screen: a position saved on another screen size could put it out of sight
+        android.graphics.Point scr = new android.graphics.Point();
+        wm.getDefaultDisplay().getRealSize(scr);
+        lp.x = Math.max(0, Math.min(scr.x - size, Store.num("fb_x", U.u(14))));
+        lp.y = Math.max(0, Math.min(scr.y - size, Store.num("fb_y", U.u(206))));
         button.setOnTouchListener(new Touch());
         button.setVisibility(visible ? View.VISIBLE : View.GONE);
         try {
