@@ -336,6 +336,68 @@ final class SettingsPanels {
 
     // ------------------------------------------------------------------ keyboard & Android settings
 
+    // ------------------------------------------------------------------ set-up checklist (first run)
+
+    static Sheets.Page setupPage;
+
+    static boolean isDefaultHome(Context c) {
+        android.content.pm.ResolveInfo r = c.getPackageManager().resolveActivity(
+                new android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME),
+                android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+        return r != null && r.activityInfo != null && c.getPackageName().equals(r.activityInfo.packageName);
+    }
+
+    static void setupChecklist() {
+        open(setupPage = () -> {
+            Context c = c();
+            LinearLayout b = U.col(c);
+            b.addView(U.text(c, "A few Android permissions make everything work. Each opens the right Android screen; press Back to return here.", 13, U.SUB, false));
+            boolean notif = MediaListener.hasAccess(c), home = isDefaultHome(c), usage = Apps.hasUsageAccess(), kb = CarIME.isDefault(c);
+            b.addView(check(c, R.drawable.ic_lyrics, 0xFF1F4E9A, "Notification access", "Song info, lyrics and controls, and turn-by-turn on the map",
+                    notif ? "Done" : "Allow", notif, () -> {
+                        android.content.Intent i;
+                        if (android.os.Build.VERSION.SDK_INT >= 30) {
+                            i = new android.content.Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+                                    .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, MediaListener.component(c).flattenToString());
+                            try {
+                                c.startActivity(i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+                                return;
+                            } catch (Exception ignored) {
+                            }
+                        }
+                        MediaListener.requestAccess(c);
+                    }), top(10));
+            b.addView(check(c, R.drawable.ic_home, U.CARD3, "Make Car Launcher your Home app", "So the Home button always comes back here",
+                    home ? "Done" : "Choose", home, () -> Status.open(c, Settings.ACTION_HOME_SETTINGS)));
+            b.addView(check(c, R.drawable.ic_apps, U.CARD3, "Usage access (optional)", "Shows the apps you really use in the dock",
+                    usage ? "Done" : "Allow", usage, () -> Status.open(c, Settings.ACTION_USAGE_ACCESS_SETTINGS)));
+            b.addView(check(c, R.drawable.ic_mic, U.CARD3, "Car keyboard (optional)", "Big keys and voice typing in every app",
+                    kb ? "Done" : "Set up", kb, SettingsPanels::keyboard));
+            b.addView(U.text(c, "Find this again any time in Settings → Android settings → Set-up checklist.", 12, U.SUB, false), top(10));
+            return Sheets.panel("Welcome to Car Launcher", b, 640, 440);
+        });
+    }
+
+    private static View check(Context c, int icon, int color, String title, String sub, String btn, boolean done, Runnable click) {
+        LinearLayout r = U.row(c);
+        r.setMinimumHeight(U.u(62));
+        FrameLayout ic = new FrameLayout(c);
+        ic.setBackground(U.round(done ? U.DGREEN : color, 10));
+        ic.addView(U.icon(c, done ? R.drawable.ic_check : icon, U.TEXT), U.flpu(20, 20, Gravity.CENTER));
+        r.addView(ic, U.lpu(36, 36));
+        LinearLayout t = U.col(c);
+        t.addView(U.text(c, title, 15, U.TEXT, false));
+        t.addView(U.text(c, sub, 12, U.SUB, false), top(3));
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+        tl.setMargins(U.u(14), 0, U.u(12), 0);
+        r.addView(t, tl);
+        r.addView(U.button(c, btn, !done, click));
+        LinearLayout w = U.col(c);
+        w.addView(U.hr(c));
+        w.addView(r);
+        return w;
+    }
+
     static Sheets.Page keyboardPage;
 
     static void keyboard() {
@@ -384,6 +446,8 @@ final class SettingsPanels {
         open(() -> {
             Context c = c();
             LinearLayout b = U.col(c);
+            b.addView(Sheets.item("Set-up checklist", null, SettingsPanels::setupChecklist));
+            b.addView(U.hr(c));
             String[][] items = {{"All Android settings", Settings.ACTION_SETTINGS}, {"Bluetooth", Settings.ACTION_BLUETOOTH_SETTINGS},
                     {"Wi-Fi", Settings.ACTION_WIFI_SETTINGS}, {"Sound", Settings.ACTION_SOUND_SETTINGS}, {"Display", Settings.ACTION_DISPLAY_SETTINGS},
                     {"Home app", Settings.ACTION_HOME_SETTINGS}, {"Apps", Settings.ACTION_APPLICATION_SETTINGS}};

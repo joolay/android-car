@@ -247,8 +247,15 @@ public class MainActivity extends Activity {
         for (String p : want) if (checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) need.add(p);
         if (!need.isEmpty() && !Store.flag("asked_perms", false)) {
             Store.put("asked_perms", true);
-            requestPermissions(need.toArray(new String[0]), 1);
-        }
+            requestPermissions(need.toArray(new String[0]), 1); // the set-up checklist follows when this closes
+        } else U.ui.postDelayed(this::firstRunChecklist, 1500);
+    }
+
+    /** First run: the checklist for permissions Android only grants in its own settings screens. */
+    private void firstRunChecklist() {
+        if (Store.flag("setup_shown", false) || isFinishing()) return;
+        Store.put("setup_shown", true);
+        if (!MediaListener.hasAccess(this) || !SettingsPanels.isDefaultHome(this)) SettingsPanels.setupChecklist();
     }
 
     @Override
@@ -266,6 +273,7 @@ public class MainActivity extends Activity {
         Loc.start();
         Status.refreshAndNotify();
         tiles.refresh();
+        if (req == 1) U.ui.postDelayed(this::firstRunChecklist, 600);
     }
 
     // ------------------------------------------------------------------ lifecycle
@@ -286,7 +294,9 @@ public class MainActivity extends Activity {
         rail.paused(false);
         dock.render();
         // back from Android's keyboard settings: show the updated steps
-        if (Sheets.open() && Sheets.top() == SettingsPanels.keyboardPage && SettingsPanels.keyboardPage != null) Sheets.refresh();
+        if (Sheets.open() && Sheets.top() != null && (Sheets.top() == SettingsPanels.keyboardPage || Sheets.top() == SettingsPanels.setupPage)) {
+            Sheets.refresh();
+        }
         if (pendingAutostart) {
             // back from hotspot settings: now open the auto-start apps
             pendingAutostart = false;
