@@ -1,73 +1,33 @@
 <!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  html, body, #map { margin: 0; padding: 0; height: 100%; width: 100%; background: #171c24; overflow: hidden; }
-  /* Dark map: invert the standard OpenStreetMap tiles */
-  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
-  .leaflet-container { background: #171c24; font-family: sans-serif; }
-  .leaflet-control-attribution { background: rgba(11,14,19,0.7) !important; color: #8a94a3 !important; font-size: 9px; }
-  .leaflet-control-attribution a { color: #8a94a3 !important; }
-  #msg { position: absolute; left: 0; right: 0; top: 42%; text-align: center; color: #9aa4b2;
-         font: 15px sans-serif; z-index: 1000; pointer-events: none; padding: 0 16px; }
-  #re { position: absolute; right: 12px; bottom: 74px; z-index: 1000; display: none;
-        width: 46px; height: 46px; border-radius: 23px; border: 0; background: #202734; color: #fff;
-        font-size: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
-  .me { width: 16px; height: 16px; border-radius: 50%; background: #3d8bfd; border: 3px solid #fff;
-        box-shadow: 0 0 0 7px rgba(61,139,253,0.28); }
-</style>
-</head>
-<body>
-<div id="map"></div>
-<div id="msg">Waiting for GPS…</div>
-<button id="re" aria-label="Recenter">&#9678;</button>
+html,body,#m{margin:0;height:100%;background:#0b0e13}
+.leaflet-control-attribution{font-size:7px;background:rgba(0,0,0,.4)!important;color:#778!important}
+.leaflet-control-attribution a{color:#99a!important}
+.me{width:18px;height:18px;margin:-9px 0 0 -9px;position:relative}
+.me .d{position:absolute;inset:3px;border-radius:50%;background:#3d8bfd;border:2px solid #fff;box-shadow:0 0 0 6px rgba(61,139,253,.25)}
+.me .a{position:absolute;left:4px;top:-9px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid #3d8bfd;display:none}
+</style></head><body><div id="m"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  var map = null, me = null, follow = true, pending = null;
-  var msgEl = document.getElementById('msg');
-  var reBtn = document.getElementById('re');
-
-  function msg(t) { msgEl.textContent = t; msgEl.style.display = t ? 'block' : 'none'; }
-
-  function init() {
-    if (typeof L === 'undefined') {
-      msg('Map needs an internet connection');
-      setTimeout(function () { location.reload(); }, 15000);
-      return;
-    }
-    map = L.map('map', { zoomControl: false, attributionControl: true }).setView([0, 0], 2);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap'
-    }).addTo(map);
-    map.on('dragstart', function () { follow = false; reBtn.style.display = 'block'; });
-    reBtn.onclick = function () {
-      follow = true; reBtn.style.display = 'none';
-      if (me) map.setView(me.getLatLng(), Math.max(map.getZoom(), 16));
-    };
-    if (pending) { setPos(pending[0], pending[1]); }
-  }
-
-  // Called from the Android side with each new GPS fix
-  function setPos(lat, lon) {
-    if (!map) { pending = [lat, lon]; return; }
-    msg('');
-    var ll = [lat, lon];
-    if (!me) {
-      me = L.marker(ll, { icon: L.divIcon({ className: '', html: '<div class="me"></div>', iconSize: [22, 22], iconAnchor: [11, 11] }) }).addTo(map);
-      map.setView(ll, 16);
-    } else {
-      me.setLatLng(ll);
-      if (follow) map.panTo(ll, { animate: true });
-    }
-  }
-
-  function noPermission() { msg('Allow location access to show your position'); }
-
-  init();
-</script>
-</body>
-</html>
+var map=null,me=null,follow=true;
+function init(lat,lon){
+  if(typeof L==='undefined'){setTimeout(function(){init(lat,lon)},2000);return;}
+  map=L.map('m',{zoomControl:false,attributionControl:true}).setView([lat,lon],15);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',
+    attribution:'© OpenStreetMap © CARTO'}).addTo(map);
+  map.attributionControl.setPrefix('');
+  var icon=L.divIcon({className:'',html:'<div class="me"><div class="a" id="arr"></div><div class="d"></div></div>',iconSize:[0,0]});
+  me=L.marker([lat,lon],{icon:icon,interactive:false}).addTo(map);
+  map.on('dragstart',function(){follow=false;setTimeout(function(){follow=true},20000)});
+}
+function setPos(lat,lon,bearing){
+  if(!map){init(lat,lon);return;}
+  me.setLatLng([lat,lon]);
+  var a=document.getElementById('arr');
+  if(a){ if(bearing>=0){a.style.display='block';a.parentNode.style.transform='rotate('+bearing+'deg)';}
+         else {a.style.display='none';a.parentNode.style.transform='';} }
+  if(follow) map.panTo([lat,lon],{animate:true});
+}
+</script></body></html>

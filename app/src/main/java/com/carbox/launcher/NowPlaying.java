@@ -1,410 +1,267 @@
 package com.carbox.launcher;
 
-import android.app.PendingIntent;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
-import android.media.AudioManager;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
-import android.media.session.MediaSessionManager;
-import android.media.session.PlaybackState;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.SystemClock;
-import android.provider.Settings;
-import android.text.TextUtils;
+import android.net.Uri;
 import android.view.Gravity;
-import android.view.KeyEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import org.json.JSONObject;
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-/** "Now playing" card: song, artist, artwork and playback controls for whatever app is playing. */
+/** Album art filling the tile, title/artist, controls, and synced lyrics scrolling over the art. */
 final class NowPlaying {
-
-    private static final int C_CARD = 0xFF171C24;
-    private static final int C_CARD2 = 0xFF222A37;
-    private static final int C_TEXT = 0xFFFFFFFF;
-    private static final int C_SUB = 0xFF9AA4B2;
-    private static final int C_ACCENT = 0xFF3D8BFD;
-
-    private final Context ctx;
-    private final float density;
-    private final Runnable openMusicApp;
-    private final Handler ui = new Handler(Looper.getMainLooper());
-    private final ComponentName listener;
-
-    private final FrameLayout root;
-    private final View scrim;
+    private final Context c;
+    final FrameLayout view;
     private final ImageView art;
-    private final TextView title, artist;
-    private final ImageView playButton;
+    private final TextView title, artist, empty, badge;
+    private final ImageView playBtn;
+    private final LinearLayout lyricBox, content;
+    private final TextView[] lyricLines = new TextView[3];
+    private boolean running, lyricsHidden;
 
-    private MediaSessionManager sessions;
-    private MediaController controller;
-    private boolean running;
+    private String trackKey;
+    private final List<long[]> lyricTimes = new ArrayList<>();
+    private final List<String> lyricText = new ArrayList<>();
 
-    NowPlaying(Context ctx, Runnable openMusicApp) {
-        this.ctx = ctx;
-        this.density = ctx.getResources().getDisplayMetrics().density;
-        this.openMusicApp = openMusicApp;
-        this.listener = new ComponentName(ctx, MediaListener.class);
+    NowPlaying(Context c) {
+        this.c = c;
+        view = new FrameLayout(c);
+        view.setBackground(U.round(U.CARD, 16));
+        MapPanel.clip(view, 16);
 
-        // Album art fills the whole tile; a dark fade at the bottom keeps text and buttons readable
-        root = new FrameLayout(ctx);
-        root.setBackground(round(C_CARD, 22));
-        root.setClipToOutline(true);
+        art = new ImageView(c);
+        art.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        view.addView(art, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        View shade = new View(c);
+        shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x33000000, 0x22000000, 0xE6000000}));
+        view.addView(shade, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
 
-        art = new ImageView(ctx);
-        root.addView(art, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        // lyrics, centred in the upper part of the art
+        lyricBox = U.col(c);
+        lyricBox.setGravity(Gravity.CENTER);
+        U.pad(lyricBox, 12, 10, 12, 0);
+        for (int i = 0; i < 3; i++) {
+            TextView t = U.text(c, "", i == 1 ? 14 : 12, i == 1 ? U.TEXT : 0x99FFFFFF, i == 1);
+            t.setGravity(Gravity.CENTER);
+            t.setMaxLines(2);
+            t.setShadowLayer(U.uf(4), 0, 0, 0xCC000000);
+            LinearLayout.LayoutParams lp = U.lp(U.MATCH, U.WRAP);
+            lp.topMargin = i == 0 ? 0 : U.u(5);
+            lyricBox.addView(t, lp);
+            lyricLines[i] = t;
+        }
+        lyricBox.setVisibility(View.GONE);
+        lyricBox.setOnClickListener(v -> {
+            lyricsHidden = true;
+            lyricBox.setVisibility(View.GONE);
+        });
+        FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams(U.MATCH, U.u(110), Gravity.TOP);
+        view.addView(lyricBox, ll);
 
-        scrim = new View(ctx);
-        scrim.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0x00000000, 0x99000000, 0xE6000000}));
-        root.addView(scrim, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        badge = U.text(c, "Spotify lyrics ›", 10, U.TEXT, true);
+        badge.setBackground(U.round(0xCC1DB954, 8));
+        U.pad(badge, 7, 3, 7, 3);
+        badge.setVisibility(View.GONE);
+        badge.setOnClickListener(v -> Apps.launchPkg(c, "com.spotify.music"));
+        FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.END);
+        bl.setMargins(0, U.u(8), U.u(8), 0);
+        view.addView(badge, bl);
 
-        LinearLayout content = new LinearLayout(ctx);
-        content.setOrientation(LinearLayout.VERTICAL);
+        content = U.col(c);
+        U.pad(content, 12, 0, 12, 10);
         content.setGravity(Gravity.BOTTOM);
-        content.setPadding(dp(14), dp(12), dp(14), dp(12));
-        root.addView(content, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-        title = new TextView(ctx);
-        title.setTextColor(C_TEXT);
-        title.setTextSize(17);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setSingleLine(true);
-        title.setEllipsize(TextUtils.TruncateAt.END);
-        title.setShadowLayer(dp(4), 0, dp(1), 0xCC000000);
-        artist = new TextView(ctx);
-        artist.setTextColor(0xFFD6DBE3);
-        artist.setTextSize(14);
-        artist.setSingleLine(true);
-        artist.setEllipsize(TextUtils.TruncateAt.END);
-        artist.setShadowLayer(dp(4), 0, dp(1), 0xCC000000);
+        title = U.line(c, "", 15, U.TEXT, true);
         content.addView(title);
-        content.addView(artist);
+        artist = U.line(c, "", 12, 0xCCFFFFFF, false);
+        LinearLayout.LayoutParams al = U.lp(U.MATCH, U.WRAP);
+        al.topMargin = U.u(2);
+        content.addView(artist, al);
+        LinearLayout ctl = U.row(c);
+        ctl.setGravity(Gravity.CENTER);
+        View prev = U.icon(c, R.drawable.ic_prev, U.TEXT);
+        prev.setOnClickListener(v -> transport(0));
+        ctl.addView(prev, U.lpu(30, 30));
+        FrameLayout play = new FrameLayout(c);
+        play.setBackground(U.oval(U.TEXT));
+        playBtn = U.icon(c, R.drawable.ic_play, 0xFF000000);
+        play.addView(playBtn, U.flpu(22, 22, Gravity.CENTER));
+        play.setOnClickListener(v -> transport(1));
+        U.press(play);
+        LinearLayout.LayoutParams pl = U.lpu(42, 42);
+        pl.setMargins(U.u(20), 0, U.u(20), 0);
+        ctl.addView(play, pl);
+        View next = U.icon(c, R.drawable.ic_next, U.TEXT);
+        next.setOnClickListener(v -> transport(2));
+        ctl.addView(next, U.lpu(30, 30));
+        LinearLayout.LayoutParams cl = U.lp(U.MATCH, U.WRAP);
+        cl.topMargin = U.u(8);
+        content.addView(ctl, cl);
+        view.addView(content, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
 
-        // Controls
-        LinearLayout controls = new LinearLayout(ctx);
-        controls.setOrientation(LinearLayout.HORIZONTAL);
-        controls.setGravity(Gravity.CENTER);
-        ImageView prev = control(R.drawable.ic_prev, 0x80000000, 46);
-        playButton = control(R.drawable.ic_play, C_ACCENT, 56);
-        ImageView next = control(R.drawable.ic_next, 0x80000000, 46);
-        prev.setOnClickListener(v -> previous());
-        playButton.setOnClickListener(v -> playPause());
-        next.setOnClickListener(v -> next());
-        prev.setContentDescription("Previous");
-        playButton.setContentDescription("Play or pause");
-        next.setContentDescription("Next");
-        controls.addView(prev, square(46, 0));
-        controls.addView(playButton, square(56, 18));
-        controls.addView(next, square(46, 18));
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        clp.topMargin = dp(10);
-        content.addView(controls, clp);
+        empty = U.text(c, "", 13, U.SUB, false);
+        empty.setGravity(Gravity.CENTER);
+        U.pad(empty, 14);
+        view.addView(empty, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
 
-        root.setOnClickListener(v -> openPlayer());
-        showIdle();
+        view.setOnClickListener(v -> {
+            if (!MediaListener.hasAccess(c)) MediaListener.requestAccess(c);
+            else if (MediaListener.controller != null) Apps.launchPkg(c, MediaListener.controller.getPackageName());
+            else openMusicApp();
+        });
+        view.setOnLongClickListener(v -> {
+            AppPanels.appPicker("Open music app", a -> Apps.launch(c, a));
+            return true;
+        });
+        MediaListener.listenMedia(this::update);
     }
 
-    View getView() {
-        return root;
+    private void openMusicApp() {
+        for (String p : Actions.MUSIC) if (Apps.launchPkg(c, p)) return;
+        AppPanels.appPicker("Open music app", a -> Apps.launch(c, a));
     }
 
-    // ---------------------------------------------------------------- lifecycle
+    private void transport(int which) {
+        MediaController m = MediaListener.controller;
+        if (m == null) {
+            openMusicApp();
+            return;
+        }
+        MediaController.TransportControls t = m.getTransportControls();
+        if (which == 0) t.skipToPrevious();
+        else if (which == 2) t.skipToNext();
+        else if (MediaListener.playing()) t.pause();
+        else t.play();
+    }
 
     void start() {
         running = true;
-        if (!hasAccess()) {
-            showNoAccess();
-            return;
-        }
-        if (sessions == null) {
-            MediaSessionManager m = (MediaSessionManager) ctx.getSystemService(Context.MEDIA_SESSION_SERVICE);
-            if (m == null) {
-                showIdle();
-                return;
-            }
-            try {
-                m.addOnActiveSessionsChangedListener(sessionsListener, listener, ui);
-                sessions = m;
-            } catch (SecurityException e) {
-                showNoAccess();
-                return;
-            }
-        }
-        refreshSessions();
+        MediaListener.attach(c);
+        update();
+        U.ui.post(tick);
     }
 
     void stop() {
         running = false;
-        if (sessions != null) {
-            try {
-                sessions.removeOnActiveSessionsChangedListener(sessionsListener);
-            } catch (Exception ignored) {
-            }
-            sessions = null;
-        }
-        setController(null);
+        U.ui.removeCallbacks(tick);
     }
 
-    private final MediaSessionManager.OnActiveSessionsChangedListener sessionsListener = this::pick;
-
-    private void refreshSessions() {
-        if (sessions == null) return;
-        try {
-            pick(sessions.getActiveSessions(listener));
-        } catch (SecurityException e) {
-            showNoAccess();
-        }
-    }
-
-    /** Prefer a session that's actually playing; otherwise the most recent one. */
-    private void pick(List<MediaController> list) {
-        MediaController best = null;
-        if (list != null) {
-            for (MediaController c : list) {
-                PlaybackState s = c.getPlaybackState();
-                if (s != null && s.getState() == PlaybackState.STATE_PLAYING) {
-                    best = c;
-                    break;
-                }
-            }
-            if (best == null && !list.isEmpty()) best = list.get(0);
-        }
-        setController(best);
-    }
-
-    private final MediaController.Callback callback = new MediaController.Callback() {
+    private final Runnable tick = new Runnable() {
         @Override
-        public void onPlaybackStateChanged(PlaybackState state) {
-            render();
-        }
-
-        @Override
-        public void onMetadataChanged(MediaMetadata metadata) {
-            render();
-        }
-
-        @Override
-        public void onSessionDestroyed() {
-            ui.post(NowPlaying.this::refreshSessions);
+        public void run() {
+            showLyric();
+            if (running) U.ui.postDelayed(this, 300);
         }
     };
 
-    private void setController(MediaController c) {
-        if (controller != null) {
-            try {
-                controller.unregisterCallback(callback);
-            } catch (Exception ignored) {
+    void update() {
+        MediaController m = MediaListener.controller;
+        MediaMetadata md = m == null ? null : m.getMetadata();
+        if (md == null) {
+            art.setImageDrawable(null);
+            content.setVisibility(View.INVISIBLE);
+            lyricBox.setVisibility(View.GONE);
+            badge.setVisibility(View.GONE);
+            empty.setVisibility(View.VISIBLE);
+            if (!MediaListener.hasAccess(c)) {
+                empty.setText("Tap to allow notification access so music shows here");
+                empty.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0);
+            } else {
+                empty.setText("Nothing playing\nTap to open music");
             }
-        }
-        controller = c;
-        if (controller != null) controller.registerCallback(callback, ui);
-        render();
-    }
-
-    // ---------------------------------------------------------------- rendering
-
-    private void render() {
-        if (controller == null) {
-            if (running && !hasAccess()) showNoAccess();
-            else showIdle();
             return;
         }
-        MediaMetadata md = controller.getMetadata();
-        String t = md == null ? null : text(md, MediaMetadata.METADATA_KEY_TITLE, MediaMetadata.METADATA_KEY_DISPLAY_TITLE);
-        String a = md == null ? null : text(md, MediaMetadata.METADATA_KEY_ARTIST, MediaMetadata.METADATA_KEY_ALBUM_ARTIST,
-                MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE);
-        title.setText(TextUtils.isEmpty(t) ? appName(controller.getPackageName()) : t);
-        artist.setText(TextUtils.isEmpty(a) ? appName(controller.getPackageName()) : a);
-
-        Bitmap bmp = null;
-        if (md != null) {
-            bmp = md.getBitmap(MediaMetadata.METADATA_KEY_ART);
-            if (bmp == null) bmp = md.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
-            if (bmp == null) bmp = md.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
+        empty.setVisibility(View.GONE);
+        content.setVisibility(View.VISIBLE);
+        Bitmap bm = md.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
+        if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_ART);
+        if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
+        if (bm != null) art.setImageBitmap(bm);
+        else {
+            art.setImageResource(R.drawable.ic_music);
+            art.setScaleType(ImageView.ScaleType.CENTER);
         }
-        art.clearColorFilter();
-        if (bmp != null) {
-            art.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            art.setPadding(0, 0, 0, 0);
-            art.setImageBitmap(bmp);
-            scrim.setVisibility(View.VISIBLE);
-        } else {
-            Drawable icon = appIcon(controller.getPackageName());
-            if (icon != null) {
-                iconArt();
-                art.setImageDrawable(icon);
-            } else {
-                placeholderArt();
-            }
-        }
+        if (bm != null) art.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        String t = md.getString(MediaMetadata.METADATA_KEY_TITLE);
+        String a = md.getString(MediaMetadata.METADATA_KEY_ARTIST);
+        if (a == null) a = md.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
+        title.setText(t == null ? "" : t);
+        artist.setText(a == null ? Apps.label(m.getPackageName()) : a);
+        playBtn.setImageResource(MediaListener.playing() ? R.drawable.ic_pause : R.drawable.ic_play);
+        boolean spotify = "com.spotify.music".equals(m.getPackageName());
+        badge.setVisibility(spotify && Store.flag(Store.LYRICS, true) ? View.VISIBLE : View.GONE);
 
-        PlaybackState s = controller.getPlaybackState();
-        boolean playing = s != null && (s.getState() == PlaybackState.STATE_PLAYING
-                || s.getState() == PlaybackState.STATE_BUFFERING);
-        playButton.setImageResource(playing ? R.drawable.ic_pause : R.drawable.ic_play);
-    }
-
-    private void showIdle() {
-        title.setText("Nothing playing");
-        artist.setText("Tap to open music");
-        placeholderArt();
-        playButton.setImageResource(R.drawable.ic_play);
-    }
-
-    private void showNoAccess() {
-        title.setText("Music");
-        artist.setText("Tap to show song info");
-        placeholderArt();
-        playButton.setImageResource(R.drawable.ic_play);
-    }
-
-    /** No artwork: show an icon in the upper part of the tile, above the text and buttons. */
-    private void iconArt() {
-        art.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        art.setPadding(dp(40), dp(16), dp(40), dp(118));
-        scrim.setVisibility(View.GONE);
-    }
-
-    private void placeholderArt() {
-        iconArt();
-        art.setImageResource(R.drawable.ic_music);
-        art.setColorFilter(C_SUB);
-    }
-
-    // ---------------------------------------------------------------- actions
-
-    private void playPause() {
-        if (controller != null) {
-            PlaybackState s = controller.getPlaybackState();
-            if (s != null && s.getState() == PlaybackState.STATE_PLAYING) controller.getTransportControls().pause();
-            else controller.getTransportControls().play();
-        } else {
-            mediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
+        String key = t + "|" + a;
+        if (!key.equals(trackKey)) {
+            trackKey = key;
+            lyricsHidden = false;
+            lyricTimes.clear();
+            lyricText.clear();
+            lyricBox.setVisibility(View.GONE);
+            if (Store.flag(Store.LYRICS, true) && t != null && a != null) fetchLyrics(key, t, a, md.getLong(MediaMetadata.METADATA_KEY_DURATION));
         }
     }
 
-    private void next() {
-        if (controller != null) controller.getTransportControls().skipToNext();
-        else mediaKey(KeyEvent.KEYCODE_MEDIA_NEXT);
-    }
+    private static final Pattern LRC = Pattern.compile("\\[(\\d+):(\\d+)(?:[.:](\\d+))?]\\s*(.*)");
 
-    private void previous() {
-        if (controller != null) controller.getTransportControls().skipToPrevious();
-        else mediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS);
-    }
-
-    /** Works without any permission – the last app that played audio receives it. */
-    private void mediaKey(int code) {
-        AudioManager am = (AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
-        if (am == null) return;
-        long now = SystemClock.uptimeMillis();
-        am.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, code, 0));
-        am.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP, code, 0));
-    }
-
-    private void openPlayer() {
-        if (!hasAccess()) {
+    private void fetchLyrics(String key, String track, String artistName, long durMs) {
+        String url = "https://lrclib.net/api/get?track_name=" + Uri.encode(track) + "&artist_name=" + Uri.encode(artistName)
+                + (durMs > 0 ? "&duration=" + Math.round(durMs / 1000.0) : "");
+        java.util.Map<String, String> h = new java.util.HashMap<>();
+        h.put("User-Agent", "CarLauncher (github.com/joolay/carlauncher)");
+        Net.get(url, h, (body, code) -> {
+            if (body == null || !key.equals(trackKey)) return;
             try {
-                Intent i = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                ctx.startActivity(i);
-                return;
-            } catch (Exception ignored) {
-                // Some car boxes hide this screen; fall through to opening a music app
-            }
-        }
-        if (controller != null) {
-            PendingIntent pi = controller.getSessionActivity();
-            if (pi != null) {
-                try {
-                    pi.send();
-                    return;
-                } catch (PendingIntent.CanceledException ignored) {
+                String synced = new JSONObject(body).optString("syncedLyrics", "");
+                if (synced.isEmpty() || "null".equals(synced)) return;
+                for (String ln : synced.split("\n")) {
+                    Matcher m = LRC.matcher(ln.trim());
+                    if (!m.matches()) continue;
+                    long ms = Long.parseLong(m.group(1)) * 60000 + Long.parseLong(m.group(2)) * 1000;
+                    if (m.group(3) != null) {
+                        String f = m.group(3);
+                        ms += Long.parseLong(f) * (f.length() == 2 ? 10 : f.length() == 1 ? 100 : 1);
+                    }
+                    lyricTimes.add(new long[]{ms});
+                    lyricText.add(m.group(4));
                 }
+                showLyric();
+            } catch (Exception ignored) {
             }
-            Intent i = ctx.getPackageManager().getLaunchIntentForPackage(controller.getPackageName());
-            if (i != null) {
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                ctx.startActivity(i);
-                return;
-            }
+        });
+    }
+
+    private int shownIdx = -2;
+
+    private void showLyric() {
+        if (lyricTimes.isEmpty() || lyricsHidden || !Store.flag(Store.LYRICS, true)) {
+            if (lyricBox.getVisibility() == View.VISIBLE) lyricBox.setVisibility(View.GONE);
+            return;
         }
-        openMusicApp.run();
-    }
-
-    // ---------------------------------------------------------------- helpers
-
-    private boolean hasAccess() {
-        String enabled = Settings.Secure.getString(ctx.getContentResolver(), "enabled_notification_listeners");
-        return enabled != null && enabled.contains(listener.flattenToString());
-    }
-
-    private static String text(MediaMetadata md, String... keys) {
-        for (String k : keys) {
-            CharSequence v = md.getText(k);
-            if (!TextUtils.isEmpty(v)) return v.toString();
+        long p = MediaListener.position() + 300;
+        int idx = -1;
+        for (int i = 0; i < lyricTimes.size(); i++) {
+            if (lyricTimes.get(i)[0] <= p) idx = i;
+            else break;
         }
-        return null;
-    }
-
-    private String appName(String pkg) {
-        try {
-            return ctx.getPackageManager().getApplicationLabel(
-                    ctx.getPackageManager().getApplicationInfo(pkg, 0)).toString();
-        } catch (Exception e) {
-            return "";
-        }
-    }
-
-    private Drawable appIcon(String pkg) {
-        try {
-            return ctx.getPackageManager().getApplicationIcon(pkg);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private ImageView control(int icon, int bg, int sizeDp) {
-        ImageView iv = new ImageView(ctx);
-        iv.setImageResource(icon);
-        GradientDrawable d = new GradientDrawable();
-        d.setShape(GradientDrawable.OVAL);
-        d.setColor(bg);
-        iv.setBackground(d);
-        int pad = dp(sizeDp / 4);
-        iv.setPadding(pad, pad, pad, pad);
-        return iv;
-    }
-
-    private LinearLayout.LayoutParams square(int sizeDp, int leftMarginDp) {
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(sizeDp), dp(sizeDp));
-        lp.leftMargin = dp(leftMarginDp);
-        return lp;
-    }
-
-    private GradientDrawable round(int color, int radiusDp) {
-        GradientDrawable g = new GradientDrawable();
-        g.setColor(color);
-        g.setCornerRadius(dp(radiusDp));
-        return g;
-    }
-
-    private int dp(int v) {
-        return Math.round(v * density);
+        lyricBox.setVisibility(View.VISIBLE);
+        if (idx == shownIdx) return;
+        shownIdx = idx;
+        lyricLines[0].setText(idx > 0 ? lyricText.get(idx - 1) : "");
+        lyricLines[1].setText(idx >= 0 ? (lyricText.get(idx).isEmpty() ? "♪" : lyricText.get(idx)) : "♪");
+        lyricLines[2].setText(idx + 1 < lyricText.size() ? lyricText.get(idx + 1) : "");
+        lyricLines[1].setAlpha(0f);
+        lyricLines[1].animate().alpha(1f).setDuration(250).start();
     }
 }

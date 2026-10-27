@@ -1,0 +1,291 @@
+package com.carbox.launcher;
+
+import android.content.Context;
+import android.graphics.Typeface;
+import android.provider.Settings;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextClock;
+import android.widget.TextView;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/** CarPlay-style status rail on the right edge. */
+final class Rail {
+    static final String[] IDS = {"clock", "weather", "cell", "wifi", "gps", "hotspot", "tailscale"};
+    static final String[] NAMES = {"Clock and date", "Weather", "Mobile signal", "Wi-Fi", "GPS", "Hotspot", "Tailscale"};
+
+    private final Context c;
+    final LinearLayout view;
+    private final LinearLayout items;
+    private ImageView wIcon, hotIcon, tsIcon;
+    private TextView wHi, wLo;
+    private StatusIcons.CellIcon cell;
+    private StatusIcons.WifiIcon wifi;
+    private StatusIcons.GpsIcon gps;
+    private final List<StatusIcons.AnimatedIcon> animated = new ArrayList<>();
+
+    Rail(Context c) {
+        this.c = c;
+        view = U.col(c);
+        view.setGravity(Gravity.CENTER_HORIZONTAL);
+        view.setBackground(U.round(U.CARD, 16));
+        U.pad(view, 0, 14, 0, 12);
+
+        items = U.col(c);
+        items.setGravity(Gravity.CENTER_HORIZONTAL);
+        view.addView(items, U.lp(U.MATCH, U.WRAP));
+        view.addView(new View(c), new LinearLayout.LayoutParams(1, 0, 1));
+
+        View gear = circle(R.drawable.ic_gear, U.CARD2, 40, 22);
+        gear.setOnClickListener(v -> SettingsPanels.main());
+        view.addView(gear, U.lpu(40, 40));
+        View mic = circle(R.drawable.ic_mic, U.ACCENT, 48, 26);
+        mic.setOnClickListener(v -> Actions.assistant(c));
+        LinearLayout.LayoutParams mlp = U.lpu(48, 48);
+        mlp.topMargin = U.u(16);
+        view.addView(mic, mlp);
+
+        build();
+        Status.listen(this::updateStatus);
+        Weather.listen(this::updateWeather);
+        Loc.listen(this::updateGps);
+    }
+
+    private View circle(int icon, int bg, float size, float iconSize) {
+        android.widget.FrameLayout f = new android.widget.FrameLayout(c);
+        f.setBackground(U.oval(bg));
+        ImageView iv = U.icon(c, icon, U.TEXT);
+        f.addView(iv, U.flpu(iconSize, iconSize, Gravity.CENTER));
+        U.press(f);
+        return f;
+    }
+
+    static List<String[]> order() {
+        JSONArray a = Store.arr(Store.RAIL);
+        List<String[]> out = new ArrayList<>();
+        List<String> seen = new ArrayList<>();
+        for (int i = 0; i < a.length(); i++) {
+            JSONObject o = a.optJSONObject(i);
+            if (o == null) continue;
+            String id = o.optString("id");
+            if (indexOf(id) < 0 || seen.contains(id)) continue;
+            seen.add(id);
+            out.add(new String[]{id, o.optBoolean("on", true) ? "1" : "0"});
+        }
+        for (String id : IDS) if (!seen.contains(id)) out.add(new String[]{id, "1"});
+        return out;
+    }
+
+    static void saveOrder(List<String[]> l) {
+        JSONArray a = new JSONArray();
+        for (String[] s : l) {
+            JSONObject o = new JSONObject();
+            try {
+                o.put("id", s[0]);
+                o.put("on", "1".equals(s[1]));
+            } catch (Exception ignored) {
+            }
+            a.put(o);
+        }
+        Store.put(Store.RAIL, a);
+    }
+
+    static int indexOf(String id) {
+        for (int i = 0; i < IDS.length; i++) if (IDS[i].equals(id)) return i;
+        return -1;
+    }
+
+    /** (Re)build items in the saved order. */
+    void build() {
+        items.removeAllViews();
+        animated.clear();
+        boolean first = true;
+        for (String[] e : order()) {
+            if (!"1".equals(e[1])) continue;
+            View v = item(e[0]);
+            if (v == null) continue;
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(U.WRAP, U.WRAP);
+            lp.gravity = Gravity.CENTER_HORIZONTAL;
+            if (!first) lp.topMargin = U.u(e[0].equals("weather") ? 4 : 10);
+            items.addView(v, lp);
+            if (e[0].equals("clock")) {
+                View hr = new View(c);
+                hr.setBackgroundColor(U.LINE);
+                LinearLayout.LayoutParams hlp = U.lpu(40, 1);
+                hlp.topMargin = U.u(8);
+                hlp.gravity = Gravity.CENTER_HORIZONTAL;
+                items.addView(hr, hlp);
+            }
+            first = false;
+        }
+        updateStatus();
+        updateWeather();
+        updateGps();
+    }
+
+    private View item(String id) {
+        View v;
+        switch (id) {
+            case "clock": {
+                LinearLayout l = U.col(c);
+                l.setGravity(Gravity.CENTER_HORIZONTAL);
+                TextClock t = new TextClock(c);
+                t.setFormat24Hour("HH:mm");
+                t.setFormat12Hour("h:mm");
+                t.setTextSize(TypedValue.COMPLEX_UNIT_PX, U.uf(22));
+                t.setTextColor(U.TEXT);
+                t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+                t.setIncludeFontPadding(false);
+                l.addView(t);
+                TextClock d = new TextClock(c);
+                d.setFormat24Hour("EEE");
+                d.setFormat12Hour("EEE");
+                d.setTextSize(TypedValue.COMPLEX_UNIT_PX, U.uf(12));
+                d.setTextColor(U.TEXT);
+                d.setTypeface(Typeface.DEFAULT_BOLD);
+                LinearLayout.LayoutParams dl = U.lp(U.WRAP, U.WRAP);
+                dl.topMargin = U.u(3);
+                l.addView(d, dl);
+                TextClock dt = new TextClock(c);
+                dt.setFormat24Hour("d MMM");
+                dt.setFormat12Hour("d MMM");
+                dt.setTextSize(TypedValue.COMPLEX_UNIT_PX, U.uf(11));
+                dt.setTextColor(U.SUB);
+                l.addView(dt);
+                v = l;
+                v.setOnClickListener(x -> InfoPanels.calendar());
+                v.setOnLongClickListener(x -> {
+                    Status.open(c, Settings.ACTION_DATE_SETTINGS);
+                    return true;
+                });
+                break;
+            }
+            case "weather": {
+                LinearLayout l = U.col(c);
+                l.setGravity(Gravity.CENTER_HORIZONTAL);
+                wIcon = U.icon(c, R.drawable.ic_w_partly, 0);
+                l.addView(wIcon, U.lpu(26, 26));
+                wHi = U.text(c, "--°", 16, U.TEXT, true);
+                LinearLayout.LayoutParams hl = U.lp(U.WRAP, U.WRAP);
+                hl.topMargin = U.u(2);
+                l.addView(wHi, hl);
+                wLo = U.text(c, "--°", 13, U.SUB, false);
+                l.addView(wLo);
+                v = l;
+                v.setOnClickListener(x -> InfoPanels.weather(0));
+                v.setOnLongClickListener(x -> {
+                    SettingsPanels.units();
+                    return true;
+                });
+                break;
+            }
+            case "cell": {
+                cell = new StatusIcons.CellIcon(c);
+                animated.add(cell);
+                cell.setLayoutParams(new LinearLayout.LayoutParams(U.WRAP, U.u(22)));
+                v = cell;
+                v.setOnClickListener(x -> InfoPanels.quick("cell"));
+                v.setOnLongClickListener(x -> {
+                    Status.open(c, Settings.ACTION_DATA_ROAMING_SETTINGS);
+                    return true;
+                });
+                return wrap(v, 22, true);
+            }
+            case "wifi": {
+                wifi = new StatusIcons.WifiIcon(c);
+                animated.add(wifi);
+                v = wifi;
+                v.setOnClickListener(x -> InfoPanels.quick("wifi"));
+                v.setOnLongClickListener(x -> {
+                    Status.open(c, Settings.ACTION_WIFI_SETTINGS);
+                    return true;
+                });
+                return wrap(v, 22, false);
+            }
+            case "gps": {
+                gps = new StatusIcons.GpsIcon(c);
+                animated.add(gps);
+                v = gps;
+                v.setOnClickListener(x -> InfoPanels.quick("gps"));
+                v.setOnLongClickListener(x -> {
+                    Status.open(c, Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                    return true;
+                });
+                return wrap(v, 22, true);
+            }
+            case "hotspot": {
+                hotIcon = U.icon(c, R.drawable.ic_hot, U.MUTED);
+                v = hotIcon;
+                v.setOnClickListener(x -> InfoPanels.quick("hotspot"));
+                v.setOnLongClickListener(x -> {
+                    Status.tetherSettings(c);
+                    return true;
+                });
+                return wrap(v, 22, false);
+            }
+            case "tailscale": {
+                tsIcon = U.icon(c, R.drawable.ic_vpnkey, U.MUTED);
+                v = tsIcon;
+                v.setOnClickListener(x -> InfoPanels.quick("tailscale"));
+                v.setOnLongClickListener(x -> {
+                    Apps.launchPkg(c, Status.TS_PKG);
+                    return true;
+                });
+                return wrap(v, 22, false);
+            }
+            default:
+                return null;
+        }
+        return v;
+    }
+
+    /** Give small icons a bigger tap area. */
+    private View wrap(View v, float h, boolean wrapWidth) {
+        android.widget.FrameLayout f = new android.widget.FrameLayout(c);
+        f.addView(v, new android.widget.FrameLayout.LayoutParams(wrapWidth ? U.WRAP : U.u(h), U.u(h), Gravity.CENTER));
+        f.setPadding(U.u(10), U.u(2), U.u(10), U.u(2));
+        f.setOnClickListener(x -> v.performClick());
+        f.setOnLongClickListener(x -> v.performLongClick());
+        return f;
+    }
+
+    void updateStatus() {
+        if (cell != null) cell.setState(!Status.sim, Status.cellLevel, Status.netType, Status.dataOn);
+        if (wifi != null) {
+            int st = !Status.wifiOn ? StatusIcons.WifiIcon.OFF : Status.wifiConnected ? StatusIcons.WifiIcon.CONNECTED : StatusIcons.WifiIcon.SCANNING;
+            wifi.setState(st, Status.wifiLevel);
+        }
+        if (hotIcon != null) hotIcon.setColorFilter(Status.hotspotOn ? U.ACCENT : U.MUTED);
+        if (tsIcon != null) tsIcon.setColorFilter(Status.vpnOn && Status.tailscaleInstalled() ? U.GREEN : U.MUTED);
+        updateGps();
+    }
+
+    void updateGps() {
+        if (gps == null) return;
+        if (!Loc.hasPermission() || !Loc.gpsEnabled()) gps.setState(StatusIcons.GpsIcon.OFF, -1);
+        else if (Loc.fresh()) gps.setState(StatusIcons.GpsIcon.FIX, Loc.satsUsed);
+        else gps.setState(StatusIcons.GpsIcon.SEARCHING, Loc.satsVisible);
+    }
+
+    void updateWeather() {
+        if (wIcon == null || !Weather.ok) return;
+        wIcon.setImageResource(Weather.icon(Weather.code, Weather.isDay));
+        Weather.Day d = Weather.today();
+        if (d != null) {
+            wHi.setText(Weather.t(d.hi));
+            wLo.setText(Weather.t(d.lo));
+        }
+    }
+
+    void paused(boolean p) {
+        for (StatusIcons.AnimatedIcon a : animated) a.setPaused(p);
+    }
+}

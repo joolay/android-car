@@ -1,63 +1,44 @@
 # Car Launcher
 
-A home-screen launcher for Android 13 car AI boxes, made for landscape screens.
+A home-screen launcher for Android 13 car AI boxes, designed for **800×480 landscape** screens and running full screen with no status bar.
 
-- **Left quarter:** live dark map (OpenStreetMap) following your GPS with a **Navigate** button on top, and a **Now playing** card below (song, artist, artwork, previous / play-pause / next)
-- **Middle:** **shortcut folders** and a **6-app favourites dock** with an All-apps button
-- **Right edge:** a CarPlay-style status rail with the clock, date, today's high / low and animated **mobile signal, Wi-Fi and GPS** icons
-- On first launch your installed apps are sorted into starter folders (Navigation, Music, Video, Social, Apps, System) and the dock is filled with common car apps
+## The home screen
 
-## Using it
+- **Left:** live dark map with a **Navigate** button. While Google Maps or Waze is navigating, the map tile becomes a full **turn-by-turn card**. Below it, **Now playing** shows full-bleed album art, title, artist and controls, with synced **lyrics** scrolling over the art (from LRCLIB). Tap the lyrics to hide them for that song.
+- **Middle:** a **4×2 grid of tiles**. Each tile is a folder of apps or a widget. Under the tiles is a **news / traffic ticker**, and under that the **dock** with pinned apps, recent apps and All apps.
+- **Right rail (CarPlay style):** clock, weather, mobile signal, Wi-Fi, GPS satellites, hotspot and Tailscale. The settings gear and the voice assistant mic sit at the bottom.
+
+## Widgets
+
+Car Connect (CarPlay / Android Auto bridge such as Speed Play, mirror link, or back to the native car screen) · Speed · Trip · Heading · Weather · Go to (Home / Work) · Quick dial · Contact (photo tile) · Next prayer · Prayer times · Qibla · Home Assistant
+
+## How to use it
 
 | Do this | To |
 |---|---|
-| Tap a folder | Open it |
-| Long-press a folder | Edit apps, rename, move to front, delete |
-| Tap the **+ New** tile after your folders | Create a folder and pick its apps |
-| Tap the **Now playing** card | Open the music app (or, the first time, the notification-access screen) |
-| Tap an empty dock slot (+) | Add an app to the dock |
-| Long-press a dock icon | Replace or remove it |
-| Tap the grid button at the end of the dock | All apps |
-| Long-press an app in All apps | Add to dock / folder, set as Navigate app, app info |
-| Tap **Navigate** | Open your navigation app (Google Maps, Waze, …) |
-| Long-press **Navigate** | Choose which navigation app it opens |
+| Long-press any tile | Edit mode: drag tiles to reorder, tap **⋯** to replace with a widget, edit a folder or change widget settings. Tap **Done** when finished |
+| Tap the ticker | Switch between News and Traffic; the ring shows when it goes back to automatic |
+| Long-press a dock app | Pin, unpin, hide or auto start it |
+| All apps → **Select** | New folder, Add to folder, Auto start, Pin, Hide |
+| Tap a rail icon | Quick card (calendar, weather forecast, signal, GPS, hotspot, Tailscale) |
+| Long-press a rail icon | Open its full Android settings or app |
+| Tap the gear | Settings: quick toggles, brightness, assistant, wallpaper, and everything else |
 
-The map and weather need internet (box hotspot or SIM) and location permission. Tap ◎ to re-centre after panning. Weather shows today's low / high from Open-Meteo (no account needed) and refreshes every 20 minutes.
+## First-time setup on the box
 
-**Song info:** Android only shares what's playing with apps that have *notification access*. Tap the Now playing card once and switch on **Car Launcher** in that list. The play/skip buttons work even without it; only the song title and artwork need it. Some car boxes hide this setting; if so, the buttons still control your music.
+1. Install the APK and press Home; choose **Car Launcher** and **Always**.
+2. Allow location, phone, calendar and contacts when asked.
+3. Tap **Now playing** once and switch on **Car Launcher** under notification access (needed for song info, lyrics and the turn-by-turn card).
+4. Optional: Settings → **Usage access** for better recent apps, and **Modify system settings** for the brightness slider.
 
-**Status icons** (no text):
-- Mobile bars: white = signal strength, with the network type beside them (LTE, 5G, H+, 3G…) in white when mobile data is connected and grey when it isn't; a sweeping animation = SIM found but searching for signal; slashed = no SIM.
-- Wi-Fi arcs: white = signal strength; arcs pulsing = Wi-Fi on but not connected; slashed = Wi-Fi off.
-- Satellite: green with signal waves streaming out = GPS fix (number = satellites in use); amber and rocking = searching (number = satellites in view); grey and slashed = GPS off or no permission.
+## Good to know
 
-## Getting the APK
+- Android 13 doesn't let apps switch Wi-Fi, Bluetooth or the hotspot directly, so those toggles open Android's own panels. Tailscale connects directly.
+- Spotify doesn't share its lyrics with other apps; the **Spotify lyrics** badge opens Spotify.
+- Hijri dates can differ by a day from your local moon sighting; adjust in Settings → Calendar.
+- Most car boxes have no compass, so the Qibla tile shows the bearing from North while parked and turns with your GPS heading while driving.
+- Home Assistant needs a URL the box can reach (Tailscale or a remote URL) and a long-lived access token.
 
-### Option A — free cloud build on GitHub (works from a phone)
+## Building
 
-1. Sign in at github.com and create a new **public or private repository** (any name).
-2. **Add file → Upload files** and upload `CarLauncher.zip` exactly as it is (don't unzip it). Commit.
-3. **Add file → Create new file**, name it `.github/workflows/build.yml`, paste the contents of `build.yml`, commit.
-4. Open the **Actions** tab and wait ~5 minutes for the green tick.
-5. Open **Releases** (right side of the repo's main page) and download `CarLauncher.apk`.
-
-Do step 2 before step 3, so the first build has the project to work with. If a build fails, re-run it from the Actions tab.
-
-### Option B — Android Studio on a PC
-
-Unzip, open the folder in Android Studio, let it sync, then **Build → Build App Bundle(s) / APK(s) → Build APK(s)**. The APK lands in `app/build/outputs/apk/debug/`.
-
-## Installing on the car box
-
-1. Copy `CarLauncher.apk` to the box (USB stick, download it in the box's browser, or `adb install CarLauncher.apk`).
-2. Open it with the file manager and allow "install unknown apps" when asked.
-3. Open **Car Launcher** once to test it, allow location and phone access (phone access lets it show LTE / 5G), and tap the Now playing card to allow notification access.
-4. Press the Home button and choose **Car Launcher → Always**, or set it in **Settings → Apps → Default apps → Home app**.
-
-To go back to the old launcher, change the Home app in the same settings screen, or uninstall Car Launcher.
-
-## Notes
-
-- Built with plain Android (no extra libraries); minSdk 26, targetSdk 33.
-- Folders and dock are saved on the device; uninstalled apps simply disappear from them.
-- Map tiles © OpenStreetMap contributors.
+Every push to `main` builds the APK with GitHub Actions and publishes it under **Releases** as `CarLauncher.apk`.
