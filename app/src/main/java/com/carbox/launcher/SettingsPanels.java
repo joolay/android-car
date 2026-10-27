@@ -46,13 +46,106 @@ final class SettingsPanels {
     // ------------------------------------------------------------------ main
 
     static void main() {
-        Sheets.show(SettingsPanels::mainPage);
+        Sheets.showFull(SettingsPanels::mainPage); // full screen; its pages open on top of it
+    }
+
+    /** One setting: icon, name and current value, all the same size. */
+    private static View tile(Context c, int icon, int color, String title, String value, Runnable click) {
+        LinearLayout r = U.row(c);
+        r.setBackground(U.round(U.CARD2, 14));
+        U.pad(r, 12, 10, 10, 10);
+        r.setMinimumHeight(U.u(64));
+        FrameLayout ic = new FrameLayout(c);
+        ic.setBackground(U.oval(color));
+        ic.addView(U.icon(c, icon, U.TEXT), U.flpu(18, 18, Gravity.CENTER));
+        r.addView(ic, U.lpu(34, 34));
+        LinearLayout t = U.col(c);
+        t.addView(U.line(c, title, 14, U.TEXT, true));
+        if (value != null && !value.isEmpty()) t.addView(U.line(c, value, 12, U.SUB, false), top(2));
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+        tl.leftMargin = U.u(10);
+        r.addView(t, tl);
+        r.addView(U.text(c, "›", 18, U.MUTED, false));
+        r.setOnClickListener(v -> click.run());
+        U.press(r);
+        return r;
     }
 
     private static View mainPage() {
         Context c = c();
-        LinearLayout b = U.col(c);
+        LinearLayout card = U.col(c);
+        card.setBackground(U.round(U.CARD, 18));
+        U.pad(card, 20, 14, 20, 14);
+        card.setLayoutParams(Sheets.centered(784, 464));
+        LinearLayout head = U.row(c);
+        head.addView(U.line(c, "Settings", 20, U.TEXT, true), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+        View x = U.icon(c, R.drawable.ic_x, U.SUB);
+        x.setOnClickListener(v -> Sheets.close());
+        head.addView(x, U.lpu(26, 26));
+        card.addView(head);
 
+        int railOn = 0;
+        for (String[] e : Rail.order()) if ("1".equals(e[1])) railOn++;
+        String w = Store.str(Store.WALL, "black");
+        String as = Store.str(Store.ASSIST, "gemini"), ext = Store.str(Store.ASSIST_PKG, null);
+        final int BLUE = 0xFF1F4E9A, GREEN = 0xFF1F7A46, AMBER = 0xFF8A5A10, PURPLE = 0xFF5A3A9A, GREY = U.CARD3;
+        Object[][][] groups = {
+                {{"Home screen"},
+                        {R.drawable.ic_photo, PURPLE, "Wallpaper", "image".equals(w) ? "Image" : "color".equals(w) ? "Colour" : "Black", (Runnable) SettingsPanels::wallpaper},
+                        {R.drawable.ic_drag, PURPLE, "Right bar icons", railOn + " of " + Rail.IDS.length + " shown", (Runnable) SettingsPanels::railOrder},
+                        {R.drawable.ic_hide, PURPLE, "Hidden apps", Apps.hidden().isEmpty() ? "None" : Apps.hidden().size() + " hidden", (Runnable) SettingsPanels::hiddenApps},
+                        {R.drawable.ic_sun, PURPLE, "Splash screen", Store.flag(Store.SPLASH_ON, false) ? "On" : "Off", (Runnable) SettingsPanels::splash}},
+                {{"Driving"},
+                        {R.drawable.ic_navarrow, GREEN, "Navigation app", Actions.navPkg() == null ? "Choose" : Apps.label(Actions.navPkg()), (Runnable) SettingsPanels::navApp},
+                        {R.drawable.ic_pin, GREEN, "Map", MapPanel.google() ? "Google Maps" : "OpenStreetMap", (Runnable) SettingsPanels::map},
+                        {R.drawable.ic_car, GREEN, "Driving timer", Rest.on() ? "Break after " + U.dur(Rest.limitMin() * 60000L) : "Off", (Runnable) Rest::setup},
+                        {R.drawable.ic_bell, GREEN, "News and traffic", tickerLabel(), (Runnable) SettingsPanels::news}},
+                {{"Music and start-up"},
+                        {R.drawable.ic_music, AMBER, "Music", Music.label() + (Store.flag(Store.MUSIC_AUTOPLAY, false) ? " · auto play" : ""), (Runnable) SettingsPanels::music},
+                        {R.drawable.ic_bolt, AMBER, "Auto start", Actions.autostart().length() + " apps", (Runnable) AppPanels::autostart},
+                        {R.drawable.ic_wifi, AMBER, "Connections at start", connLabel(), (Runnable) SettingsPanels::connections}},
+                {{"Phone and voice"},
+                        {R.drawable.ic_phone, BLUE, "Calls", Widgets.callsLabel(), (Runnable) SettingsPanels::calls},
+                        {R.drawable.ic_mic, BLUE, "Assistant", "external".equals(as) && ext != null ? Apps.label(ext) : "Gemini", (Runnable) SettingsPanels::assistant},
+                        {R.drawable.ic_apps, BLUE, "Keyboard", "Car keyboard" + (CarIME.isDefault(c) ? " · on" : ""), (Runnable) SettingsPanels::keyboard}},
+                {{"Time, calendar and faith"},
+                        {R.drawable.ic_calendar, GREY, "Units and clock", (Store.flag(Store.CELSIUS, true) ? "°C" : "°F") + " · " + (Store.flag(Store.H24, true) ? "24 h" : "12 h"), (Runnable) SettingsPanels::units},
+                        {R.drawable.ic_calendar, GREY, "Calendar", Cal.altLabel(), (Runnable) SettingsPanels::calendar},
+                        {R.drawable.ic_moon, GREY, "Faith add-ons", Faith.label(), (Runnable) Faith::picker},
+                        Faith.islam() ? new Object[]{R.drawable.ic_kaaba, GREY, "Prayer times", Prayer.METHODS[Store.num(Store.PRAY_METHOD, 0)], (Runnable) SettingsPanels::prayerTimes} : null},
+                {{"System"},
+                        {R.drawable.ic_check, GREY, "Set-up checklist", null, (Runnable) SettingsPanels::setupChecklist},
+                        {R.drawable.ic_bolt, GREY, "Startup optimiser", null, (Runnable) Optimiser::show},
+                        {R.drawable.ic_back, GREY, "Floating back button", BackButtonService.enabled(c) ? "On" : "Off", (Runnable) SettingsPanels::floatingBack},
+                        {R.drawable.ic_gear, GREY, "Android settings", null, (Runnable) SettingsPanels::androidSettings}}};
+
+        LinearLayout list = U.col(c);
+        for (Object[][] g : groups) {
+            TextView h = U.line(c, ((String) g[0][0]).toUpperCase(java.util.Locale.ROOT), 11, U.SUB, true);
+            h.setLetterSpacing(0.08f);
+            list.addView(h, top(list.getChildCount() == 0 ? 2 : 14));
+            List<View> cells = new ArrayList<>();
+            for (int k = 1; k < g.length; k++) {
+                Object[] it = g[k];
+                if (it == null) continue;
+                cells.add(tile(c, (Integer) it[0], (Integer) it[1], (String) it[2], (String) it[3], (Runnable) it[4]));
+            }
+            list.addView(AppPanels.grid(c, cells, 3, 8), top(6));
+        }
+        android.widget.ScrollView sv = new android.widget.ScrollView(c);
+        sv.setVerticalScrollBarEnabled(false);
+        sv.addView(list);
+        LinearLayout.LayoutParams sl = U.weight(1, false);
+        sl.topMargin = U.u(8);
+        card.addView(sv, sl);
+        return card;
+    }
+
+    /** Assistant for the voice button. */
+    static void assistant() {
+        open(() -> {
+            Context c = c();
+            LinearLayout b = U.col(c);
         // assistant
         String as = Store.str(Store.ASSIST, "gemini");
         String ext = Store.str(Store.ASSIST_PKG, null);
@@ -63,6 +156,16 @@ final class SettingsPanels {
                 }),
                 U.seg(c, "external".equals(as) && ext != null ? "External · " + Apps.label(ext) + " ›" : "External ›", "external".equals(as), SettingsPanels::assistantPicker)));
 
+            b.addView(U.text(c, "Tip: hold the voice button on the right bar to pick any installed assistant for one go.", 12, U.SUB, false), top(10));
+            return Sheets.panel("Assistant", b, 560, 260);
+        });
+    }
+
+    /** Wallpaper: black, a colour or an image. */
+    static void wallpaper() {
+        open(() -> {
+            Context c = c();
+            LinearLayout b = U.col(c);
         // wallpaper
         String w = Store.str(Store.WALL, "black");
         View swatch = new View(c);
@@ -84,56 +187,8 @@ final class SettingsPanels {
                     if (MainActivity.I != null) MainActivity.I.pickWallpaperImage();
                 })));
 
-        // two-column list
-        int railOn = 0;
-        for (String[] e : Rail.order()) if ("1".equals(e[1])) railOn++;
-        String[][] items = {
-                {"Navigation app", Actions.navPkg() == null ? "Choose" : Apps.label(Actions.navPkg())},
-                {"Map", MapPanel.google() ? "Google Maps" : "OpenStreetMap"},
-                {"Right bar icons", railOn + " of " + Rail.IDS.length + " shown"},
-                {"Hidden apps", Apps.hidden().isEmpty() ? "None" : Apps.hidden().size() + " hidden"},
-                {"News and traffic", tickerLabel()},
-                {"Calls", Widgets.callsLabel()},
-                {"Connections at start", connLabel()},
-                {"Splash screen", Store.flag(Store.SPLASH_ON, false) ? "On" : "Off"},
-                {"Calendar", Cal.altLabel()},
-                {"Faith add-ons", Faith.label()},
-                {"Prayer times", Prayer.METHODS[Store.num(Store.PRAY_METHOD, 0)]},
-                {"Units and clock", (Store.flag(Store.CELSIUS, true) ? "°C" : "°F") + " · " + (Store.flag(Store.H24, true) ? "24 h" : "12 h")},
-                {"Auto start", Actions.autostart().length() + " apps"},
-                {"Music", Music.label() + (Store.flag(Store.MUSIC_AUTOPLAY, false) ? " · auto play" : "")},
-                {"Keyboard", "Car keyboard" + (CarIME.isDefault(c) ? " · on" : "")},
-                {"Android settings", ""}};
-        Runnable[] actions = {SettingsPanels::navApp, SettingsPanels::map, SettingsPanels::railOrder, SettingsPanels::hiddenApps, SettingsPanels::news,
-                SettingsPanels::calls, SettingsPanels::connections, SettingsPanels::splash, SettingsPanels::calendar, Faith::picker, SettingsPanels::prayerTimes,
-                SettingsPanels::units, AppPanels::autostart, SettingsPanels::music, SettingsPanels::keyboard, SettingsPanels::androidSettings};
-        // faith add-ons: hide prayer settings unless Islam is selected
-        if (!Faith.islam()) {
-            List<String[]> li = new ArrayList<>();
-            List<Runnable> la = new ArrayList<>();
-            for (int i = 0; i < items.length; i++) if (!"Prayer times".equals(items[i][0])) {
-                li.add(items[i]);
-                la.add(actions[i]);
-            }
-            items = li.toArray(new String[0][]);
-            actions = la.toArray(new Runnable[0]);
-        }
-        LinearLayout cols = U.row(c);
-        cols.setGravity(Gravity.TOP);
-        LinearLayout l1 = U.col(c), l2 = U.col(c);
-        for (int i = 0; i < items.length; i++) {
-            LinearLayout col = i % 2 == 0 ? l1 : l2;
-            col.addView(U.hr(c));
-            LinearLayout it = Sheets.item(items[i][0], items[i][1].isEmpty() ? null : items[i][1], actions[i]);
-            it.setMinimumHeight(U.u(48)); // finger-sized rows
-            col.addView(it, U.lp(U.MATCH, U.WRAP));
-        }
-        // WRAP heights: MATCH_PARENT columns inside the scrolling panel measured as zero height on the box
-        cols.addView(l1, new LinearLayout.LayoutParams(0, U.WRAP, 1));
-        cols.addView(U.gap(c, 28, 1));
-        cols.addView(l2, new LinearLayout.LayoutParams(0, U.WRAP, 1));
-        b.addView(cols, top(12));
-        return Sheets.panel("Settings", b, 640, 440);
+            return Sheets.panel("Wallpaper", b, 560, 240);
+        });
     }
 
     private static LinearLayout.LayoutParams margin() {
