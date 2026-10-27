@@ -102,7 +102,7 @@ final class SettingsPanels {
                 {"Auto start", Actions.autostart().length() + " apps"},
                 {"Night dimming", Store.flag(Store.NIGHT, false) ? "On" : "Off"},
                 {"Music", Music.label() + (Store.flag(Store.MUSIC_AUTOPLAY, false) ? " · auto play" : "")},
-                {"Bluetooth settings", ""},
+                {"Keyboard", "Car keyboard" + (CarIME.isDefault(c) ? " · on" : "")},
                 {"Android settings", ""}};
         Runnable[] actions = {SettingsPanels::navApp, SettingsPanels::map, SettingsPanels::railOrder, SettingsPanels::hiddenApps, SettingsPanels::news,
                 SettingsPanels::calls, SettingsPanels::connections, SettingsPanels::splash, SettingsPanels::calendar, SettingsPanels::prayerTimes,
@@ -110,13 +110,7 @@ final class SettingsPanels {
             Store.put(Store.NIGHT, !Store.flag(Store.NIGHT, false));
             if (MainActivity.I != null) MainActivity.I.applyNight();
             Sheets.refresh();
-        }, SettingsPanels::music, () -> {
-            Status.open(c, Settings.ACTION_BLUETOOTH_SETTINGS);
-            Sheets.close();
-        }, () -> {
-            Status.open(c, Settings.ACTION_SETTINGS);
-            Sheets.close();
-        }};
+        }, SettingsPanels::music, SettingsPanels::keyboard, SettingsPanels::androidSettings};
         LinearLayout cols = U.row(c);
         cols.setGravity(Gravity.TOP);
         LinearLayout l1 = U.col(c), l2 = U.col(c);
@@ -337,6 +331,70 @@ final class SettingsPanels {
                 Sheets.refresh();
             })));
             return Sheets.panel("Default music app", b, 560, 420);
+        });
+    }
+
+    // ------------------------------------------------------------------ keyboard & Android settings
+
+    static Sheets.Page keyboardPage;
+
+    static void keyboard() {
+        open(keyboardPage = () -> {
+            Context c = c();
+            LinearLayout b = U.col(c);
+            b.addView(U.text(c, "Use the big Car keyboard (with voice typing) in every app on the box, not just the launcher.", 13, U.SUB, false));
+            boolean en = CarIME.enabled(c), def = CarIME.isDefault(c);
+            boolean mic = c.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            b.addView(step(c, 1, "Turn on Car keyboard", "In Android's keyboard list. Android shows a standard warning for any keyboard; tap OK.", en ? "Done" : "Turn on", en, () ->
+                    Status.open(c, Settings.ACTION_INPUT_METHOD_SETTINGS)), top(10));
+            b.addView(step(c, 2, "Make it the default", "Pick \"Car keyboard\" from the list Android shows", def ? "Done" : "Choose", def, () -> {
+                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) c.getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) imm.showInputMethodPicker();
+                U.ui.postDelayed(Sheets::refresh, 4000);
+            }));
+            b.addView(step(c, 3, "Allow the microphone", "For the Voice button", mic ? "Done" : "Allow", mic, () -> {
+                if (MainActivity.I != null) MainActivity.I.requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 54);
+            }));
+            b.addView(U.text(c, "To switch back later, choose your old keyboard the same way.", 12, U.SUB, false), top(12));
+            return Sheets.panel("Keyboard", b, 640, 432);
+        });
+    }
+
+    private static View step(Context c, int n, String title, String sub, String btn, boolean done, Runnable click) {
+        LinearLayout r = U.row(c);
+        r.setMinimumHeight(U.u(64));
+        TextView num = U.text(c, done ? "✓" : String.valueOf(n), 14, U.TEXT, true);
+        num.setGravity(Gravity.CENTER);
+        num.setBackground(U.oval(done ? U.DGREEN : U.CARD3));
+        r.addView(num, U.lpu(30, 30));
+        LinearLayout t = U.col(c);
+        t.addView(U.text(c, title, 15, U.TEXT, false));
+        t.addView(U.text(c, sub, 12, U.SUB, false), top(3));
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+        tl.setMargins(U.u(14), 0, U.u(12), 0);
+        r.addView(t, tl);
+        r.addView(U.button(c, btn, !done, click));
+        LinearLayout w = U.col(c);
+        w.addView(U.hr(c));
+        w.addView(r);
+        return w;
+    }
+
+    static void androidSettings() {
+        open(() -> {
+            Context c = c();
+            LinearLayout b = U.col(c);
+            String[][] items = {{"All Android settings", Settings.ACTION_SETTINGS}, {"Bluetooth", Settings.ACTION_BLUETOOTH_SETTINGS},
+                    {"Wi-Fi", Settings.ACTION_WIFI_SETTINGS}, {"Sound", Settings.ACTION_SOUND_SETTINGS}, {"Display", Settings.ACTION_DISPLAY_SETTINGS},
+                    {"Home app", Settings.ACTION_HOME_SETTINGS}, {"Apps", Settings.ACTION_APPLICATION_SETTINGS}};
+            for (String[] it : items) {
+                b.addView(Sheets.item(it[0], null, () -> {
+                    Status.open(c, it[1]);
+                    Sheets.close();
+                }));
+                b.addView(U.hr(c));
+            }
+            return Sheets.panel("Android settings", b, 520, 432);
         });
     }
 

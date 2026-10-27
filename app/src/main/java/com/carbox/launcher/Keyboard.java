@@ -56,6 +56,7 @@ final class Keyboard {
         shift = false;
         ViewGroup root = MainActivity.I.findViewById(android.R.id.content);
         shown = new FrameLayout(MainActivity.I);
+        bubbleHost = null;
         root.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         render();
     }
@@ -204,15 +205,20 @@ final class Keyboard {
 
     /** Hold backspace to keep deleting. */
     private static void repeat(View v) {
+        repeat(v, Keyboard::backspace);
+    }
+
+    /** Hold to repeat (backspace). */
+    static void repeat(View v, Runnable action) {
         final Runnable[] r = new Runnable[1];
         r[0] = () -> {
-            backspace();
+            action.run();
             U.ui.postDelayed(r[0], 70);
         };
         v.setOnTouchListener((view, e) -> {
             if (e.getAction() == MotionEvent.ACTION_DOWN) {
                 view.setAlpha(0.7f);
-                backspace();
+                action.run();
                 U.ui.postDelayed(r[0], 450);
             } else if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL) {
                 view.setAlpha(1f);
@@ -224,12 +230,12 @@ final class Keyboard {
 
     static final float KEY_H = 66; // 58 du key + 8 du gap, and the gap is touchable too
 
-    private static LinearLayout.LayoutParams weightLp(float w) {
+    static LinearLayout.LayoutParams weightLp(float w) {
         return new LinearLayout.LayoutParams(0, U.MATCH, w);
     }
 
     /** A cell that is touchable edge to edge, with the visible key face inset by 4 du. */
-    private static FrameLayout cell(Context c, View face, int color) {
+    static FrameLayout cell(Context c, View face, int color) {
         FrameLayout f = new FrameLayout(c);
         face.setTag("face");
         face.setBackground(U.round(color, 11));
@@ -240,7 +246,7 @@ final class Keyboard {
         return f;
     }
 
-    private static View key(Context c, String s, Runnable r) {
+    static View key(Context c, String s, Runnable r) {
         TextView face = U.text(c, s, s.length() > 1 ? 17 : 25, U.TEXT, false);
         face.setGravity(Gravity.CENTER);
         FrameLayout f = cell(c, face, 0xFF3A4456);
@@ -259,24 +265,27 @@ final class Keyboard {
     }
 
     private static TextView bubbleView;
+    /** Where key bubbles are drawn: the launcher overlay, or the system keyboard's own view. */
+    static FrameLayout bubbleHost;
 
     /** Enlarged copy of the key above your finger, so you can see what you pressed. */
     private static void bubble(View keyView, String s) {
         hideBubble();
-        if (shown == null) return;
-        Context c = shown.getContext();
+        FrameLayout host = bubbleHost != null && bubbleHost.isAttachedToWindow() ? bubbleHost : shown;
+        if (host == null) return;
+        Context c = host.getContext();
         bubbleView = U.text(c, s, 38, U.TEXT, false);
         bubbleView.setGravity(Gravity.CENTER);
         bubbleView.setBackground(U.round(0xFF6B7A95, 14));
         bubbleView.setElevation(U.uf(8));
         int[] k = new int[2], o = new int[2];
         keyView.getLocationInWindow(k);
-        shown.getLocationInWindow(o);
+        host.getLocationInWindow(o);
         int w = U.u(64), h = U.u(76);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, h, Gravity.TOP | Gravity.START);
         lp.leftMargin = Math.max(0, k[0] - o[0] + keyView.getWidth() / 2 - w / 2);
         lp.topMargin = Math.max(0, k[1] - o[1] - h + U.u(10));
-        shown.addView(bubbleView, lp);
+        host.addView(bubbleView, lp);
     }
 
     private static void hideBubble() {
@@ -284,7 +293,7 @@ final class Keyboard {
         bubbleView = null;
     }
 
-    private static View special(Context c, String label, int icon, Runnable r, boolean on) {
+    static View special(Context c, String label, int icon, Runnable r, boolean on) {
         View face;
         if (icon != 0) {
             FrameLayout ff = new FrameLayout(c);

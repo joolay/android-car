@@ -89,6 +89,10 @@ final class Sheets {
         render();
     }
 
+    static Page top() {
+        return stack.isEmpty() ? null : stack.get(stack.size() - 1);
+    }
+
     static int depth() {
         return stack.size();
     }

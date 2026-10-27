@@ -73,6 +73,20 @@
             </intent-filter>
         </activity>
 
+        <!-- "Car keyboard": the big-key keyboard, usable in every app once turned on in Android settings -->
+        <service
+            android:name=".CarIME"
+            android:exported="true"
+            android:label="@string/kb_name"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+
         <!-- Only used to receive "notification access", which lets the Now Playing card read song info -->
         <service
             android:name=".MediaListener"

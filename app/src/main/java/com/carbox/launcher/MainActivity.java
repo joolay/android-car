@@ -254,6 +254,10 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int req, String[] p, int[] r) {
         super.onRequestPermissionsResult(req, p, r);
+        if (req == 54) { // microphone for the Car keyboard
+            Sheets.refresh();
+            return;
+        }
         if (req == Keyboard.REQ_MIC) {
             if (r.length > 0 && r[0] == PackageManager.PERMISSION_GRANTED) Keyboard.micGranted();
             return;
@@ -281,6 +285,8 @@ public class MainActivity extends Activity {
         map.start();
         rail.paused(false);
         dock.render();
+        // back from Android's keyboard settings: show the updated steps
+        if (Sheets.open() && Sheets.top() == SettingsPanels.keyboardPage && SettingsPanels.keyboardPage != null) Sheets.refresh();
         if (pendingAutostart) {
             // back from hotspot settings: now open the auto-start apps
             pendingAutostart = false;

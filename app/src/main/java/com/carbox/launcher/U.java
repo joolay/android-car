@@ -64,6 +64,16 @@ final class U {
         if (S <= 0) S = 1f;
     }
 
+    /** Same scale for a service (the system keyboard), which has no Activity. */
+    static void init(Context c) {
+        DisplayMetrics dm = new DisplayMetrics();
+        ((android.view.WindowManager) c.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRealMetrics(dm);
+        int w = Math.max(dm.widthPixels, dm.heightPixels);
+        int h = Math.min(dm.widthPixels, dm.heightPixels);
+        S = Math.min(w / 800f, h / 480f);
+        if (S <= 0) S = 1f;
+    }
+
     static int u(float v) {
         return Math.round(v * S);
     }
