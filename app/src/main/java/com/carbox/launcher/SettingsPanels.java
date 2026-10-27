@@ -542,11 +542,7 @@ final class SettingsPanels {
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
         tl.setMargins(U.u(14), 0, U.u(12), 0);
         r.addView(t, tl);
-        r.addView(U.button(c, btn, !done, () -> {
-            // remember we left the checklist for an Android page, so coming back reopens it
-            Store.put("setup_return", System.currentTimeMillis());
-            click.run();
-        }));
+        r.addView(U.button(c, btn, !done, click));
         LinearLayout w = U.col(c);
         w.addView(U.hr(c));
         w.addView(r);
