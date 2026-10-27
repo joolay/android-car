@@ -397,7 +397,10 @@ final class SettingsPanels {
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
         tl.setMargins(U.u(14), 0, U.u(12), 0);
         r.addView(t, tl);
-        r.addView(U.button(c, btn, !done, click));
+        r.addView(U.button(c, btn, !done, () -> {
+            Store.put("setup_return", System.currentTimeMillis()); // coming back reopens the checklist
+            click.run();
+        }));
         LinearLayout w = U.col(c);
         w.addView(U.hr(c));
         w.addView(r);
