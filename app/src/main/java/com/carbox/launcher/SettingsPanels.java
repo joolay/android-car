@@ -290,8 +290,16 @@ final class SettingsPanels {
             b.addView(Sheets.switchRow(0, 0, "Play music when the car starts", "Starts straight away, before the splash screen",
                     Store.flag(Store.MUSIC_AUTOPLAY, false), on -> Store.put(Store.MUSIC_AUTOPLAY, on)));
             b.addView(U.hr(c));
-            b.addView(U.text(c, "If nothing is loaded, play", 15, U.TEXT, false), top(12));
-            b.addView(U.text(c, "A playlist name (searched in your music app) or a playlist link you've shared from the app", 12, U.SUB, false), top(3));
+            String sw = Music.startWith();
+            b.addView(Sheets.row("At start, play", U.seg(c, "My playlist", "playlist".equals(sw), () -> {
+                Store.put("music_start", "playlist");
+                Sheets.refresh();
+            }), U.seg(c, "Whatever played last", "last".equals(sw), () -> {
+                Store.put("music_start", "last");
+                Sheets.refresh();
+            })), top(8));
+            b.addView(U.text(c, "My playlist", 15, U.TEXT, false), top(12));
+            b.addView(U.text(c, "\"Liked Songs\", a playlist name, or a playlist link shared from the app. Also used if nothing is loaded.", 12, U.SUB, false), top(3));
             LinearLayout pr = U.row(c);
             final String[] pl = {Store.str(Store.MUSIC_PLAYLIST, "")};
             pr.addView(Widgets.field("e.g. Liked Songs", pl[0], false, v -> {

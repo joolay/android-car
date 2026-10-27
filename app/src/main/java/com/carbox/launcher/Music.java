@@ -70,6 +70,11 @@ final class Music {
         if (Math.abs(Store.lng("music_boot", 0) - bootAt) < 60000) return;
         Store.put("music_boot", bootAt);
         if (musicActive(a)) return; // something is already playing (e.g. the phone over Bluetooth)
+        // the chosen playlist (e.g. Liked Songs) comes first when set to start with it
+        if ("playlist".equals(startWith())) {
+            playPlaylist(a, true);
+            return;
+        }
         resume(a);
         // the music app may still be waking up after boot: try once more, then fall back to the playlist
         U.ui.postDelayed(() -> {
@@ -115,11 +120,65 @@ final class Music {
      * a link opens that playlist and presses play. Android only allows this by briefly opening the
      * music app, so afterwards the launcher comes back to the front.
      */
+    /** "playlist" (start with the chosen playlist) or "last" (carry on with whatever played last). */
+    static String startWith() {
+        return Store.str("music_start", Store.str(Store.MUSIC_PLAYLIST, "").trim().isEmpty() ? "last" : "playlist");
+    }
+
+    /** Spotify's own address for a few names people type, so it plays that exact list. */
+    private static String spotifyUri(String q) {
+        String l = q.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z ]", "").trim();
+        if (l.equals("liked songs") || l.equals("liked") || l.equals("my liked songs") || l.equals("favourites") || l.equals("favorites"))
+            return "spotify:collection:tracks";
+        if (q.startsWith("spotify:")) return q;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("open\\.spotify\\.com/(playlist|album|artist|track)/([A-Za-z0-9]+)").matcher(q);
+        if (m.find()) return "spotify:" + m.group(1) + ":" + m.group(2);
+        return null;
+    }
+
     static void playPlaylist(Context c, boolean comeBack) {
         String q = Store.str(Store.MUSIC_PLAYLIST, "").trim();
         if (q.isEmpty()) return;
         String p = pkg();
+        // Best way: ask the music app's media session directly (no screen switching).
+        // At start-up the app may not be running yet, so wake it and wait for its session.
+        String target = p != null ? p : "com.spotify.music";
+        String uri = "com.spotify.music".equals(target) ? spotifyUri(q) : (q.contains("://") || q.contains(":") && !q.contains(" ") ? q : null);
+        if (viaSession(c, target, q, uri, comeBack, 0)) return;
+        playByOpening(c, q, p, comeBack);
+    }
+
+    private static boolean viaSession(Context c, String target, String q, String uri, boolean comeBack, int tries) {
+        android.media.session.MediaController m = MediaListener.controllerFor(target);
+        if (m != null) {
+            try {
+                if (uri != null) m.getTransportControls().playFromUri(Uri.parse(uri), null);
+                else m.getTransportControls().playFromSearch(q, null);
+                // check it took: if nothing plays within a few seconds, fall back to opening the app
+                U.ui.postDelayed(() -> {
+                    if (!musicActive(c)) playByOpening(c, q, pkg(), comeBack);
+                }, 5000);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        if (tries == 0) {
+            if (!Apps.installed(target)) return false;
+            mediaButton(c, target); // wakes the app (it may start its last song for a moment)
+        }
+        if (tries >= 8) return false;
+        U.ui.postDelayed(() -> {
+            if (!viaSession(c, target, q, uri, comeBack, tries + 1) && tries + 1 >= 8) playByOpening(c, q, pkg(), comeBack);
+        }, 1000);
+        return true; // still waiting for the session
+    }
+
+    /** Older way: open the playlist in the music app, press play, then come back to the launcher. */
+    private static void playByOpening(Context c, String q, String p, boolean comeBack) {
         Intent i;
+        String su = "com.spotify.music".equals(p) || p == null ? spotifyUri(q) : null;
+        if (su != null) q = su;
         boolean link = q.startsWith("http") || q.contains(":playlist:") || q.startsWith("spotify:");
         if (link) {
             i = new Intent(Intent.ACTION_VIEW, Uri.parse(q));

@@ -28,6 +28,17 @@ public class MediaListener extends NotificationListenerService {
     // ------------------------------------------------------------------ media
 
     static MediaController controller;
+
+    /** The media session of one app (e.g. Spotify), or null if it has none right now. */
+    static MediaController controllerFor(String pkg) {
+        if (pkg == null) return null;
+        if (controller != null && pkg.equals(controller.getPackageName())) return controller;
+        try {
+            if (msm != null) for (MediaController m : msm.getActiveSessions(component(ctx))) if (pkg.equals(m.getPackageName())) return m;
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
     private static final List<Runnable> mediaListeners = new ArrayList<>();
     private static MediaSessionManager msm;
     private static final MediaSessionManager.OnActiveSessionsChangedListener sessionsChanged = MediaListener::pick;
