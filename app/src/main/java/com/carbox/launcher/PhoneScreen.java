@@ -46,7 +46,9 @@ final class PhoneScreen {
             shown = new FrameLayout(a);
             shown.setClickable(true);
             shown.setBackgroundColor(U.BG);
-            ((ViewGroup) a.findViewById(android.R.id.content)).addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            shown.setBackground(U.round(U.BG, 16));
+            // inside the tile area, under any open panel
+            a.tileArea.addView(shown, a.tileArea.indexOfChild(a.sheetHost), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         }
         Store.put("phone_seen", true);
         render();
@@ -65,22 +67,22 @@ final class PhoneScreen {
         shown.removeAllViews();
         LinearLayout row = U.row(c);
         row.setGravity(Gravity.TOP);
-        U.pad(row, 12);
+        U.pad(row, 0);
 
         // tabs
         LinearLayout tabs = U.col(c);
         String[][] t = {{"favourites", "Favourites"}, {"recents", "Recents"}, {"contacts", "Contacts"}, {"keypad", "Keypad"}};
         for (String[] x : t) {
-            TextView b = U.text(c, x[1], 16, U.TEXT, x[0].equals(tab));
+            TextView b = U.text(c, x[1], 14, U.TEXT, x[0].equals(tab));
             b.setGravity(Gravity.CENTER_VERTICAL);
-            U.pad(b, 16, 0, 8, 0);
+            U.pad(b, 12, 0, 6, 0);
             b.setBackground(U.round(x[0].equals(tab) ? U.ACCENT : U.CARD2, 14));
             b.setOnClickListener(v -> {
                 tab = x[0];
                 render();
             });
-            LinearLayout.LayoutParams bl = U.lpu(U.MATCH, 62);
-            bl.bottomMargin = U.u(8);
+            LinearLayout.LayoutParams bl = U.lpu(U.MATCH, 52);
+            bl.bottomMargin = U.u(6);
             tabs.addView(b, bl);
         }
         tabs.addView(new View(c), U.weight(1, false));
@@ -88,13 +90,13 @@ final class PhoneScreen {
         TextView via = U.text(c, "Calls go through\n" + (Store.str(Store.CALLS, "bt").equals("bt") ? (bt == null ? "Bluetooth" : Apps.label(bt)) : Widgets.callsLabel()), 11, U.SUB, false);
         via.setPadding(U.u(4), 0, 0, U.u(4));
         tabs.addView(via);
-        row.addView(tabs, U.lpu(150, U.MATCH));
+        row.addView(tabs, U.lpu(104, U.MATCH));
 
         LinearLayout body = U.col(c);
         body.setBackground(U.round(U.CARD, 18));
-        U.pad(body, 20, 14, 20, 14);
+        U.pad(body, 12, 10, 12, 10);
         LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(0, U.MATCH, 1);
-        bl.leftMargin = U.u(12);
+        bl.leftMargin = U.u(8);
         row.addView(body, bl);
         shown.addView(row, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
 
@@ -281,7 +283,7 @@ final class PhoneScreen {
         // left: the number, a contact match, then backspace and call
         LinearLayout left = U.col(c);
         left.setGravity(Gravity.CENTER);
-        display = U.line(c, "", 36, U.TEXT, true);
+        display = U.line(c, "", 26, U.TEXT, true);
         display.setGravity(Gravity.CENTER);
         display.setHint("Enter a number");
         display.setHintTextColor(U.MUTED);
@@ -300,7 +302,7 @@ final class PhoneScreen {
             if (number.length() > 0) dial(number.toString());
         });
         U.press(call);
-        actions.addView(call, U.lpu(80, 80));
+        actions.addView(call, U.lpu(64, 64));
         FrameLayout del = new FrameLayout(c);
         del.setBackground(U.oval(U.CARD2));
         del.addView(U.icon(c, R.drawable.ic_backspace, U.TEXT2), U.flpu(26, 26, Gravity.CENTER));
@@ -313,10 +315,10 @@ final class PhoneScreen {
             updateNumber(c);
             return true;
         });
-        LinearLayout.LayoutParams dl = U.lpu(56, 56);
-        dl.leftMargin = U.u(22);
+        LinearLayout.LayoutParams dl = U.lpu(48, 48);
+        dl.leftMargin = U.u(14);
         actions.addView(del, dl);
-        left.addView(actions, Widgets.top(28));
+        left.addView(actions, Widgets.top(18));
         row.addView(left, new LinearLayout.LayoutParams(0, U.MATCH, 1));
 
         // right: a standard 3 × 4 keypad, digits centred with their letters underneath
@@ -330,7 +332,7 @@ final class PhoneScreen {
                 LinearLayout b = U.col(c);
                 b.setGravity(Gravity.CENTER);
                 b.setBackground(U.round(U.CARD2, 18));
-                TextView d = U.text(c, key[0], 28, U.TEXT, false);
+                TextView d = U.text(c, key[0], 22, U.TEXT, false);
                 d.setGravity(Gravity.CENTER);
                 b.addView(d, new LinearLayout.LayoutParams(U.WRAP, U.WRAP));
                 TextView l = U.text(c, key[1], 10, U.SUB, true);
@@ -347,17 +349,17 @@ final class PhoneScreen {
                     return true;
                 });
                 U.press(b);
-                LinearLayout.LayoutParams kl = new LinearLayout.LayoutParams(0, U.u(64), 1);
-                kl.setMargins(U.u(5), U.u(5), U.u(5), U.u(5));
+                LinearLayout.LayoutParams kl = new LinearLayout.LayoutParams(0, U.u(56), 1);
+                kl.setMargins(U.u(3), U.u(3), U.u(3), U.u(3));
                 kr.addView(b, kl);
             }
             pad.addView(kr);
         }
-        row.addView(pad, U.lpu(330, U.MATCH));
+        row.addView(pad, new LinearLayout.LayoutParams(0, U.MATCH, 1.25f));
         FrameLayout wrap = new FrameLayout(c);
         wrap.addView(row, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         View close = square(c, R.drawable.ic_x, PhoneScreen::hide);
-        wrap.addView(close, U.flpu(44, 44, Gravity.TOP | Gravity.START));
+        wrap.addView(close, U.flpu(36, 36, Gravity.TOP | Gravity.START));
         body.addView(wrap, new LinearLayout.LayoutParams(U.MATCH, U.MATCH));
         updateNumber(c);
     }

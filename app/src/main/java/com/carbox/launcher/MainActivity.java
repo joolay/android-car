@@ -28,6 +28,7 @@ public class MainActivity extends Activity {
     static final int REQ_WALLPAPER = 41;
 
     private FrameLayout root, overlay;
+    FrameLayout tileArea, sheetHost;
     private LinearLayout middle;
     private FrameLayout tickerSlot;
     MapPanel map;
@@ -91,7 +92,12 @@ public class MainActivity extends Activity {
         // middle: tiles, ticker, dock
         middle = U.col(this);
         tiles = new Tiles(this);
-        middle.addView(tiles.view, U.weight(1, false));
+        // the tile area also hosts panels (All apps, settings, phone...) so they stay inside the 2×4 grid
+        tileArea = new FrameLayout(this);
+        tileArea.addView(tiles.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        sheetHost = new FrameLayout(this);
+        tileArea.addView(sheetHost, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        middle.addView(tileArea, U.weight(1, false));
         tickerSlot = new FrameLayout(this);
         ticker = new Ticker(this);
         tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
@@ -113,7 +119,7 @@ public class MainActivity extends Activity {
 
         overlay = new FrameLayout(this);
         root.addView(overlay, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        Sheets.attach(overlay);
+        Sheets.attach(sheetHost, overlay);
         setContentView(root);
         dock.render();
     }

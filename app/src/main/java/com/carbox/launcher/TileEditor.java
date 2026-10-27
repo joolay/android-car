@@ -27,7 +27,7 @@ final class TileEditor {
 
     static void open() {
         page = TileEditor::build;
-        Sheets.show(page);
+        Sheets.showFull(page); // the editor uses the whole screen
     }
 
     private static View build() {

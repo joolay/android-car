@@ -108,8 +108,8 @@ final class AppPanels {
     private static View allAppsPage() {
         Context c = Sheets.ctx();
         LinearLayout card = U.col(c);
-        card.setBackground(U.round(U.CARD, 22));
-        U.pad(card, 24, 18, 24, 16);
+        card.setBackground(U.round(U.CARD, 16));
+        U.pad(card, 16, 12, 16, 12);
         card.setLayoutParams(Sheets.centered(760, 452));
 
         LinearLayout head = U.row(c);
@@ -215,7 +215,7 @@ final class AppPanels {
             cells.add(cell);
         }
         if (cells.isEmpty()) results.addView(U.text(c, "No apps match", 14, U.SUB, false));
-        else results.addView(grid(c, cells, 7, 6));
+        else results.addView(grid(c, cells, 6, 4)); // 6 across fits the tile area
     }
 
     private static void newFolderFromSelection() {

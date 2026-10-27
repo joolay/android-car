@@ -20,7 +20,8 @@ final class Sheets {
         View build();
     }
 
-    private static FrameLayout layer;
+    private static FrameLayout layer, tileLayer, fullLayer;
+    private static boolean full; // true: over the whole screen (tile editor); false: inside the tile grid
     private static Context ctx;
     private static final List<Page> stack = new ArrayList<>();
     private static final List<Runnable> onClose = new ArrayList<>();
@@ -29,9 +30,20 @@ final class Sheets {
     private Sheets() {
     }
 
-    static void attach(FrameLayout overlay) {
-        layer = overlay;
-        ctx = overlay.getContext();
+    /** Panels open inside the 2×4 tile area (tiles); a few full-screen ones use the whole screen (full). */
+    static void attach(FrameLayout tiles, FrameLayout fullScreen) {
+        tileLayer = layer = tiles;
+        fullLayer = fullScreen;
+        ctx = tiles.getContext();
+    }
+
+    /** Like show(), but over the whole screen. */
+    static void showFull(Page p) {
+        stack.clear();
+        stack.add(p);
+        scrimColor = 0x99000000;
+        full = true;
+        render();
     }
 
     static boolean open() {
@@ -43,6 +55,7 @@ final class Sheets {
         stack.clear();
         stack.add(p);
         scrimColor = 0x99000000;
+        full = false;
         render();
     }
 
@@ -67,7 +80,10 @@ final class Sheets {
     static void close() {
         Keyboard.hide();
         stack.clear();
-        if (layer != null) layer.removeAllViews();
+        if (tileLayer != null) tileLayer.removeAllViews();
+        if (fullLayer != null) fullLayer.removeAllViews();
+        full = false;
+        layer = tileLayer;
         for (Runnable r : new ArrayList<>(onClose)) r.run();
         onClose.clear();
     }
@@ -98,7 +114,10 @@ final class Sheets {
     }
 
     private static void render() {
-        if (layer == null) return;
+        FrameLayout target = full ? fullLayer : tileLayer;
+        if (target == null) return;
+        if (layer != null && layer != target) layer.removeAllViews();
+        layer = target;
         layer.removeAllViews();
         View scrim = new View(ctx);
         scrim.setBackgroundColor(scrimColor);
@@ -106,7 +125,8 @@ final class Sheets {
         layer.addView(scrim, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         View page = stack.get(stack.size() - 1).build();
         page.setClickable(true); // swallow taps so they don't close the sheet
-        if (page.getLayoutParams() == null) page.setLayoutParams(centered(640, 440));
+        if (!full) page.setLayoutParams(new FrameLayout.LayoutParams(U.MATCH, U.MATCH)); // fill the tile area exactly
+        else if (page.getLayoutParams() == null) page.setLayoutParams(centered(640, 440));
         layer.addView(page);
     }
 
@@ -115,6 +135,7 @@ final class Sheets {
         stack.clear();
         stack.add(p);
         scrimColor = 0x59000000;
+        full = false;
         render();
     }
 
@@ -136,8 +157,8 @@ final class Sheets {
     /** A titled panel. body is added below the header; scrolls if taller than the panel. */
     static LinearLayout panel(String title, View body, float w, float h) {
         LinearLayout p = U.col(ctx);
-        p.setBackground(U.round(U.CARD, 22));
-        U.pad(p, 30, 22, 30, 22);
+        p.setBackground(U.round(U.CARD, 16)); // same corners as the tiles it covers
+        U.pad(p, 20, 14, 20, 14);
         p.setLayoutParams(centered(w, h));
 
         LinearLayout head = U.row(ctx);
