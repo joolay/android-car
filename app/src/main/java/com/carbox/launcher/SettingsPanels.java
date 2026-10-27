@@ -884,6 +884,14 @@ final class SettingsPanels {
             String when = Store.str(Store.SPLASH_WHEN, "start");
             b.addView(Sheets.row("When", segStr(c, Store.SPLASH_WHEN, "start", "Every start", when), segStr(c, Store.SPLASH_WHEN, "day", "Once a day", when),
                     segStr(c, Store.SPLASH_WHEN, "nav", "When navigation starts", when)));
+            String mode = Splash.mode();
+            b.addView(Sheets.row("Show as", segStr(c, "splash_mode", "screen", "Screen", mode), segStr(c, "splash_mode", "both", "Screen + voice", mode),
+                    segStr(c, "splash_mode", "voice", "Voice only", mode)), top(4));
+            if (!"screen".equals(mode) && !"custom".equals(type)) {
+                String lang = Store.str("splash_voice_lang", "orig");
+                b.addView(Sheets.row("Recite in", segStr(c, "splash_voice_lang", "orig", "Original language", lang),
+                        segStr(c, "splash_voice_lang", "en", "English", lang)), top(4));
+            }
             if ("custom".equals(type)) {
                 b.addView(Sheets.section("Custom text"));
                 b.addView(Widgets.field("Main text", ct, false, t -> Store.put(Store.CUSTOM_TEXT, t)), U.lp(U.MATCH, U.WRAP));
@@ -891,7 +899,10 @@ final class SettingsPanels {
             } else {
                 b.addView(Sheets.item("Set up Travel Prayer", null, SettingsPanels::travelPrayer), top(4));
             }
-            b.addView(U.button(c, "Preview", false, SettingsPanels::preview), top(10));
+            b.addView(U.button(c, "Preview", false, () -> {
+                if (!"screen".equals(Splash.mode())) Splash.recite(c);
+                if (!"voice".equals(Splash.mode())) preview();
+            }), top(10));
             return Sheets.panel("Splash screen", b, 680, 444);
         });
     }

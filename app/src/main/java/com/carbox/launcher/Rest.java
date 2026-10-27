@@ -181,6 +181,30 @@ final class Rest {
     }
 
     private static void speak(String text) {
+        speak(text, null, null);
+    }
+
+    /**
+     * Say something over the music (ducking it), e.g. the travel prayer at start-up. If the voice
+     * engine has no voice for `loc`, it says `fallback` in the normal language instead.
+     */
+    static void say(Context c, String text, Locale loc, String fallback) {
+        init(c);
+        duck(true);
+        speak(text, loc, fallback);
+    }
+
+    private static void go(String text, Locale loc, String fallback) {
+        String t = text;
+        if (loc != null && tts.isLanguageAvailable(loc) >= 0) tts.setLanguage(loc);
+        else {
+            if (loc != null && fallback != null) t = fallback;
+            if (tts.setLanguage(Locale.getDefault()) < 0) tts.setLanguage(Locale.UK);
+        }
+        tts.speak(t, TextToSpeech.QUEUE_FLUSH, null, "rest");
+    }
+
+    private static void speak(String text, Locale loc, String fallback) {
         if (tts == null) {
             tts = new TextToSpeech(ctx, s -> {
                 ttsReady = s == TextToSpeech.SUCCESS;
@@ -203,7 +227,7 @@ final class Rest {
                             U.ui.post(() -> duck(false));
                         }
                     });
-                    tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "rest");
+                    go(text, loc, fallback);
                 } else {
                     beeps(); // no voice engine: fall back to beeps
                     U.ui.postDelayed(() -> duck(false), 1600);
@@ -211,7 +235,7 @@ final class Rest {
             });
             return;
         }
-        if (ttsReady) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "rest");
+        if (ttsReady) go(text, loc, fallback);
         else duck(false);
     }
 

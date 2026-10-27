@@ -43,7 +43,47 @@ final class Splash {
             if (Math.abs(Store.lng("splash_boot", 0) - bootAt) < 60000) return false;
             Store.put("splash_boot", bootAt);
         }
+        String mode = mode();
+        if (!"screen".equals(mode)) recite(a);
+        if ("voice".equals(mode)) return false; // voice only: nothing on screen, start-up carries on
         return show(a, after);
+    }
+
+    /** "screen", "both" (screen and voice) or "voice" (voice only). */
+    static String mode() {
+        return Store.str("splash_mode", "screen");
+    }
+
+    /** Recite the chosen prayer (or own text) aloud: original language, or English if chosen or no voice for it. */
+    static void recite(Context c) {
+        String text, fallback = null;
+        Locale loc = null;
+        if ("custom".equals(Store.str(Store.SPLASH_TYPE, "prayer"))) {
+            text = Store.str(Store.CUSTOM_TEXT, "");
+        } else {
+            Prayers.P p = Prayers.get(Store.str(Store.PRAYER_ID, null));
+            if (p == null) return;
+            fallback = p.english;
+            boolean original = "orig".equals(Store.str("splash_voice_lang", "orig")) && p.orig != null && !p.orig.isEmpty();
+            text = original ? p.orig : p.english;
+            if (original) loc = scriptLocale(p.orig);
+        }
+        if (text == null || text.trim().isEmpty()) return;
+        Rest.say(c, text, loc, fallback);
+    }
+
+    /** Pick the voice language from the script the prayer is written in. */
+    private static Locale scriptLocale(String s) {
+        for (int i = 0; i < s.length(); i++) {
+            Character.UnicodeBlock b = Character.UnicodeBlock.of(s.charAt(i));
+            if (b == Character.UnicodeBlock.ARABIC) return new Locale("ar");
+            if (b == Character.UnicodeBlock.HEBREW) return new Locale("he");
+            if (b == Character.UnicodeBlock.DEVANAGARI) return new Locale("hi");
+            if (b == Character.UnicodeBlock.GURMUKHI) return new Locale("pa");
+            if (b == Character.UnicodeBlock.GREEK) return new Locale("el");
+            if (b == Character.UnicodeBlock.CYRILLIC) return new Locale("ru");
+        }
+        return null; // Latin script: the normal voice
     }
 
     private static Runnable afterClose;
