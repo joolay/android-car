@@ -119,6 +119,13 @@ final class Actions {
 
     // ------------------------------------------------------------------ calls
 
+    /** Car-box phone apps read the number from different places: give it in all the usual ones. */
+    static Intent withNumber(Intent i, String number) {
+        String n = number.replaceAll("[^0-9+*#]", "");
+        return i.putExtra("number", n).putExtra("phone_number", n).putExtra("phoneNumber", n).putExtra("tel", n)
+                .putExtra("android.intent.extra.PHONE_NUMBER", n).putExtra("dial_number", n).putExtra("num", n);
+    }
+
     static void call(Activity a, String number) {
         String mode = Store.str(Store.CALLS, "bt");
         if ("connect".equals(mode)) {
@@ -144,12 +151,12 @@ final class Actions {
                 // ask BT Phone to call straight away; if it only accepts "dial", it opens with the number filled in
                 if (a.checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
                     try {
-                        a.startActivity(new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + Uri.encode(number))).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                        a.startActivity(withNumber(new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + Uri.encode(number))), number).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                         return;
                     } catch (Exception ignored) {
                     }
                 }
-                Intent d = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number))).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                Intent d = withNumber(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number))), number).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 try {
                     a.startActivity(d);
                     return;
