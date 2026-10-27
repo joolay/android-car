@@ -92,6 +92,7 @@ final class Tiles {
         JSONArray s = Store.arr(Store.TILES);
         if (s.length() == 0 && !Store.flag("tiles_empty", false)) s = defaults();
         if (!Store.flag("tiles_cm", false) && s.length() > 0) s = toColumns(s);
+        s = clean(s);
         return s;
     }
 
@@ -110,6 +111,51 @@ final class Tiles {
         for (int i = COUNT; i < keep; i++) out.put(s.opt(i)); // the extra columns were already column by column
         Store.put("tiles_cm", true);
         save(out);
+        return out;
+    }
+
+    /**
+     * Tidies tiles left over from older versions: empty tiles, widgets that no longer exist,
+     * a widget that appears more than once (keeps the first), empty filler folders, and folders
+     * sharing a name (renamed "Music 2" etc.). Saves only if something changed.
+     */
+    private static JSONArray clean(JSONArray s) {
+        JSONArray out = new JSONArray();
+        java.util.Set<String> widgets = new java.util.HashSet<>(), folders = new java.util.HashSet<>();
+        boolean changed = false;
+        for (int i = 0; i < s.length(); i++) {
+            JSONObject o = s.optJSONObject(i);
+            if (o == null) {
+                changed = true;
+                continue;
+            }
+            if ("f".equals(o.optString("t"))) {
+                JSONArray apps = o.optJSONArray("apps");
+                String name = o.optString("name", "Folder").trim();
+                if ((apps == null || apps.length() == 0) && ("Apps".equals(name) || name.isEmpty())) { // old empty filler
+                    changed = true;
+                    continue;
+                }
+                String n = name.isEmpty() ? "Folder" : name, base = n;
+                for (int k = 2; folders.contains(n.toLowerCase(java.util.Locale.ROOT)); k++) n = base + " " + k;
+                if (!n.equals(name)) {
+                    Widgets.put(o, "name", n);
+                    changed = true;
+                }
+                folders.add(n.toLowerCase(java.util.Locale.ROOT));
+                out.put(o);
+            } else {
+                String id = o.optString("id");
+                boolean known = false;
+                for (String[] w : Widgets.CATALOG) if (w[0].equals(id)) known = true;
+                if (!known || !widgets.add(id)) { // gone, empty ("none") or a duplicate
+                    changed = true;
+                    continue;
+                }
+                out.put(o);
+            }
+        }
+        if (changed) save(out);
         return out;
     }
 
