@@ -411,13 +411,16 @@ final class SettingsPanels {
             boolean on = BackButtonService.enabled(c);
             if (!on) b.addView(step(c, 1, "Allow restricted settings", "Android 13 asks this for apps installed from a file: App info → ⋮ → Allow restricted settings",
                     "App info", false, () -> Apps.appInfo(c, c.getPackageName())), top(10));
-            b.addView(step(c, on ? 1 : 2, "Turn on \"Car Launcher back button\"", "In Android's Accessibility list. It's only used to press Back and Home for you.",
+            b.addView(step(c, on ? 1 : 2, "Turn on \"Car Launcher back button\"", "In Android's Accessibility list. Leave its \"shortcut\" switch OFF, or Android adds a blue tab that turns the button off.",
                     on ? "Done" : "Turn on", on, () -> Status.open(c, Settings.ACTION_ACCESSIBILITY_SETTINGS)), on ? top(10) : U.lp(U.MATCH, U.WRAP));
+            boolean ov = BackButtonService.overlay(c);
+            b.addView(step(c, on ? 2 : 3, "Allow display over other apps", "So the hold-menu shortcuts can open apps while another app is on screen",
+                    ov ? "Done" : "Allow", ov, () -> overlaySettings(c)));
             b.addView(Sheets.item("Hold menu", QuickActions.chosen().size() + " buttons", SettingsPanels::holdMenu), top(4));
             b.addView(U.hr(c));
             String sz = Store.str("fb_size", "m");
             b.addView(Sheets.row("Size", sizeSeg(c, "s", "Small", sz), sizeSeg(c, "m", "Medium", sz), sizeSeg(c, "l", "Large", sz)), top(8));
-            b.addView(Sheets.switchRow(0, 0, "Only when I touch the screen", "Appears when you tap or scroll, then fades after 4 seconds", BackButtonService.onlyOnTouch(), v -> {
+            b.addView(Sheets.switchRow(0, 0, "Only when I touch the screen", "Off: always shown over apps. On: appears when you tap or scroll, fades after 4 seconds", BackButtonService.onlyOnTouch(), v -> {
                 Store.put("fb_touch", v);
                 BackButtonService.refresh();
             }));
@@ -427,6 +430,16 @@ final class SettingsPanels {
             }));
             return Sheets.panel("Floating back button", b, 640, 432);
         });
+    }
+
+    /** Android's "Display over other apps" page for Car Launcher (falls back to the full list). */
+    static void overlaySettings(Context c) {
+        try {
+            c.startActivity(new android.content.Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:" + c.getPackageName())).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (Exception e) {
+            Status.open(c, Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
+        }
     }
 
     static void holdMenu() {

@@ -100,7 +100,7 @@ public class BackButtonService extends AccessibilityService {
     }
 
     static boolean onlyOnTouch() {
-        return Store.flag("fb_touch", true);
+        return Store.flag("fb_touch", false);
     }
 
     /**
@@ -357,6 +357,11 @@ public class BackButtonService extends AccessibilityService {
             }
             return false;
         }
+    }
+
+    /** "Display over other apps" granted. */
+    static boolean overlay(Context c) {
+        return android.provider.Settings.canDrawOverlays(c);
     }
 
     static boolean enabled(Context c) {
