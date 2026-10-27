@@ -273,7 +273,7 @@ final class Widgets {
             p.setStrokeWidth(sw);
             p.setColor(U.CARD3);
             cv.drawArc(r, 135, 270, false, p);
-            p.setColor(value > max * 0.67f ? U.AMBER : U.ACCENT);
+            p.setColor(SpeedLimit.over() ? U.RED : value > max * 0.67f ? U.AMBER : U.ACCENT);
             cv.drawArc(r, 135, 270 * Math.max(0, Math.min(1, value / max)), false, p);
             p.setStyle(Paint.Style.FILL);
             p.setTextAlign(Paint.Align.CENTER);
@@ -290,12 +290,23 @@ final class Widgets {
 
     static final class Speed extends W {
         private final Dial dial;
-        private final TextView topT;
+        private final TextView topT, limit;
+        private final LinearLayout box;
+        private boolean lit;
 
         Speed(Context c, int i, JSONObject s) {
             super(c, i, s);
             LinearLayout l = card(c, U.CARD);
-            l.addView(label(c, "SPEED"));
+            box = l;
+            LinearLayout head = U.row(c);
+            head.addView(label(c, "SPEED"), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+            // the road's speed limit, as a round road sign
+            limit = U.text(c, "", 12, 0xFF111111, true);
+            limit.setGravity(Gravity.CENTER);
+            limit.setBackground(U.outline(0xFFFFFFFF, 0xFFE24B4A, 3, 15));
+            limit.setVisibility(View.GONE);
+            head.addView(limit, U.lpu(30, 30));
+            l.addView(head);
             dial = new Dial(c);
             l.addView(dial, U.weight(1, false));
             topT = U.line(c, "", 11, U.SUB, false);
@@ -321,6 +332,30 @@ final class Widgets {
             dial.invalidate();
             float top = Loc.topSpeedToday * (m ? 0.621371f : 1f);
             topT.setText("Top today " + Math.round(top));
+            // speed limit sign, and light the tile up red when over it
+            if (SpeedLimit.kmh > 0) {
+                limit.setText(String.valueOf(Math.round(SpeedLimit.kmh * (m ? 0.621371f : 1f))));
+                limit.setVisibility(View.VISIBLE);
+            } else limit.setVisibility(View.GONE);
+            boolean over = SpeedLimit.over();
+            if (over) dial.max = Math.max(dial.max, dial.value);
+            if (over != lit) {
+                lit = over;
+                box.setBackground(over ? U.outline(0xFF5A1010, 0xFFE24B4A, 3, 16) : U.round(U.CARD, 16));
+                box.animate().cancel();
+                box.setAlpha(1f);
+                if (over) pulse();
+            }
+            if (over) {
+                topT.setText("Over the limit");
+                topT.setTextColor(0xFFFF8A80);
+            } else topT.setTextColor(U.SUB);
+        }
+
+        /** A gentle glow pulse while over the limit. */
+        private void pulse() {
+            if (!lit) return;
+            box.animate().alpha(0.7f).setDuration(450).withEndAction(() -> box.animate().alpha(1f).setDuration(450).withEndAction(this::pulse).start()).start();
         }
     }
 

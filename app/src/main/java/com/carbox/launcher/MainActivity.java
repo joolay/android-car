@@ -56,6 +56,7 @@ public class MainActivity extends Activity {
         Salah.start(this);
         HfpCalls.start(this);
         NavCard.start();
+        SpeedLimit.start();
         build();
         immersive();
         askPermissions();
