@@ -18,8 +18,9 @@ import java.util.List;
 
 /** CarPlay-style status rail on the right edge. */
 final class Rail {
-    static final String[] IDS = {"clock", "weather", "cell", "wifi", "gps", "hotspot", "tailscale"};
-    static final String[] NAMES = {"Clock and date", "Weather", "Mobile signal", "Wi-Fi", "GPS", "Hotspot", "Tailscale"};
+    // the clock (top) and the voice button (bottom) are fixed; these sit between them, evenly spaced
+    static final String[] IDS = {"weather", "cell", "wifi", "gps", "hotspot", "tailscale"};
+    static final String[] NAMES = {"Weather", "Mobile signal", "Wi-Fi", "GPS", "Hotspot", "Tailscale"};
 
     private final Context c;
     final LinearLayout view;
@@ -58,15 +59,26 @@ final class Rail {
         view.setBackground(U.round(U.CARD, 16));
         U.pad(view, 0, 14, 0, 12);
 
+        // fixed: clock and date at the top
+        view.addView(item("clock"), U.lp(U.MATCH, U.WRAP));
+        View hr = new View(c);
+        hr.setBackgroundColor(U.LINE);
+        LinearLayout.LayoutParams hlp = U.lpu(40, 1);
+        hlp.topMargin = U.u(8);
+        hlp.gravity = Gravity.CENTER_HORIZONTAL;
+        view.addView(hr, hlp);
+
+        // the switched-on icons share the space between the clock and the mic
         items = U.col(c);
         items.setGravity(Gravity.CENTER_HORIZONTAL);
-        view.addView(items, U.lp(U.MATCH, U.WRAP));
-        view.addView(new View(c), new LinearLayout.LayoutParams(1, 0, 1));
+        view.addView(items, new LinearLayout.LayoutParams(U.MATCH, 0, 1));
 
         // Settings now lives in All apps; the rail keeps just the voice button at the bottom
         View mic = circle(R.drawable.ic_mic, U.ACCENT, 48, 26);
         mic.setOnClickListener(v -> Actions.assistant(c));
-        view.addView(mic, U.lpu(48, 48));
+        LinearLayout.LayoutParams mlp = U.lpu(48, 48);
+        mlp.gravity = Gravity.CENTER_HORIZONTAL;
+        view.addView(mic, mlp);
 
         build();
         Status.listen(this::updateStatus);
@@ -118,28 +130,25 @@ final class Rail {
         return -1;
     }
 
-    /** (Re)build items in the saved order. */
+    /** (Re)build the middle icons in the saved order, spread evenly with equal gaps. */
     void build() {
         items.removeAllViews();
         animated.clear();
-        boolean first = true;
+        cell = null;
+        wifi = null;
+        gps = null;
+        wIcon = null;
+        hotIcon = null;
+        tsIcon = null;
+        items.addView(new View(c), new LinearLayout.LayoutParams(1, 0, 1));
         for (String[] e : order()) {
             if (!"1".equals(e[1])) continue;
             View v = item(e[0]);
             if (v == null) continue;
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(e[0].equals("clock") ? U.MATCH : U.WRAP, U.WRAP);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(U.WRAP, U.WRAP);
             lp.gravity = Gravity.CENTER_HORIZONTAL;
-            if (!first) lp.topMargin = U.u(e[0].equals("weather") ? 4 : 10);
             items.addView(v, lp);
-            if (e[0].equals("clock")) {
-                View hr = new View(c);
-                hr.setBackgroundColor(U.LINE);
-                LinearLayout.LayoutParams hlp = U.lpu(40, 1);
-                hlp.topMargin = U.u(8);
-                hlp.gravity = Gravity.CENTER_HORIZONTAL;
-                items.addView(hr, hlp);
-            }
-            first = false;
+            items.addView(new View(c), new LinearLayout.LayoutParams(1, 0, 1));
         }
         updateStatus();
         updateWeather();

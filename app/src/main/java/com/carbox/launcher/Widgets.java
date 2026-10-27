@@ -56,7 +56,7 @@ final class Widgets {
 
     static String name(String id) {
         for (String[] w : CATALOG) if (w[0].equals(id)) return w[1];
-        return id;
+        return "none".equals(id) ? "Empty" : id;
     }
 
     static boolean configurable(String id) {

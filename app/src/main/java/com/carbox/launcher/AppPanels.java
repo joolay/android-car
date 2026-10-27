@@ -229,7 +229,7 @@ final class AppPanels {
             b.addView(Sheets.section("Put it in place of"));
             JSONArray specs = Tiles.specs();
             List<View> cells = new ArrayList<>();
-            for (int i = 0; i < Tiles.COUNT; i++) {
+            for (int i = 0; i < Tiles.count(); i++) {
                 final int idx = i;
                 JSONObject s = specs.optJSONObject(i);
                 String label = s == null ? "Empty" : "f".equals(s.optString("t")) ? s.optString("name") + " folder" : Widgets.name(s.optString("id"));
@@ -255,7 +255,7 @@ final class AppPanels {
             LinearLayout b = U.col(c);
             JSONArray specs = Tiles.specs();
             boolean any = false;
-            for (int i = 0; i < Tiles.COUNT; i++) {
+            for (int i = 0; i < Tiles.count(); i++) {
                 final int idx = i;
                 JSONObject s = specs.optJSONObject(i);
                 if (s == null || !"f".equals(s.optString("t"))) continue;

@@ -14,7 +14,7 @@ import java.util.List;
 final class Dock {
     private final Activity a;
     final LinearLayout view;
-    private static final int SLOTS = 7; // + All apps = 8 icons
+    static final int SLOTS = 6; // at most 6 app icons, then All apps
 
     Dock(Activity a) {
         this.a = a;
@@ -34,11 +34,20 @@ final class Dock {
         while (pinned.size() > SLOTS) pinned.remove(pinned.size() - 1);
         int left = Math.max(0, SLOTS - pinned.size());
         List<Apps.App> recent = Apps.recents(left);
-        for (Apps.App ap : pinned) add(ap, true);
-        if (!pinned.isEmpty() && !recent.isEmpty()) divider();
-        for (Apps.App ap : recent) add(ap, false);
-        // fill remaining space so All apps sits at the right end
-        view.addView(new View(a), new LinearLayout.LayoutParams(0, 1, 1));
+        // icons share the width evenly, so 6 icons spread out instead of bunching on the left
+        spacer();
+        for (Apps.App ap : pinned) {
+            add(ap, true);
+            spacer();
+        }
+        if (!pinned.isEmpty() && !recent.isEmpty()) {
+            divider();
+            spacer();
+        }
+        for (Apps.App ap : recent) {
+            add(ap, false);
+            spacer();
+        }
         divider();
         FrameLayout all = new FrameLayout(a);
         all.setBackground(U.round(U.ACCENT, 10));
@@ -46,7 +55,7 @@ final class Dock {
         all.setOnClickListener(v -> AppPanels.allApps(false));
         U.press(all);
         LinearLayout.LayoutParams lp = U.lpu(40, 40);
-        lp.leftMargin = U.u(6);
+        lp.leftMargin = U.u(14);
         view.addView(all, lp);
     }
 
@@ -72,16 +81,17 @@ final class Dock {
         });
         f.setContentDescription(ap.label);
         U.press(f);
-        LinearLayout.LayoutParams lp = U.lpu(48, 48);
-        lp.rightMargin = U.u(8);
-        view.addView(f, lp);
+        view.addView(f, U.lpu(48, 48));
     }
 
     private void divider() {
         View d = new View(a);
         d.setBackgroundColor(U.LINE);
         LinearLayout.LayoutParams lp = U.lpu(1, 30);
-        lp.setMargins(U.u(4), 0, U.u(12), 0);
         view.addView(d, lp);
+    }
+
+    private void spacer() {
+        view.addView(new View(a), new LinearLayout.LayoutParams(0, 1, 1));
     }
 }
