@@ -100,17 +100,12 @@ final class SettingsPanels {
                 {"Prayer times", Prayer.METHODS[Store.num(Store.PRAY_METHOD, 0)]},
                 {"Units and clock", (Store.flag(Store.CELSIUS, true) ? "°C" : "°F") + " · " + (Store.flag(Store.H24, true) ? "24 h" : "12 h")},
                 {"Auto start", Actions.autostart().length() + " apps"},
-                {"Night dimming", Store.flag(Store.NIGHT, false) ? "On" : "Off"},
                 {"Music", Music.label() + (Store.flag(Store.MUSIC_AUTOPLAY, false) ? " · auto play" : "")},
                 {"Keyboard", "Car keyboard" + (CarIME.isDefault(c) ? " · on" : "")},
                 {"Android settings", ""}};
         Runnable[] actions = {SettingsPanels::navApp, SettingsPanels::map, SettingsPanels::railOrder, SettingsPanels::hiddenApps, SettingsPanels::news,
                 SettingsPanels::calls, SettingsPanels::connections, SettingsPanels::splash, SettingsPanels::calendar, SettingsPanels::prayerTimes,
-                SettingsPanels::units, AppPanels::autostart, () -> {
-            Store.put(Store.NIGHT, !Store.flag(Store.NIGHT, false));
-            if (MainActivity.I != null) MainActivity.I.applyNight();
-            Sheets.refresh();
-        }, SettingsPanels::music, SettingsPanels::keyboard, SettingsPanels::androidSettings};
+                SettingsPanels::units, AppPanels::autostart, SettingsPanels::music, SettingsPanels::keyboard, SettingsPanels::androidSettings};
         LinearLayout cols = U.row(c);
         cols.setGravity(Gravity.TOP);
         LinearLayout l1 = U.col(c), l2 = U.col(c);

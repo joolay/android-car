@@ -238,7 +238,7 @@ public class MainActivity extends Activity {
 
     void applyNight() {
         WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.screenBrightness = Store.flag(Store.NIGHT, false) ? 0.08f : WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+        lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE; // night dimming removed: the box controls brightness
         getWindow().setAttributes(lp);
     }
 

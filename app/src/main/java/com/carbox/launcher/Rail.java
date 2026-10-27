@@ -74,7 +74,7 @@ final class Rail {
         view.addView(items, new LinearLayout.LayoutParams(U.MATCH, 0, 1));
 
         // Settings now lives in All apps; the rail keeps just the voice button at the bottom
-        View mic = circle(R.drawable.ic_mic, U.ACCENT, 48, 26);
+        View mic = circle(R.drawable.ic_mic, U.RED, 48, 26);
         mic.setOnClickListener(v -> Actions.assistant(c));
         LinearLayout.LayoutParams mlp = U.lpu(48, 48);
         mlp.gravity = Gravity.CENTER_HORIZONTAL;
