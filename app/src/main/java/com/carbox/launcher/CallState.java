@@ -62,7 +62,34 @@ final class CallState {
 
     // ------------------------------------------------------------------ actions
 
+    // source 4: BT Phone's own screen, read by the accessibility service (BtAuto)
+    static boolean screen;
+
+    static void fromScreen(Context c, String who, boolean ringing) {
+        if (call != null || (notifKey != null && !screen)) return; // a better source has it
+        int before = state;
+        screen = true;
+        String contact = PhoneScreen.lookup(c, who);
+        boolean isNumber = who.replaceAll("[^0-9]", "").length() >= 6;
+        name = contact != null ? contact : who;
+        number = isNumber ? who : "";
+        via = "Bluetooth";
+        state = ringing ? RINGING : ACTIVE;
+        if (state == ACTIVE && before != ACTIVE) activeSince = android.os.SystemClock.elapsedRealtime();
+        if (before == state && name.equals(who)) return;
+        changed();
+        if (before == NONE || (before == RINGING) != ringing) CallScreen.open(c);
+    }
+
+    static void screenGone() {
+        if (screen && call == null) {
+            screen = false;
+            clear();
+        }
+    }
+
     static void answer() {
+        if (screen && BtAuto.press("answer")) return;
         if (call != null) call.answer(VideoProfile.STATE_AUDIO_ONLY);
         else if (answerPI != null) send(answerPI);
         else openBtPhone(); // no button we can press: open BT Phone to answer there
@@ -79,6 +106,7 @@ final class CallState {
     }
 
     static void decline() {
+        if (screen && BtAuto.press("decline")) return;
         if (call != null) {
             if (call.getState() == Call.STATE_RINGING) call.reject(false, null);
             else call.disconnect();
@@ -87,6 +115,7 @@ final class CallState {
     }
 
     static void hangup() {
+        if (screen && BtAuto.press("hangup")) return;
         if (call != null) call.disconnect();
         else if (hangupPI != null || declinePI != null) send(hangupPI != null ? hangupPI : declinePI);
         else openBtPhone();
@@ -286,6 +315,7 @@ final class CallState {
         notifKey = null;
         answerPI = declinePI = hangupPI = openPI = null;
         hfp = false;
+        screen = false;
         activeSince = 0;
         muted = false;
         changed();

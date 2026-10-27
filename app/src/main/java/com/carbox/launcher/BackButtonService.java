@@ -145,6 +145,11 @@ public class BackButtonService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent e) {
         int t = e.getEventType();
+        try {
+            BtAuto.onEvent(this, e); // BT Phone only: calls in, calls out
+        } catch (Exception ignored) {
+        }
+        if (t == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED || t == AccessibilityEvent.TYPE_WINDOWS_CHANGED) return;
         if ((t == AccessibilityEvent.TYPE_VIEW_CLICKED || t == AccessibilityEvent.TYPE_VIEW_SCROLLED) && visible && onlyOnTouch()) {
             setAwake(true);
             return;

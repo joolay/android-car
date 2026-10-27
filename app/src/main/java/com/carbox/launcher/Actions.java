@@ -147,6 +147,11 @@ final class Actions {
                 });
                 return;
             }
+            if (pkg != null && BtAuto.active() && Store.flag("bt_type", true)) {
+                // BT Phone ignores numbers sent to it: open it and type the number in for you
+                BtAuto.dial(a, number, pkg);
+                return;
+            }
             if (pkg != null) {
                 // ask BT Phone to call straight away; if it only accepts "dial", it opens with the number filled in
                 if (a.checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {

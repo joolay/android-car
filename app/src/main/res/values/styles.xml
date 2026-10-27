@@ -8,7 +8,7 @@
     <string name="kb_name">Car keyboard</string>
     <string name="kb_subtype">English</string>
     <string name="fb_name">Car Launcher back button</string>
-    <string name="fb_desc">Shows a floating back button over other apps (not on the home screen). Tap to go back a page, hold for a menu of shortcuts such as Home, split screen and music controls. It only presses Back and Home for you and does not read what is on the screen.</string>
+    <string name="fb_desc">Shows a floating back button over other apps (not on the home screen). Tap to go back a page, hold for a menu of shortcuts such as Home, split screen and music controls. It also works your box\'s BT Phone app for you: it reads only BT Phone\'s own screens, to show incoming calls in Car Launcher, press its Answer and Decline buttons and type in numbers you dial. It does not read any other app.</string>
 
     <style name="LauncherTheme" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/bg</item>
