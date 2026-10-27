@@ -678,43 +678,80 @@ final class AppPanels {
         List<String[]> choices = new ArrayList<>();
         for (String[] w : Widgets.CATALOG) if (Faith.widgetAllowed(w[0])) choices.add(w);
 
-        LinearLayout cols = U.row(c);
-        cols.setGravity(Gravity.TOP);
-        for (int k = 0; k < choices.size(); k += 2) {
-            LinearLayout col = U.col(c);
-            for (int r = 0; r < 2 && k + r < choices.size(); r++) {
-                String[] w = choices.get(k + r);
-                boolean sel = manage ? on.containsKey(w[0]) : w[0].equals(current);
-                LinearLayout cell = U.col(c);
-                U.pad(cell, 5, 5, 5, 6);
-                cell.setBackground(sel ? U.outline(0xFF15233A, U.ACCENT, 3, 16) : U.round(U.CARD2, 16));
-                View pv = "folder".equals(w[0]) ? folderPreview(c) : Widgets.preview(c, Tiles.widget(w[0]));
-                cell.addView(pv, new LinearLayout.LayoutParams(U.MATCH, 0, 1));
-                Integer n = on.get(w[0]);
-                TextView nm = U.line(c, w[1] + (manage && n != null && n > 1 ? " ×" + n : ""), 12, sel ? U.ACCENT_SOFT : U.TEXT, true);
-                nm.setGravity(Gravity.CENTER);
-                cell.addView(nm, top(5));
-                cell.setOnClickListener(v -> {
-                    if (manage) pick(index, w[0], on.containsKey(w[0]));
-                    else if (on.containsKey(w[0]) && !w[0].equals(finalCurrent)) // each widget only once
-                        android.widget.Toast.makeText(c, Widgets.name(w[0]) + " is already on your home screen", android.widget.Toast.LENGTH_SHORT).show();
-                    else pick(index, w[0], false);
-                });
-                U.press(cell);
-                LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(U.u(132), 0, 1);
-                cl.setMargins(U.u(5), U.u(5), U.u(5), U.u(5));
-                col.addView(cell, cl);
-            }
-            cols.addView(col, new LinearLayout.LayoutParams(U.WRAP, U.MATCH));
-        }
+        // group by category, each with a heading; chips at the top jump to a category
+        String[][] cats = {{"Driving", "speed,trip,rest,heading,goto"}, {"Phone", "phone,quickdial,contact"},
+                {"Car & home", "carconnect,ha"}, {"Weather", "weather"}, {"Faith", "nextprayer,prayertimes,qibla"}};
+        LinearLayout blocks = U.row(c);
+        blocks.setGravity(Gravity.TOP);
         android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(c);
+        LinearLayout chips = U.row(c);
+        java.util.Set<String> placed = new java.util.HashSet<>();
+        for (int ci = 0; ci <= cats.length; ci++) {
+            List<String[]> group = new ArrayList<>();
+            String cat = ci < cats.length ? cats[ci][0] : "More";
+            for (String[] w : choices) {
+                boolean in = ci < cats.length ? ("," + cats[ci][1] + ",").contains("," + w[0] + ",") : !placed.contains(w[0]);
+                if (in && placed.add(w[0])) group.add(w);
+            }
+            if (group.isEmpty()) continue;
+            LinearLayout block = U.col(c);
+            TextView ht = U.line(c, cat.toUpperCase(java.util.Locale.ROOT), 11, U.SUB, true);
+            ht.setLetterSpacing(0.08f);
+            U.pad(ht, 6, 0, 0, 0);
+            block.addView(ht);
+            LinearLayout cols = U.row(c);
+            cols.setGravity(Gravity.TOP);
+            for (int k = 0; k < group.size(); k += 2) {
+                LinearLayout col = U.col(c);
+                for (int r = 0; r < 2 && k + r < group.size(); r++) {
+                    String[] w = group.get(k + r);
+                    col.addView(cell(c, w, index, manage, on, finalCurrent), cellLp());
+                }
+                cols.addView(col, new LinearLayout.LayoutParams(U.WRAP, U.MATCH));
+            }
+            block.addView(cols, new LinearLayout.LayoutParams(U.WRAP, 0, 1));
+            LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(U.WRAP, U.MATCH);
+            bl.rightMargin = U.u(14);
+            blocks.addView(block, bl);
+            TextView chip = U.seg(c, cat, false, () -> hs.smoothScrollTo(block.getLeft(), 0));
+            LinearLayout.LayoutParams chl = U.lp(U.WRAP, U.WRAP);
+            chl.rightMargin = U.u(8);
+            chips.addView(chip, chl);
+        }
+        card.addView(chips, top(10));
         hs.setHorizontalScrollBarEnabled(false);
         hs.setFillViewport(true);
-        hs.addView(cols, new android.widget.FrameLayout.LayoutParams(U.WRAP, U.MATCH));
+        hs.addView(blocks, new android.widget.FrameLayout.LayoutParams(U.WRAP, U.MATCH));
         LinearLayout.LayoutParams hl = U.weight(1, false);
-        hl.topMargin = U.u(10);
+        hl.topMargin = U.u(8);
         card.addView(hs, hl);
         return card;
+    }
+
+    private static LinearLayout.LayoutParams cellLp() {
+        LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(U.u(128), 0, 1);
+        cl.setMargins(U.u(5), U.u(5), U.u(5), U.u(5));
+        return cl;
+    }
+
+    /** One choice: live preview + name; blue border when it's on the home screen (or on this tile). */
+    private static View cell(Context c, String[] w, int index, boolean manage, java.util.Map<String, Integer> on, String current) {
+        boolean sel = manage ? on.containsKey(w[0]) : w[0].equals(current);
+        LinearLayout cell = U.col(c);
+        U.pad(cell, 5, 5, 5, 6);
+        cell.setBackground(sel ? U.outline(0xFF15233A, U.ACCENT, 3, 16) : U.round(U.CARD2, 16));
+        cell.addView(Widgets.preview(c, Tiles.widget(w[0])), new LinearLayout.LayoutParams(U.MATCH, 0, 1));
+        TextView nm = U.line(c, w[1], 12, sel ? U.ACCENT_SOFT : U.TEXT, true);
+        nm.setGravity(Gravity.CENTER);
+        cell.addView(nm, top(5));
+        cell.setOnClickListener(v -> {
+            if (manage) pick(index, w[0], on.containsKey(w[0]));
+            else if (on.containsKey(w[0]) && !w[0].equals(current)) // each widget only once
+                android.widget.Toast.makeText(c, Widgets.name(w[0]) + " is already on your home screen", android.widget.Toast.LENGTH_SHORT).show();
+            else pick(index, w[0], false);
+        });
+        U.press(cell);
+        return cell;
     }
 
     /** Names of the folders on the home screen (lower case), except the one at `skip`. */
