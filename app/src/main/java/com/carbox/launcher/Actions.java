@@ -128,6 +128,16 @@ final class Actions {
         }
         if ("bt".equals(mode)) {
             String pkg = btDialler();
+            if (pkg == null && !Store.flag("bt_asked", false)) {
+                // first call and no BT phone app recognised: ask once which app it is, then dial
+                Store.put("bt_asked", true);
+                AppPanels.btPhonePicker(chosen -> {
+                    Store.put(Store.CALLS_BT_PKG, chosen.pkg);
+                    Sheets.close();
+                    call(a, number);
+                });
+                return;
+            }
             if (pkg != null) {
                 Intent d = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number))).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 try {
@@ -209,6 +219,40 @@ final class Actions {
         return null;
     }
 
+    /** The Bluetooth phone app: the one chosen in Calls, otherwise the box's own BT phone app found by name. */
+    static String btDialler() {
+        String p = Store.str(Store.CALLS_BT_PKG, null);
+        if (p != null && Apps.installed(p)) return p;
+        Apps.App a = guessBtPhone();
+        return a == null ? null : a.pkg;
+    }
+
+    /** Car boxes name it "BT Phone", "Bluetooth", "Phone Link"… — but never the BT music player. */
+    static Apps.App guessBtPhone() {
+        Apps.App best = null;
+        int bestScore = 0;
+        for (Apps.App a : Apps.all) {
+            String l = a.label.toLowerCase(java.util.Locale.ROOT), k = a.pkg.toLowerCase(java.util.Locale.ROOT);
+            if (l.contains("music") || l.contains("audio") || l.contains("player") || k.contains("music")) continue;
+            int score = 0;
+            if (l.contains("bt phone") || l.contains("btphone") || l.contains("bluetooth phone") || l.contains("bt dial")) score = 5;
+            else if (l.equals("bluetooth") || l.equals("bt") || l.contains("phone link")) score = 4;
+            else if (k.contains("bluetooth") || k.contains(".bt.") || k.endsWith(".bt") || k.contains("btphone")) score = 3;
+            else if (l.contains("bluetooth")) score = 2;
+            if (score > bestScore) {
+                bestScore = score;
+                best = a;
+            }
+        }
+        return best;
+    }
+
+    static boolean looksLikeBtPhone(Apps.App a) {
+        String l = a.label.toLowerCase(java.util.Locale.ROOT), k = a.pkg.toLowerCase(java.util.Locale.ROOT);
+        if (l.contains("music") || l.contains("audio")) return false;
+        return l.contains("bluetooth") || l.startsWith("bt") || l.contains("phone") || l.contains("dial") || k.contains("bluetooth") || k.contains(".bt");
+    }
+
     static void carConnect(Context c, String which) {
         Apps.App a = connectApp(which);
         if (a != null && Apps.launch(c, a)) {
@@ -216,18 +260,6 @@ final class Actions {
             return;
         }
         AppPanels.bridgePicker(connectTitle(which) + " app", connectKey(which));
-    }
-
-    /** The Bluetooth phone app: the one chosen in Calls, otherwise one that looks like it. */
-    static String btDialler() {
-        String p = Store.str(Store.CALLS_BT_PKG, null);
-        if (p != null && Apps.installed(p)) return p;
-        for (Apps.App a : Apps.all) {
-            String l = a.label.toLowerCase(java.util.Locale.ROOT);
-            if (l.contains("bluetooth") || l.startsWith("bt ") || l.equals("bt") || l.contains("btphone") || l.contains("bt phone") || l.contains("bt dial"))
-                return a.pkg;
-        }
-        return null;
     }
 
     // ------------------------------------------------------------------ brightness & night

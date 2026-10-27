@@ -41,8 +41,16 @@ final class Splash {
         show(a);
     }
 
+    private static Runnable afterClose;
+
     static void show(Activity a) {
-        dismiss();
+        show(a, null);
+    }
+
+    /** afterClose runs when the splash finishes (timeout or tap), e.g. to reopen the setup page after a preview. */
+    static void show(Activity a, Runnable after) {
+        cancel();
+        afterClose = after;
         View content = build(a, Store.str(Store.PRAYER_LAYOUT, "stacked"));
         if (content == null) return;
         FrameLayout layer = new FrameLayout(a);
@@ -83,10 +91,19 @@ final class Splash {
         shown = null;
         ring = null;
         U.ui.removeCallbacks(countdown);
+        final Runnable after = afterClose;
+        afterClose = null;
         s.animate().alpha(0f).setDuration(250).withEndAction(() -> {
             if (s.getParent() != null) ((ViewGroup) s.getParent()).removeView(s);
+            if (after != null) after.run();
         }).start();
         return true;
+    }
+
+    /** Close without returning anywhere (Home pressed). */
+    static boolean cancel() {
+        afterClose = null;
+        return dismiss();
     }
 
     private static U.Ring newRing(Context c) {

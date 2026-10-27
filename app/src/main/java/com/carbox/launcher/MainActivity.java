@@ -304,7 +304,7 @@ public class MainActivity extends Activity {
         Keyboard.hide();
         if (Sheets.open()) Sheets.close();
         if (tiles.editing()) tiles.setEditing(false);
-        Splash.dismiss();
+        Splash.cancel();
     }
 
     @Override

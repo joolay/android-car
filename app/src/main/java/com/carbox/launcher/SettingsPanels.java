@@ -445,7 +445,7 @@ final class SettingsPanels {
             b.addView(radio(c, "Bluetooth dialler (default)", "Calls go through your paired phone · " + (bt == null ? "choose the app ›" : "app: " + Apps.label(bt) + " ›"),
                     "bt".equals(m), () -> {
                         Store.put(Store.CALLS, "bt");
-                        if (Actions.btDialler() == null) AppPanels.appPicker("Bluetooth dialler app", a -> {
+                        if (Actions.btDialler() == null) AppPanels.btPhonePicker(a -> {
                             Store.put(Store.CALLS_BT_PKG, a.pkg);
                             Sheets.back();
                             Sheets.refresh();
@@ -461,7 +461,7 @@ final class SettingsPanels {
                 Sheets.refresh();
             }));
             if ("bt".equals(m)) {
-                b.addView(Sheets.item("Bluetooth dialler app", bt == null ? "Choose" : Apps.label(bt), () -> AppPanels.appPicker("Bluetooth dialler app", a -> {
+                b.addView(Sheets.item("Bluetooth dialler app", bt == null ? "Choose" : Apps.label(bt), () -> AppPanels.btPhonePicker(a -> {
                     Store.put(Store.CALLS_BT_PKG, a.pkg);
                     Sheets.back();
                     Sheets.refresh();
@@ -576,8 +576,10 @@ final class SettingsPanels {
 
     static void preview() {
         if (MainActivity.I == null) return;
+        // come back to the same setup page when the preview ends
+        final java.util.List<Sheets.Page> pages = Sheets.saveStack();
         Sheets.close();
-        Splash.show(MainActivity.I);
+        Splash.show(MainActivity.I, () -> Sheets.restoreStack(pages));
     }
 
     private static View typeTile(Context c, String title, String sub, boolean on, Runnable click) {

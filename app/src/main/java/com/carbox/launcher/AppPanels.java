@@ -336,6 +336,27 @@ final class AppPanels {
         list.addView(grid(c, cells, 6, 6));
     }
 
+    /** Pick the Bluetooth phone app, with likely ones first. */
+    static void btPhonePicker(U.Cb<Apps.App> cb) {
+        Sheets.Page page = () -> {
+            Context c = Sheets.ctx();
+            LinearLayout b = U.col(c);
+            b.addView(U.text(c, "Calls go out through your phone over Bluetooth. Which app on this box is the Bluetooth phone?", 13, U.SUB, false));
+            String cur = Actions.btDialler();
+            int n = 0;
+            for (Apps.App a : Apps.visible()) {
+                if (!Actions.looksLikeBtPhone(a)) continue;
+                n++;
+                b.addView(SettingsPanels.appRow(c, a, a.pkg.equals(cur), () -> cb.on(a)));
+            }
+            if (n == 0) b.addView(U.text(c, "No Bluetooth phone app recognised.", 14, U.TEXT2, false), top(10));
+            b.addView(Sheets.item("Other app…", null, () -> appPicker("Bluetooth phone app", cb)), top(4));
+            return Sheets.panel("Bluetooth phone app", b, 560, 420);
+        };
+        if (Sheets.open()) Sheets.push(page);
+        else Sheets.show(page);
+    }
+
     // ------------------------------------------------------------------ Car Connect
 
     static void connect() {

@@ -76,6 +76,19 @@ final class Sheets {
         onClose.add(r);
     }
 
+    /** Copy of the open pages, to bring them back later (e.g. after a splash preview). */
+    static List<Page> saveStack() {
+        return new ArrayList<>(stack);
+    }
+
+    static void restoreStack(List<Page> pages) {
+        if (pages == null || pages.isEmpty()) return;
+        stack.clear();
+        stack.addAll(pages);
+        scrimColor = 0x99000000;
+        render();
+    }
+
     static int depth() {
         return stack.size();
     }
