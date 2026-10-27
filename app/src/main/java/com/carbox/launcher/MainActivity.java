@@ -67,6 +67,7 @@ public class MainActivity extends Activity {
         // splash next; hotspot settings and auto-start apps only once it has closed
         if (!Splash.maybeShow(this, "start", () -> Actions.afterSplash(this))) Actions.afterSplash(this);
         U.ui.post(() -> handleOpen(getIntent()));
+        U.ui.postDelayed(this::afterUpdate, 2500);
         // the launcher can be restarted when it becomes the Home app: carry on with the checklist
         U.ui.postDelayed(() -> {
             if (SettingsPanels.backFromChecklist()) SettingsPanels.reopenChecklist();
@@ -290,6 +291,37 @@ public class MainActivity extends Activity {
     }
 
     /** First run: the checklist for permissions Android only grants in its own settings screens. */
+    /** After installing a new version: offer to run the set-up checklist again (new steps may have been added). */
+    private void afterUpdate() {
+        String ver;
+        long code;
+        try {
+            android.content.pm.PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+            ver = pi.versionName;
+            code = pi.getLongVersionCode();
+        } catch (Exception e) {
+            return;
+        }
+        long last = Store.lng("last_version", -1);
+        Store.put("last_version", code);
+        if (last < 0 || last == code || isFinishing()) return; // first install (the checklist runs anyway) or no change
+        if (Sheets.open() || CallState.state != CallState.NONE) return; // don't interrupt
+        Sheets.show(() -> {
+            android.content.Context c = Sheets.ctx();
+            LinearLayout b = U.col(c);
+            b.addView(U.text(c, "Car Launcher was updated to " + ver + ". Run the set-up checklist again? New steps may have been added, and anything already done stays ticked.", 14, U.TEXT2, false));
+            LinearLayout btns = U.row(c);
+            btns.addView(U.button(c, "Run set-up", true, () -> {
+                Sheets.close();
+                SettingsPanels.setupChecklist();
+            }));
+            btns.addView(U.gap(c, 10, 1));
+            btns.addView(U.button(c, "Not now", false, Sheets::close));
+            b.addView(btns, Widgets.top(16));
+            return Sheets.panel("Updated", b, 460, 260);
+        });
+    }
+
     private void firstRunChecklist() {
         if (Store.flag("setup_shown", false) || isFinishing()) return;
         Store.put("setup_shown", true);
