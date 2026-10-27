@@ -102,7 +102,7 @@ final class AppPanels {
         selecting = select;
         selection.clear();
         query = "";
-        Sheets.show(AppPanels::allAppsPage);
+        Sheets.showFull(AppPanels::allAppsPage); // a full-screen card
     }
 
     private static View allAppsPage() {
@@ -113,7 +113,24 @@ final class AppPanels {
         card.setLayoutParams(Sheets.centered(760, 452));
 
         LinearLayout head = U.row(c);
-        head.addView(U.line(c, selecting ? selection.size() + " selected" : "All apps", 20, U.TEXT, true), U.lpu(170, U.WRAP));
+        // title with the Settings gear beside it
+        LinearLayout tbox = U.row(c);
+        tbox.addView(U.line(c, selecting ? selection.size() + " selected" : "All apps", 20, U.TEXT, true));
+        if (!selecting) {
+            android.widget.FrameLayout gear = new android.widget.FrameLayout(c);
+            gear.setBackground(U.oval(U.CARD2));
+            gear.addView(U.icon(c, R.drawable.ic_gear, U.TEXT), U.flpu(20, 20, Gravity.CENTER));
+            gear.setOnClickListener(v -> {
+                Sheets.close();
+                SettingsPanels.main();
+            });
+            gear.setContentDescription("Settings");
+            U.press(gear);
+            LinearLayout.LayoutParams gl = U.lpu(36, 36);
+            gl.leftMargin = U.u(12);
+            tbox.addView(gear, gl);
+        }
+        head.addView(tbox, U.lpu(210, U.WRAP));
         LinearLayout searchBox = U.row(c);
         searchBox.setBackground(U.round(U.CARD2, 12));
         U.pad(searchBox, 10, 0, 6, 0);
@@ -189,7 +206,7 @@ final class AppPanels {
         List<View> cells = new ArrayList<>();
         // Car Launcher's own Settings, first in the grid (also found by searching "settings")
         String q = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
-        if (!selecting && (q.isEmpty() || "settings".startsWith(q) || "car launcher settings".contains(q))) {
+        if (!selecting && !q.isEmpty() && ("settings".startsWith(q) || "car launcher settings".contains(q))) { // only when searched; the gear is by the title
             View s = settingsCell(c);
             s.setOnClickListener(v -> {
                 Sheets.close();
@@ -215,7 +232,7 @@ final class AppPanels {
             cells.add(cell);
         }
         if (cells.isEmpty()) results.addView(U.text(c, "No apps match", 14, U.SUB, false));
-        else results.addView(grid(c, cells, 6, 4)); // 6 across fits the tile area
+        else results.addView(grid(c, cells, 7, 6)); // full screen: 7 across
     }
 
     private static void newFolderFromSelection() {
