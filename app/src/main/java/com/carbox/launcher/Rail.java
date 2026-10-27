@@ -8,7 +8,6 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.TextClock;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -26,7 +25,7 @@ final class Rail {
     final LinearLayout view;
     private final LinearLayout items;
     private ImageView wIcon, hotIcon, tsIcon;
-    private TextView wHi, wLo, clock;
+    private TextView wHi, wLo, clock, day, date;
 
     private final Runnable clockTick = this::tickClock;
 
@@ -41,6 +40,9 @@ final class Rail {
         s.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), 0, st, 0);
         s.setSpan(new android.text.style.ForegroundColorSpan(U.TEXT2), st, s.length(), 0);
         clock.setText(s);
+        java.util.Date now = k.getTime();
+        if (day != null) day.setText(new java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault()).format(now));
+        if (date != null) date.setText(new java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(now));
         U.ui.removeCallbacks(clockTick);
         U.ui.postDelayed(clockTick, 60000 - (k.get(java.util.Calendar.SECOND) * 1000 + k.get(java.util.Calendar.MILLISECOND)) + 50);
     }
@@ -129,7 +131,7 @@ final class Rail {
             if (!"1".equals(e[1])) continue;
             View v = item(e[0]);
             if (v == null) continue;
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(U.WRAP, U.WRAP);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(e[0].equals("clock") ? U.MATCH : U.WRAP, U.WRAP);
             lp.gravity = Gravity.CENTER_HORIZONTAL;
             if (!first) lp.topMargin = U.u(e[0].equals("weather") ? 4 : 10);
             items.addView(v, lp);
@@ -152,29 +154,25 @@ final class Rail {
         View v;
         switch (id) {
             case "clock": {
+                // Full rail width with centred text: on the box the wrap-sized column was measured
+                // before the time was filled in, which clipped "10:45" to "10" and "27 Oct" to "27".
                 LinearLayout l = U.col(c);
                 l.setGravity(Gravity.CENTER_HORIZONTAL);
-                // bold hours with smaller minutes, kept on one line so it always fits the rail
                 clock = U.text(c, "", 20, U.TEXT, false);
                 clock.setSingleLine(true);
                 clock.setGravity(Gravity.CENTER);
-                l.addView(clock);
-                tickClock();
-                TextClock d = new TextClock(c);
-                d.setFormat24Hour("EEE");
-                d.setFormat12Hour("EEE");
-                d.setTextSize(TypedValue.COMPLEX_UNIT_PX, U.uf(12));
-                d.setTextColor(U.TEXT);
-                d.setTypeface(Typeface.DEFAULT_BOLD);
-                LinearLayout.LayoutParams dl = U.lp(U.WRAP, U.WRAP);
+                l.addView(clock, U.lp(U.MATCH, U.WRAP));
+                day = U.text(c, "", 12, U.TEXT, true);
+                day.setSingleLine(true);
+                day.setGravity(Gravity.CENTER);
+                LinearLayout.LayoutParams dl = U.lp(U.MATCH, U.WRAP);
                 dl.topMargin = U.u(3);
-                l.addView(d, dl);
-                TextClock dt = new TextClock(c);
-                dt.setFormat24Hour("d MMM");
-                dt.setFormat12Hour("d MMM");
-                dt.setTextSize(TypedValue.COMPLEX_UNIT_PX, U.uf(11));
-                dt.setTextColor(U.SUB);
-                l.addView(dt);
+                l.addView(day, dl);
+                date = U.text(c, "", 11, U.SUB, false);
+                date.setSingleLine(true);
+                date.setGravity(Gravity.CENTER);
+                l.addView(date, U.lp(U.MATCH, U.WRAP));
+                tickClock();
                 v = l;
                 v.setOnClickListener(x -> InfoPanels.calendar());
                 v.setOnLongClickListener(x -> {
@@ -301,6 +299,7 @@ final class Rail {
     }
 
     void paused(boolean p) {
+        if (!p) tickClock(); // catch up straight away after the screen was off
         for (StatusIcons.AnimatedIcon a : animated) a.setPaused(p);
     }
 }

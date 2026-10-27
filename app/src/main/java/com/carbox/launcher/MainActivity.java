@@ -296,6 +296,7 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent i) {
         super.onNewIntent(i);
         // Home pressed while already home: close any panel and leave edit mode
+        Keyboard.hide();
         if (Sheets.open()) Sheets.close();
         if (tiles.editing()) tiles.setEditing(false);
         Splash.dismiss();
@@ -303,6 +304,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        if (Keyboard.hide()) return;
         if (Splash.dismiss()) return;
         if (Sheets.open()) {
             Sheets.back();

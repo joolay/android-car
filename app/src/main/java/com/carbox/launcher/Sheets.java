@@ -65,6 +65,7 @@ final class Sheets {
     }
 
     static void close() {
+        Keyboard.hide();
         stack.clear();
         if (layer != null) layer.removeAllViews();
         for (Runnable r : new ArrayList<>(onClose)) r.run();
