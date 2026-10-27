@@ -570,8 +570,15 @@ final class AppPanels {
             final String[] name = {spec.optString("name")};
             LinearLayout b = U.col(c);
             b.addView(Widgets.field("Folder name", name[0], false, t -> name[0] = t), U.lp(U.MATCH, U.WRAP));
+            TextView err = U.text(c, "", 12, U.RED, false);
+            b.addView(err, top(6));
             b.addView(U.button(c, "Save", true, () -> {
-                Widgets.put(spec, "name", name[0].isEmpty() ? "Folder" : name[0]);
+                String n = name[0].trim().isEmpty() ? "Folder" : name[0].trim();
+                if (folderNames(index).contains(n.toLowerCase(java.util.Locale.ROOT))) {
+                    err.setText("There's already a folder called " + n);
+                    return;
+                }
+                Widgets.put(spec, "name", n);
                 Tiles.setSpec(index, spec);
                 Sheets.close();
             }), top(16));
@@ -643,6 +650,8 @@ final class AppPanels {
         titles.addView(U.line(c, manage ? "Widgets on your home screen" : "Choose a widget", 20, U.TEXT, true));
         titles.addView(U.line(c, manage ? "Blue = on your home screen · tap to add or take off · swipe for more" : "Tap one to put it on this tile · swipe for more", 12, U.SUB, false), top(2));
         head.addView(titles, new LinearLayout.LayoutParams(0, U.WRAP, 1));
+        head.addView(U.button(c, "Add folder", false, () -> newFolder(index)));
+        head.addView(U.gap(c, 10, 1));
         head.addView(U.button(c, "Done", true, () -> {
             Sheets.back();
             if (MainActivity.I != null) MainActivity.I.tiles.refresh();
@@ -665,8 +674,8 @@ final class AppPanels {
             if (o != null) current = "f".equals(o.optString("t")) ? "folder" : o.optString("id");
         }
 
+        final String finalCurrent = current;
         List<String[]> choices = new ArrayList<>();
-        choices.add(new String[]{"folder", "Folder", "Apps grouped on one tile"});
         for (String[] w : Widgets.CATALOG) if (Faith.widgetAllowed(w[0])) choices.add(w);
 
         LinearLayout cols = U.row(c);
@@ -685,7 +694,12 @@ final class AppPanels {
                 TextView nm = U.line(c, w[1] + (manage && n != null && n > 1 ? " ×" + n : ""), 12, sel ? U.ACCENT_SOFT : U.TEXT, true);
                 nm.setGravity(Gravity.CENTER);
                 cell.addView(nm, top(5));
-                cell.setOnClickListener(v -> pick(index, w[0], manage && on.containsKey(w[0]) && !"folder".equals(w[0])));
+                cell.setOnClickListener(v -> {
+                    if (manage) pick(index, w[0], on.containsKey(w[0]));
+                    else if (on.containsKey(w[0]) && !w[0].equals(finalCurrent)) // each widget only once
+                        android.widget.Toast.makeText(c, Widgets.name(w[0]) + " is already on your home screen", android.widget.Toast.LENGTH_SHORT).show();
+                    else pick(index, w[0], false);
+                });
                 U.press(cell);
                 LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(U.u(132), 0, 1);
                 cl.setMargins(U.u(5), U.u(5), U.u(5), U.u(5));
@@ -701,6 +715,59 @@ final class AppPanels {
         hl.topMargin = U.u(10);
         card.addView(hs, hl);
         return card;
+    }
+
+    /** Names of the folders on the home screen (lower case), except the one at `skip`. */
+    private static java.util.Set<String> folderNames(int skip) {
+        java.util.Set<String> n = new java.util.HashSet<>();
+        JSONArray s = Tiles.specs();
+        for (int i = 0; i < s.length(); i++) {
+            JSONObject o = s.optJSONObject(i);
+            if (i != skip && o != null && "f".equals(o.optString("t"))) n.add(o.optString("name").trim().toLowerCase(java.util.Locale.ROOT));
+        }
+        return n;
+    }
+
+    /** Ask for a name (must be new), then add the folder (or put it on the tile being replaced) and choose its apps. */
+    private static void newFolder(int index) {
+        Sheets.pushFull(() -> {
+            Context c = Sheets.ctx();
+            final String[] name = {""};
+            LinearLayout b = U.col(c);
+            TextView err = U.text(c, "", 12, U.RED, false);
+            b.addView(Widgets.field("Folder name, e.g. Music", "", false, t -> {
+                name[0] = t;
+                err.setText("");
+            }), U.lp(U.MATCH, U.WRAP));
+            b.addView(err, top(6));
+            b.addView(U.button(c, "Add folder", true, () -> {
+                String n = name[0].trim();
+                if (n.isEmpty()) {
+                    err.setText("Give the folder a name");
+                    return;
+                }
+                if (folderNames(index).contains(n.toLowerCase(java.util.Locale.ROOT))) {
+                    err.setText("There's already a folder called " + n);
+                    return;
+                }
+                JSONObject f = Tiles.folder(n, new JSONArray());
+                int at;
+                if (index >= 0) {
+                    Tiles.setSpec(index, f);
+                    at = index;
+                } else {
+                    JSONArray s = Tiles.specs();
+                    s.put(f);
+                    Tiles.save(s);
+                    if (MainActivity.I != null) MainActivity.I.tiles.refresh();
+                    at = s.length() - 1;
+                }
+                Sheets.back(); // close this name box
+                editFolder(at);
+            }), top(10));
+            LinearLayout card = (LinearLayout) Sheets.panel("New folder", b, 440, 250);
+            return card;
+        });
     }
 
     /** What a new folder tile looks like. */
