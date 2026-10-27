@@ -351,7 +351,7 @@ final class Widgets {
 
     static final class RestW extends W {
         private final LinearLayout box;
-        private final TextView head, time, sub;
+        private final TextView head, time, sub, sub2;
         private final Bar bar;
 
         RestW(Context c, int i, JSONObject s) {
@@ -369,6 +369,8 @@ final class Widgets {
             box.addView(new View(c), U.weight(1, false));
             sub = U.line(c, "", 12, U.TEXT2, false);
             box.addView(sub);
+            sub2 = U.line(c, "", 12, U.SUB, false);
+            box.addView(sub2, top(2));
             box.setOnClickListener(x -> Rest.setup());
             U.press(box);
             v = box;
@@ -383,6 +385,7 @@ final class Widgets {
             boolean due = Rest.due();
             long stopped = Rest.stoppedMs();
             int bg;
+            String l2 = "";
             if (!Rest.on()) {
                 head.setText("DRIVING");
                 sub.setText("Reminders off");
@@ -391,27 +394,30 @@ final class Widgets {
             } else if (due && stopped > 60000) {
                 long left = Rest.breakMin() - stopped / 60000;
                 head.setText("RESTING");
-                sub.setText(left > 0 ? "Break done in " + left + " min" : "Break done");
+                sub.setText(left > 0 ? "Break done in" : "Break done");
+                if (left > 0) l2 = left + " min";
                 bar.color = U.TEAL;
                 bg = U.CARD;
             } else if (due) {
                 head.setText("TAKE A BREAK");
-                sub.setText("Stop and rest " + Rest.breakMin() + " min");
+                sub.setText("Stop and rest");
+                l2 = Rest.breakMin() + " minutes";
                 bar.color = U.AMBER;
                 bg = 0xFF4A3410;
             } else {
                 head.setText("DRIVING");
                 long leftMin = Rest.limitMin() - min;
-                String s = "Break in " + U.dur(leftMin * 60000);
+                sub.setText("Break in " + U.dur(leftMin * 60000));
                 if (Rest.limitKm() > 0) {
                     boolean m = mph();
                     double left = (Rest.limitKm() * 1000.0 - Rest.meters) / (m ? 1609.34 : 1000.0);
-                    s += " · " + Math.max(0, Math.round(left)) + (m ? " mi" : " km");
+                    l2 = "or " + Math.max(0, Math.round(left)) + (m ? " mi" : " km");
                 }
-                sub.setText(s);
                 bar.color = bar.value > 0.85f ? U.AMBER : U.ACCENT;
                 bg = U.CARD;
             }
+            sub2.setText(l2);
+            sub2.setVisibility(l2.isEmpty() ? View.GONE : View.VISIBLE);
             box.setBackground(U.round(bg, 16));
             bar.invalidate();
         }
