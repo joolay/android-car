@@ -45,6 +45,8 @@ final class Dock {
         U.press(dial);
         view.addView(dial, U.lpu(42, 42));
         spacer();
+        divider(); // separates the dialler from the apps
+        spacer();
         for (Apps.App ap : pinned) {
             add(ap, true);
             spacer();
