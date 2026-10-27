@@ -18,6 +18,8 @@
     <!-- Recent calls on the phone screen -->
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <!-- to see Bluetooth hands-free calls (HfpCalls) -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <!-- Brightness slider -->
     <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <!-- Better recent apps in the dock (granted in Settings → Usage access) -->

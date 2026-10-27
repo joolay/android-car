@@ -38,7 +38,9 @@ final class CallState {
     static InCallService inCall;
     // source 2
     static String notifKey;
-    static PendingIntent answerPI, declinePI, hangupPI;
+    static PendingIntent answerPI, declinePI, hangupPI, openPI;
+    // source 3: the Bluetooth hands-free stack (HfpCalls)
+    static boolean hfp;
 
     private static final List<Runnable> listeners = new ArrayList<>();
 
@@ -62,19 +64,32 @@ final class CallState {
 
     static void answer() {
         if (call != null) call.answer(VideoProfile.STATE_AUDIO_ONLY);
-        else send(answerPI);
+        else if (answerPI != null) send(answerPI);
+        else openBtPhone(); // no button we can press: open BT Phone to answer there
+    }
+
+    /** Open the box's BT Phone app (its call screen), for calls we can see but not control. */
+    static void openBtPhone() {
+        if (openPI != null) {
+            send(openPI);
+            return;
+        }
+        String bt = Actions.btDialler();
+        if (bt != null && MainActivity.I != null) Apps.launchPkg(MainActivity.I, bt);
     }
 
     static void decline() {
         if (call != null) {
             if (call.getState() == Call.STATE_RINGING) call.reject(false, null);
             else call.disconnect();
-        } else send(declinePI != null ? declinePI : hangupPI);
+        } else if (declinePI != null || hangupPI != null) send(declinePI != null ? declinePI : hangupPI);
+        else openBtPhone();
     }
 
     static void hangup() {
         if (call != null) call.disconnect();
-        else send(hangupPI != null ? hangupPI : declinePI);
+        else if (hangupPI != null || declinePI != null) send(hangupPI != null ? hangupPI : declinePI);
+        else openBtPhone();
     }
 
     static void setMuted(boolean m) {
@@ -156,12 +171,57 @@ final class CallState {
 
     /** True if this notification looks like a call from the box's Bluetooth phone app. */
     static boolean isCallNotification(Context c, String pkg, Notification n) {
-        if (Notification.CATEGORY_CALL.equals(n.category)) return true;
         String bt = Actions.btDialler();
-        if (pkg.equals(bt) && n.actions != null) {
-            for (Notification.Action a : n.actions) if (a.title != null && match(a.title, ANSWER) || a.title != null && match(a.title, HANGUP)) return true;
+        if (pkg.equals(bt)) log(pkg, n); // keep a record, to see what this box's BT Phone sends
+        if (Notification.CATEGORY_CALL.equals(n.category)) return true;
+        if (pkg.equals(bt)) {
+            if (n.actions != null)
+                for (Notification.Action a : n.actions) if (a.title != null && (match(a.title, ANSWER) || match(a.title, HANGUP) || match(a.title, DECLINE))) return true;
+            // some BT Phone apps post a plain "Incoming call" / caller notification with no buttons
+            CharSequence t = n.extras.getCharSequence(Notification.EXTRA_TITLE), x = n.extras.getCharSequence(Notification.EXTRA_TEXT);
+            String all = ((t == null ? "" : t) + " " + (x == null ? "" : x)).toLowerCase(Locale.ROOT);
+            if (looksLikeStatus(all) || (n.flags & Notification.FLAG_ONGOING_EVENT) != 0 && all.replaceAll("[^0-9]", "").length() >= 6) return true;
         }
         return false;
+    }
+
+    /** The last few notifications from BT Phone (Settings → Calls shows them). */
+    private static void log(String pkg, Notification n) {
+        try {
+            CharSequence t = n.extras.getCharSequence(Notification.EXTRA_TITLE), x = n.extras.getCharSequence(Notification.EXTRA_TEXT);
+            StringBuilder a = new StringBuilder();
+            if (n.actions != null) for (Notification.Action ac : n.actions) a.append(a.length() > 0 ? ", " : "").append(ac.title);
+            String line = new java.text.SimpleDateFormat("HH:mm", Locale.US).format(new java.util.Date()) + "  " + (n.category == null ? "-" : n.category)
+                    + " · " + t + " · " + x + (a.length() > 0 ? " · buttons: " + a : " · no buttons");
+            java.util.List<String> l = new ArrayList<>(Store.list("call_log"));
+            l.add(0, line);
+            while (l.size() > 6) l.remove(l.size() - 1);
+            Store.putList("call_log", l);
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** Calls seen by the Bluetooth hands-free stack. HFP states: 0 active, 1 held, 2 dialling, 3 alerting, 4 incoming, 5 waiting, 6 held, 7 ended. */
+    static void fromHfp(Context c, int hfpState, String num) {
+        if (call != null || hfpState < 0) return; // the calling system has it
+        if (hfpState == 7) {
+            if (hfp && notifKey == null) clear();
+            hfp = false;
+            return;
+        }
+        hfp = true;
+        int before = state;
+        state = hfpState == 4 || hfpState == 5 ? RINGING : hfpState == 2 || hfpState == 3 ? DIALING : hfpState == 0 ? ACTIVE : HOLDING;
+        if (notifKey == null) { // a notification, if any, already filled in the caller
+            number = num == null ? "" : num;
+            String contact = number.isEmpty() ? null : PhoneScreen.lookup(c, number);
+            name = contact != null ? contact : number.isEmpty() ? "Unknown" : number;
+            photo = Widgets.photo(c, PhoneScreen.photoFor(c, number));
+            via = "Bluetooth";
+        }
+        if (state == ACTIVE && before != ACTIVE) activeSince = android.os.SystemClock.elapsedRealtime();
+        changed();
+        if (before == NONE || (before == RINGING) != (state == RINGING)) CallScreen.open(c);
     }
 
     static void fromNotification(Context c, String key, String pkg, Notification n) {
@@ -173,8 +233,8 @@ final class CallState {
             else if (dec == null && match(a.title, DECLINE)) dec = a.actionIntent;
             else if (hang == null && match(a.title, HANGUP)) hang = a.actionIntent;
         }
-        if (ans == null && dec == null && hang == null) return; // nothing we can press
         notifKey = key;
+        openPI = n.contentIntent; // tapping it opens BT Phone's own call screen
         answerPI = ans;
         declinePI = dec;
         hangupPI = hang;
@@ -197,14 +257,16 @@ final class CallState {
         }
         via = Apps.label(pkg);
         int before = state;
-        state = ans != null ? RINGING : ACTIVE;
+        String all = (title + " " + text).toLowerCase(Locale.ROOT);
+        state = ans != null || all.contains("incoming") || all.contains("来电") ? RINGING : ACTIVE;
         if (state == ACTIVE && before != ACTIVE) activeSince = SystemClock.elapsedRealtime();
         changed();
         if (before == NONE || (before == RINGING) != (state == RINGING)) CallScreen.open(c);
     }
 
     static void notificationRemoved(String key) {
-        if (call == null && key.equals(notifKey)) clear();
+        if (call == null && key.equals(notifKey) && !hfp) clear();
+        else if (key.equals(notifKey)) notifKey = null;
     }
 
     private static boolean looksLikeStatus(String s) {
@@ -222,7 +284,8 @@ final class CallState {
         state = NONE;
         call = null;
         notifKey = null;
-        answerPI = declinePI = hangupPI = null;
+        answerPI = declinePI = hangupPI = openPI = null;
+        hfp = false;
         activeSince = 0;
         muted = false;
         changed();

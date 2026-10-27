@@ -24,6 +24,10 @@ public class CallScreen extends Activity {
 
     /** Bring the call screen up from anywhere (calling service, accessibility service or the launcher). */
     static void open(Context c) {
+        if (MainActivity.I != null && MainActivity.I.isResumed2()) {
+            CallCard.show(); // Car Launcher is in front: show the call inside the tile area
+            return;
+        }
         Context from = BackButtonService.I != null ? BackButtonService.I : MainActivity.I != null && MainActivity.I.isResumed2() ? MainActivity.I : c;
         try {
             from.startActivity(CallState.screenIntent(from));

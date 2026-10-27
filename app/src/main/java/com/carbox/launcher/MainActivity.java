@@ -54,6 +54,7 @@ public class MainActivity extends Activity {
         Loc.init(this);
         Rest.init(this);
         Salah.start(this);
+        HfpCalls.start(this);
         build();
         immersive();
         askPermissions();
@@ -276,11 +277,12 @@ public class MainActivity extends Activity {
 
     private void askPermissions() {
         String[] want = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALENDAR, Manifest.permission.READ_CONTACTS};
+                Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALENDAR, Manifest.permission.READ_CONTACTS,
+                android.os.Build.VERSION.SDK_INT >= 31 ? Manifest.permission.BLUETOOTH_CONNECT : Manifest.permission.READ_CONTACTS}; // Bluetooth: to see BT calls
         List<String> need = new ArrayList<>();
         for (String p : want) if (checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) need.add(p);
-        if (!need.isEmpty() && !Store.flag("asked_perms", false)) {
-            Store.put("asked_perms", true);
+        if (!need.isEmpty() && !Store.flag("asked_perms2", false)) {
+            Store.put("asked_perms2", true); // asked again once, for the new Bluetooth permission
             requestPermissions(need.toArray(new String[0]), 1); // the set-up checklist follows when this closes
         } else U.ui.postDelayed(this::firstRunChecklist, 1500);
     }
@@ -324,6 +326,7 @@ public class MainActivity extends Activity {
         applyNight();
         Loc.start();
         Status.start();
+        if (CallState.state != CallState.NONE) CallCard.show(); // back home during a call
         Weather.maybeFetch();
         ticker.start();
         tiles.start();

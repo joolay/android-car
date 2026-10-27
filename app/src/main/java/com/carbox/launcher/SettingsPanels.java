@@ -819,6 +819,11 @@ final class SettingsPanels {
                 }
             }));
             b.addView(U.text(c, "Optional. If this box handles Bluetooth calls through Android, every call then uses Car Launcher's screen with mute, keypad and audio controls. If it doesn't, nothing changes and BT Phone keeps working.", 12, U.SUB, false), top(4));
+            // what the box's BT Phone has sent: helps when calls aren't picked up
+            b.addView(Sheets.section("Last BT Phone notifications"));
+            java.util.List<String> cl = Store.list("call_log");
+            if (cl.isEmpty()) b.addView(U.text(c, "None yet. If a call rings and nothing shows here, BT Phone isn't posting notifications; calls are then picked up from Bluetooth directly (allow Nearby devices).", 12, U.SUB, false));
+            for (String s : cl) b.addView(U.text(c, s, 11, U.SUB, false), top(4));
             return Sheets.panel("Calls", b, 640, 430);
         });
     }
