@@ -56,7 +56,9 @@ public class MainActivity extends Activity {
         askPermissions();
         Actions.connectionsAtStart(this);
         U.ui.postDelayed(Actions.tsWatch, 60000);
-        // splash first; hotspot settings and auto-start apps only once it has closed
+        // music starts first, even before the splash
+        Music.atStart(this);
+        // splash next; hotspot settings and auto-start apps only once it has closed
         if (!Splash.maybeShow(this, "start", () -> Actions.afterSplash(this))) Actions.afterSplash(this);
     }
 

@@ -33,6 +33,8 @@
         <intent><action android:name="android.intent.action.DIAL" /></intent>
         <intent><action android:name="android.speech.RecognitionService" /></intent>
         <intent><action android:name="android.speech.action.RECOGNIZE_SPEECH" /></intent>
+        <intent><action android:name="android.media.browse.MediaBrowserService" /></intent>
+        <intent><action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" /></intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="geo" />

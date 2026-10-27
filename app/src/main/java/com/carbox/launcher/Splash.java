@@ -79,6 +79,13 @@ final class Splash {
         public void run() {
             if (shown == null) return;
             long now = SystemClock.elapsedRealtime();
+            if (MainActivity.I != null && !MainActivity.I.isResumed2() && endsAt != 0) {
+                // covered by another app (e.g. the music app starting a playlist): hold the countdown
+                endsAt += 100;
+                startedAt += 100;
+                U.ui.postDelayed(this, 100);
+                return;
+            }
             if (endsAt != 0 && now >= endsAt) {
                 dismiss();
                 return;

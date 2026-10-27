@@ -101,7 +101,7 @@ final class SettingsPanels {
                 {"Units and clock", (Store.flag(Store.CELSIUS, true) ? "°C" : "°F") + " · " + (Store.flag(Store.H24, true) ? "24 h" : "12 h")},
                 {"Auto start", Actions.autostart().length() + " apps"},
                 {"Night dimming", Store.flag(Store.NIGHT, false) ? "On" : "Off"},
-                {"Lyrics over album art", Store.flag(Store.LYRICS, true) ? "On" : "Off"},
+                {"Music", Music.label() + (Store.flag(Store.MUSIC_AUTOPLAY, false) ? " · auto play" : "")},
                 {"Bluetooth settings", ""},
                 {"Android settings", ""}};
         Runnable[] actions = {SettingsPanels::navApp, SettingsPanels::map, SettingsPanels::railOrder, SettingsPanels::hiddenApps, SettingsPanels::news,
@@ -110,11 +110,7 @@ final class SettingsPanels {
             Store.put(Store.NIGHT, !Store.flag(Store.NIGHT, false));
             if (MainActivity.I != null) MainActivity.I.applyNight();
             Sheets.refresh();
-        }, () -> {
-            Store.put(Store.LYRICS, !Store.flag(Store.LYRICS, true));
-            Sheets.refresh();
-            if (MainActivity.I != null) MainActivity.I.nowPlaying.update();
-        }, () -> {
+        }, SettingsPanels::music, () -> {
             Status.open(c, Settings.ACTION_BLUETOOTH_SETTINGS);
             Sheets.close();
         }, () -> {
@@ -264,6 +260,83 @@ final class SettingsPanels {
             })));
             b.addView(U.text(c, "Turn-by-turn on the map tile works with Google Maps and Waze.", 12, U.SUB, false), top(8));
             return Sheets.panel("Navigation app", b, 520, 400);
+        });
+    }
+
+    // ------------------------------------------------------------------ music
+
+    static void music() {
+        open(() -> {
+            Context c = c();
+            LinearLayout b = U.col(c);
+            LinearLayout app = U.row(c);
+            U.pad(app, 0, 10, 0, 10);
+            LinearLayout t = U.col(c);
+            t.addView(U.text(c, "Default music app", 15, U.TEXT, false));
+            t.addView(U.text(c, "Used by auto play, the Now playing card and its play button", 12, U.SUB, false), top(3));
+            app.addView(t, new LinearLayout.LayoutParams(0, U.WRAP, 1));
+            String p = Music.pkg();
+            if (p != null && Apps.iconOf(p) != null) {
+                ImageView iv = new ImageView(c);
+                iv.setImageDrawable(Apps.iconOf(p));
+                app.addView(iv, U.lpu(28, 28));
+                app.addView(U.gap(c, 8, 1));
+            }
+            app.addView(U.text(c, Music.label() + " ›", 14, U.ACCENT_SOFT, true));
+            app.setOnClickListener(v -> musicAppPicker());
+            b.addView(app);
+            b.addView(U.hr(c));
+            b.addView(Sheets.switchRow(0, 0, "Play music when the car starts", "Starts straight away, before the splash screen",
+                    Store.flag(Store.MUSIC_AUTOPLAY, false), on -> Store.put(Store.MUSIC_AUTOPLAY, on)));
+            b.addView(U.hr(c));
+            b.addView(U.text(c, "If nothing is loaded, play", 15, U.TEXT, false), top(12));
+            b.addView(U.text(c, "A playlist name (searched in your music app) or a playlist link you've shared from the app", 12, U.SUB, false), top(3));
+            LinearLayout pr = U.row(c);
+            final String[] pl = {Store.str(Store.MUSIC_PLAYLIST, "")};
+            pr.addView(Widgets.field("e.g. Liked Songs", pl[0], false, v -> {
+                pl[0] = v;
+                Store.put(Store.MUSIC_PLAYLIST, v);
+            }), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+            pr.addView(U.gap(c, 10, 1));
+            pr.addView(U.button(c, "Test", false, () -> {
+                Sheets.close();
+                Music.playPlaylist(c, true);
+            }));
+            b.addView(pr, top(10));
+            b.addView(U.hr(c), top(12));
+            b.addView(Sheets.switchRow(0, 0, "Lyrics over album art", "Synced lyrics when available", Store.flag(Store.LYRICS, true), on -> {
+                Store.put(Store.LYRICS, on);
+                if (MainActivity.I != null) MainActivity.I.nowPlaying.update();
+            }));
+            return Sheets.panel("Music", b, 640, 432);
+        });
+    }
+
+    static void musicAppPicker() {
+        Sheets.push(() -> {
+            Context c = c();
+            LinearLayout b = U.col(c);
+            b.addView(U.text(c, "Music apps on this box are listed first", 12, U.SUB, false));
+            String cur = Store.str(Store.MUSIC_PKG, null), now = Music.pkg();
+            for (Apps.App a : Music.players(c)) {
+                b.addView(appRow(c, a, !Music.LAST.equals(cur) && a.pkg.equals(now), () -> {
+                    Store.put(Store.MUSIC_PKG, a.pkg);
+                    Sheets.back();
+                    Sheets.refresh();
+                }));
+            }
+            b.addView(radio(c, "Last app that played", "Whatever played last time", Music.LAST.equals(cur), () -> {
+                Store.put(Store.MUSIC_PKG, Music.LAST);
+                Sheets.back();
+                Sheets.refresh();
+            }));
+            b.addView(Sheets.item("Other app…", null, () -> AppPanels.appPicker("Default music app", a -> {
+                Store.put(Store.MUSIC_PKG, a.pkg);
+                Sheets.back();
+                Sheets.back();
+                Sheets.refresh();
+            })));
+            return Sheets.panel("Default music app", b, 560, 420);
         });
     }
 

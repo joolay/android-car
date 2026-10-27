@@ -156,6 +156,9 @@ final class Store {
     static final String CONN_TS = "conn_ts";
     static final String CONN_TS_RETRY = "conn_ts_retry";
     static final String LYRICS = "lyrics";
+    static final String MUSIC_PKG = "music_pkg";        // package or "last"
+    static final String MUSIC_AUTOPLAY = "music_autoplay";
+    static final String MUSIC_PLAYLIST = "music_playlist";  // playlist name or link
     static final String NIGHT = "night";
     static final String CELSIUS = "celsius";
     static final String H24 = "h24";

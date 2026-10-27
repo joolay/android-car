@@ -120,6 +120,7 @@ final class NowPlaying {
     }
 
     private void openMusicApp() {
+        if (Music.open(c)) return;
         for (String p : Actions.MUSIC) if (Apps.launchPkg(c, p)) return;
         AppPanels.appPicker("Open music app", a -> Apps.launch(c, a));
     }
@@ -127,7 +128,9 @@ final class NowPlaying {
     private void transport(int which) {
         MediaController m = MediaListener.controller;
         if (m == null) {
-            openMusicApp();
+            // nothing loaded yet: press play on the default music app without opening it
+            if (which == 1) Music.resume(c);
+            else openMusicApp();
             return;
         }
         MediaController.TransportControls t = m.getTransportControls();
