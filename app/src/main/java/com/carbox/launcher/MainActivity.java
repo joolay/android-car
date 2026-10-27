@@ -301,7 +301,7 @@ public class MainActivity extends Activity {
         rail.paused(false);
         dock.render();
         // back from Android's keyboard settings: show the updated steps
-        if (Sheets.open() && Sheets.top() != null && (Sheets.top() == SettingsPanels.keyboardPage || Sheets.top() == SettingsPanels.setupPage || Sheets.top() == SettingsPanels.floatPage)) {
+        if (Sheets.open() && Sheets.top() != null && (Sheets.top() == SettingsPanels.keyboardPage || Sheets.top() == SettingsPanels.setupPage || Sheets.top() == SettingsPanels.floatPage || Sheets.top() == Optimiser.page)) {
             Sheets.refresh();
         }
         if (pendingAutostart) {

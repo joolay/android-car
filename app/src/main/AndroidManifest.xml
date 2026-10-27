@@ -32,6 +32,11 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
         <intent><action android:name="android.intent.action.VOICE_COMMAND" /></intent>
+        <!-- other launchers, for the startup optimiser -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
         <intent><action android:name="android.intent.action.ASSIST" /></intent>
         <intent><action android:name="android.speech.action.VOICE_SEARCH_HANDS_FREE" /></intent>
         <intent><action android:name="android.intent.action.DIAL" /></intent>

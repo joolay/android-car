@@ -377,6 +377,9 @@ final class SettingsPanels {
             boolean fb = BackButtonService.enabled(c);
             b.addView(check(c, R.drawable.ic_back, U.CARD3, "Floating back button (optional)", "A back button over other apps; hold it for shortcuts",
                     fb ? "Done" : "Set up", fb, SettingsPanels::floatingBack));
+            boolean opt = Store.flag("opt_seen", false);
+            b.addView(check(c, R.drawable.ic_bolt, U.CARD3, "Startup optimiser (recommended)", "Find apps that clash with Car Launcher or slow the start-up",
+                    opt ? "Done" : "Check", opt, Optimiser::show));
             b.addView(U.text(c, "Find this again any time in Settings → Android settings → Set-up checklist.", 12, U.SUB, false), top(10));
             return Sheets.panel("Welcome to Car Launcher", b, 640, 440);
         });
@@ -551,6 +554,8 @@ final class SettingsPanels {
             b.addView(Sheets.item("Set-up checklist", null, SettingsPanels::setupChecklist));
             b.addView(U.hr(c));
             b.addView(Sheets.item("Floating back button", BackButtonService.enabled(c) ? "On" : "Off", SettingsPanels::floatingBack));
+            b.addView(U.hr(c));
+            b.addView(Sheets.item("Startup optimiser", null, Optimiser::show));
             b.addView(U.hr(c));
             String[][] items = {{"All Android settings", Settings.ACTION_SETTINGS}, {"Bluetooth", Settings.ACTION_BLUETOOTH_SETTINGS},
                     {"Wi-Fi", Settings.ACTION_WIFI_SETTINGS}, {"Sound", Settings.ACTION_SOUND_SETTINGS}, {"Display", Settings.ACTION_DISPLAY_SETTINGS},
