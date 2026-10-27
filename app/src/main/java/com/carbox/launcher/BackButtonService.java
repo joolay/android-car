@@ -22,7 +22,10 @@ public class BackButtonService extends AccessibilityService {
     private WindowManager wm;
     private FrameLayout button;
     private WindowManager.LayoutParams lp;
-    private boolean visible;
+    private boolean visible;      // an app (not home) is on screen
+    private boolean awake;        // shown because the screen was touched recently
+    static final long SHOW_MS = 4000;
+    private final Runnable sleep = () -> setAwake(false);
 
     @Override
     protected void onServiceConnected() {
@@ -53,8 +56,10 @@ public class BackButtonService extends AccessibilityService {
         button.setElevation(U.uf(6));
         ImageView iv = U.icon(this, R.drawable.ic_back, U.TEXT);
         button.addView(iv, new FrameLayout.LayoutParams(size / 2, size / 2, Gravity.CENTER));
+        // FLAG_WATCH_OUTSIDE_TOUCH tells us when the screen is touched anywhere (the touch still goes to the app)
         lp = new WindowManager.LayoutParams(size, size, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                 PixelFormat.TRANSLUCENT);
         lp.gravity = Gravity.TOP | Gravity.START;
         lp.x = Store.num("fb_x", U.u(14));
@@ -78,12 +83,57 @@ public class BackButtonService extends AccessibilityService {
 
     private void setVisible(boolean v) {
         visible = v;
-        if (button != null) button.setVisibility(v && Store.flag("fb_on", true) ? View.VISIBLE : View.GONE);
+        if (!v) awake = false;
+        apply();
+    }
+
+    /** Wake the button for a few seconds after any touch. */
+    private void setAwake(boolean a) {
+        awake = a;
+        U.ui.removeCallbacks(sleep);
+        if (a) U.ui.postDelayed(sleep, SHOW_MS);
+        apply();
+    }
+
+    static boolean onlyOnTouch() {
+        return Store.flag("fb_touch", true);
+    }
+
+    /**
+     * Shown: full size and opaque. Asleep: a 1-pixel invisible window that only listens for touches,
+     * so nothing is blocked and the next tap on the app wakes the button.
+     */
+    private void apply() {
+        if (button == null) return;
+        boolean on = visible && Store.flag("fb_on", true);
+        button.setVisibility(on ? View.VISIBLE : View.GONE);
+        if (!on) return;
+        boolean show = awake || !onlyOnTouch();
+        int size = U.u(sizeDu());
+        int w = show ? size : 1;
+        if (lp.width != w) {
+            lp.width = w;
+            lp.height = w;
+            try {
+                wm.updateViewLayout(button, lp);
+            } catch (Exception ignored) {
+            }
+        }
+        button.animate().cancel();
+        if (show) {
+            button.setAlpha(button.getAlpha() < 0.05f ? 0f : button.getAlpha());
+            button.animate().alpha(1f).setDuration(150).start();
+        } else button.setAlpha(0f);
     }
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent e) {
-        if (e.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || e.getPackageName() == null) return;
+        int t = e.getEventType();
+        if ((t == AccessibilityEvent.TYPE_VIEW_CLICKED || t == AccessibilityEvent.TYPE_VIEW_SCROLLED) && visible && onlyOnTouch()) {
+            setAwake(true);
+            return;
+        }
+        if (t != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || e.getPackageName() == null) return;
         String pkg = e.getPackageName().toString();
         if (pkg.equals(getPackageName())) {
             setVisible(false); // the home screen (and our own panels)
@@ -142,6 +192,12 @@ public class BackButtonService extends AccessibilityService {
 
         @Override
         public boolean onTouch(View v, MotionEvent e) {
+            if (e.getActionMasked() == MotionEvent.ACTION_OUTSIDE) {
+                if (onlyOnTouch()) setAwake(true);
+                return false;
+            }
+            if (onlyOnTouch() && !awake) return false;
+            if (onlyOnTouch()) setAwake(true); // keep it up while you use it
             switch (e.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     downX = e.getRawX();

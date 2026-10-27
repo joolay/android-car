@@ -415,6 +415,10 @@ final class SettingsPanels {
                     on ? "Done" : "Turn on", on, () -> Status.open(c, Settings.ACTION_ACCESSIBILITY_SETTINGS)), on ? top(10) : U.lp(U.MATCH, U.WRAP));
             String sz = Store.str("fb_size", "m");
             b.addView(Sheets.row("Size", sizeSeg(c, "s", "Small", sz), sizeSeg(c, "m", "Medium", sz), sizeSeg(c, "l", "Large", sz)), top(8));
+            b.addView(Sheets.switchRow(0, 0, "Only when I touch the screen", "Appears when you tap or scroll, then fades after 4 seconds", BackButtonService.onlyOnTouch(), v -> {
+                Store.put("fb_touch", v);
+                BackButtonService.refresh();
+            }));
             b.addView(Sheets.switchRow(0, 0, "Show button", null, Store.flag("fb_on", true), v -> {
                 Store.put("fb_on", v);
                 BackButtonService.refresh();
