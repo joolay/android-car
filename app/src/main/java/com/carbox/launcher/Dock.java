@@ -14,7 +14,7 @@ import java.util.List;
 final class Dock {
     private final Activity a;
     final LinearLayout view;
-    private static final int SLOTS = 9;
+    private static final int SLOTS = 7; // + All apps = 8 icons
 
     Dock(Activity a) {
         this.a = a;
@@ -31,6 +31,7 @@ final class Dock {
             Apps.App ap = Apps.get(k);
             if (ap != null && !Apps.hidden().contains(k)) pinned.add(ap);
         }
+        while (pinned.size() > SLOTS) pinned.remove(pinned.size() - 1);
         int left = Math.max(0, SLOTS - pinned.size());
         List<Apps.App> recent = Apps.recents(left);
         for (Apps.App ap : pinned) add(ap, true);

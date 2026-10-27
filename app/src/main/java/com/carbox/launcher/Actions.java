@@ -120,13 +120,14 @@ final class Actions {
     // ------------------------------------------------------------------ calls
 
     static void call(Activity a, String number) {
-        String mode = Store.str(Store.CALLS, "box");
+        String mode = Store.str(Store.CALLS, "bt");
         if ("connect".equals(mode)) {
-            if (!Apps.launchPkg(a, Store.str(Store.BRIDGE_PKG, null))) AppPanels.connect();
+            Apps.App app = connectApp("carplay");
+            if (app == null || !Apps.launch(a, app)) AppPanels.connect();
             return;
         }
         if ("bt".equals(mode)) {
-            String pkg = Store.str(Store.CALLS_BT_PKG, null);
+            String pkg = btDialler();
             if (pkg != null) {
                 Intent d = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number))).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 try {
@@ -160,19 +161,73 @@ final class Actions {
 
     // ------------------------------------------------------------------ car connect
 
-    static void carConnect(Context c, String which) {
-        String key = "bridge".equals(which) ? Store.BRIDGE_PKG : "mirror".equals(which) ? Store.MIRROR_PKG : Store.NATIVE_PKG;
-        String pkg = Store.str(key, null);
-        if ("bridge".equals(which) && pkg == null) {
-            Apps.App b = findBridge();
-            if (b != null) pkg = b.pkg;
+    /** which: carplay | aa | mirror | native */
+    static String connectKey(String which) {
+        switch (which) {
+            case "carplay":
+                return Store.CARPLAY_PKG;
+            case "aa":
+                return Store.AA_PKG;
+            case "mirror":
+                return Store.MIRROR_PKG;
+            default:
+                return Store.NATIVE_PKG;
         }
-        if (pkg != null && Apps.launchPkg(c, pkg)) {
+    }
+
+    static String connectTitle(String which) {
+        switch (which) {
+            case "carplay":
+                return "Apple CarPlay";
+            case "aa":
+                return "Android Auto";
+            case "mirror":
+                return "Mirror Screen";
+            default:
+                return "Native Car";
+        }
+    }
+
+    /** The app a Car Connect line opens: the one you chose, otherwise a good guess by name. */
+    static Apps.App connectApp(String which) {
+        Apps.App a = Apps.byPkg(Store.str(connectKey(which), null));
+        if (a != null) return a;
+        if ("carplay".equals(which) || "aa".equals(which)) {
+            a = Apps.byPkg(Store.str(Store.BRIDGE_PKG, null));
+            return a != null ? a : findBridge();
+        }
+        if ("mirror".equals(which)) return byLabel("mirror", false);
+        return byLabel("car", true);
+    }
+
+    static Apps.App byLabel(String word, boolean exact) {
+        for (Apps.App a : Apps.all) {
+            String l = a.label.trim().toLowerCase(java.util.Locale.ROOT);
+            if (exact ? l.equals(word) : l.equals(word)) return a;
+        }
+        if (!exact) for (Apps.App a : Apps.all) if (a.label.toLowerCase(java.util.Locale.ROOT).contains(word)) return a;
+        return null;
+    }
+
+    static void carConnect(Context c, String which) {
+        Apps.App a = connectApp(which);
+        if (a != null && Apps.launch(c, a)) {
             Sheets.close();
             return;
         }
-        String title = "bridge".equals(which) ? "CarPlay / Android Auto app" : "mirror".equals(which) ? "Mirror link app" : "Native car shortcut";
-        AppPanels.bridgePicker(title, key);
+        AppPanels.bridgePicker(connectTitle(which) + " app", connectKey(which));
+    }
+
+    /** The Bluetooth phone app: the one chosen in Calls, otherwise one that looks like it. */
+    static String btDialler() {
+        String p = Store.str(Store.CALLS_BT_PKG, null);
+        if (p != null && Apps.installed(p)) return p;
+        for (Apps.App a : Apps.all) {
+            String l = a.label.toLowerCase(java.util.Locale.ROOT);
+            if (l.contains("bluetooth") || l.startsWith("bt ") || l.equals("bt") || l.contains("btphone") || l.contains("bt phone") || l.contains("bt dial"))
+                return a.pkg;
+        }
+        return null;
     }
 
     // ------------------------------------------------------------------ brightness & night

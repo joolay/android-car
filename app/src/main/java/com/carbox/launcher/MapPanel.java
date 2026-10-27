@@ -51,9 +51,17 @@ final class MapPanel {
                 @Override
                 public void onPageFinished(WebView v, String url) {
                     pageReady = true;
+                    String key = Store.str(Store.MAP_KEY, "").replace("'", "");
+                    web.evaluateJavascript("setup('" + (google() ? "google" : "osm") + "','" + key + "')", null);
                     push();
                 }
             });
+            web.addJavascriptInterface(new Object() {
+                @android.webkit.JavascriptInterface
+                public void mapNote(String msg) {
+                    U.ui.post(() -> android.widget.Toast.makeText(c, msg, android.widget.Toast.LENGTH_LONG).show());
+                }
+            }, "Android");
             web.loadUrl("file:///android_asset/map.html");
             mapLayer.addView(web, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         } catch (Throwable t) {
@@ -112,6 +120,18 @@ final class MapPanel {
 
         Loc.listen(this::push);
         MediaListener.listenNav(this::updateNav);
+    }
+
+    /** Google Maps only when it's chosen and a key has been entered; otherwise OpenStreetMap. */
+    static boolean google() {
+        return "google".equals(Store.str(Store.MAP_PROVIDER, "osm")) && !Store.str(Store.MAP_KEY, "").isEmpty();
+    }
+
+    /** Reload after the map setting changes. */
+    void reload() {
+        if (web == null) return;
+        pageReady = false;
+        web.loadUrl("file:///android_asset/map.html");
     }
 
     static void clip(View v, float r) {

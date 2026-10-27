@@ -27,6 +27,13 @@ final class Ticker {
     private final Marquee marquee;
     private final U.Ring ring;
     private final List<String> news = new ArrayList<>(), traffic = new ArrayList<>();
+    private final List<Item> newsItems = new ArrayList<>(), trafficItems = new ArrayList<>();
+    private long newsAt, trafficAt; // wall clock of last successful load
+
+    static final class Item {
+        String title, link, desc, source;
+        long date;
+    }
     private boolean showingNews = true;
     private long manualUntil;     // elapsedRealtime; 0 = automatic
     private long manualStart;
@@ -52,7 +59,9 @@ final class Ticker {
         LinearLayout.LayoutParams rlp = U.lpu(18, 18);
         rlp.leftMargin = U.u(8);
         view.addView(ring, rlp);
-        view.setOnClickListener(v -> tapped());
+        // the NEWS / TRAFFIC label switches feeds; the headlines open the feed for more detail
+        tag.setOnClickListener(v -> tapped());
+        view.setOnClickListener(v -> openFeed());
         String mode = Store.str(Store.TICKER_MODE, "alt");
         showingNews = !"traffic".equals(mode);
         applyTag();
@@ -139,15 +148,24 @@ final class Ticker {
         if (trafficUrl.isEmpty()) trafficUrl = "https://news.google.com/rss/search?q=" + Uri.encode("traffic " + place()) + "+when:2d&hl=en-ZA&gl=ZA&ceid=ZA:en";
         Net.get(newsUrl, null, (b, code) -> {
             if (b != null) {
+                List<Item> items = parseItems(b);
+                if (items.isEmpty()) return;
+                newsItems.clear();
+                newsItems.addAll(items);
                 news.clear();
-                news.addAll(parse(b));
+                for (Item it : items) news.add(it.title);
+                newsAt = System.currentTimeMillis();
                 if (showingNews) updateText();
             }
         });
         Net.get(trafficUrl, null, (b, code) -> {
             if (b != null) {
+                List<Item> items = parseItems(b);
+                trafficItems.clear();
+                trafficItems.addAll(items);
                 traffic.clear();
-                traffic.addAll(parse(b));
+                for (Item it : items) traffic.add(it.title);
+                trafficAt = System.currentTimeMillis();
                 if (!showingNews) updateText();
             }
         });
@@ -166,7 +184,13 @@ final class Ticker {
                         String d = p.getJSONArray("events").getJSONObject(0).optString("description");
                         String from = p.optString("from"), to = p.optString("to");
                         int delay = p.optInt("delay", 0);
-                        live.add(d + (from.isEmpty() ? "" : ": " + from + (to.isEmpty() ? "" : " to " + to)) + (delay > 60 ? " · " + delay / 60 + " min delay" : ""));
+                        String line = d + (from.isEmpty() ? "" : ": " + from + (to.isEmpty() ? "" : " to " + to)) + (delay > 60 ? " · " + delay / 60 + " min delay" : "");
+                        live.add(line);
+                        Item it = new Item();
+                        it.title = line;
+                        it.source = "TomTom live traffic";
+                        it.date = System.currentTimeMillis();
+                        trafficItems.add(live.size() - 1, it);
                     }
                     if (!live.isEmpty()) {
                         traffic.addAll(0, live);
@@ -178,31 +202,167 @@ final class Ticker {
         }
     }
 
-    static List<String> parse(String xml) {
-        List<String> out = new ArrayList<>();
+    static List<Item> parseItems(String xml) {
+        List<Item> out = new ArrayList<>();
         try {
             XmlPullParser p = XmlPullParserFactory.newInstance().newPullParser();
             p.setInput(new StringReader(xml));
-            boolean inItem = false;
+            Item cur = null;
             String tagName = null;
-            for (int e = p.getEventType(); e != XmlPullParser.END_DOCUMENT && out.size() < 15; e = p.next()) {
+            StringBuilder text = new StringBuilder();
+            for (int e = p.getEventType(); e != XmlPullParser.END_DOCUMENT && out.size() < 20; e = p.next()) {
                 if (e == XmlPullParser.START_TAG) {
                     tagName = p.getName();
-                    if ("item".equals(tagName) || "entry".equals(tagName)) inItem = true;
-                } else if (e == XmlPullParser.TEXT && inItem && "title".equals(tagName)) {
-                    String t = p.getText().trim();
-                    // Google News appends " - Source"
-                    int dash = t.lastIndexOf(" - ");
-                    if (dash > 20) t = t.substring(0, dash);
-                    if (!t.isEmpty()) out.add(t);
+                    text.setLength(0);
+                    if ("item".equals(tagName) || "entry".equals(tagName)) cur = new Item();
+                    if (cur != null && "link".equals(tagName) && p.getAttributeValue(null, "href") != null) cur.link = p.getAttributeValue(null, "href");
+                } else if (e == XmlPullParser.TEXT || e == XmlPullParser.CDSECT) {
+                    text.append(p.getText());
                 } else if (e == XmlPullParser.END_TAG) {
-                    if ("item".equals(p.getName()) || "entry".equals(p.getName())) inItem = false;
+                    String n = p.getName(), t = text.toString().trim();
+                    if (cur != null) {
+                        if ("title".equals(n)) cur.title = t;
+                        else if ("link".equals(n) && !t.isEmpty()) cur.link = t;
+                        else if ("description".equals(n) || "summary".equals(n)) cur.desc = clean(t);
+                        else if ("source".equals(n)) cur.source = t;
+                        else if ("pubDate".equals(n) || "updated".equals(n) || "published".equals(n)) cur.date = date(t);
+                        else if ("item".equals(n) || "entry".equals(n)) {
+                            if (cur.title != null && !cur.title.isEmpty()) {
+                                // Google News appends " - Source"
+                                int dash = cur.title.lastIndexOf(" - ");
+                                if (dash > 20) {
+                                    if (cur.source == null) cur.source = cur.title.substring(dash + 3);
+                                    cur.title = cur.title.substring(0, dash);
+                                }
+                                if (cur.desc != null && (cur.desc.startsWith(cur.title) || cur.desc.length() < 12)) cur.desc = null;
+                                out.add(cur);
+                            }
+                            cur = null;
+                        }
+                    }
+                    text.setLength(0);
                     tagName = null;
                 }
             }
         } catch (Exception ignored) {
         }
         return out;
+    }
+
+    static List<String> parse(String xml) {
+        List<String> l = new ArrayList<>();
+        for (Item it : parseItems(xml)) l.add(it.title);
+        return l;
+    }
+
+    private static String clean(String html) {
+        String t = android.text.Html.fromHtml(html, android.text.Html.FROM_HTML_MODE_COMPACT).toString().replace('\uFFFC', ' ').trim();
+        t = t.replaceAll("\\s+", " ");
+        return t.length() > 220 ? t.substring(0, 217) + "…" : t;
+    }
+
+    private static long date(String s) {
+        String[] fmts = {"EEE, dd MMM yyyy HH:mm:ss zzz", "EEE, dd MMM yyyy HH:mm:ss Z", "yyyy-MM-dd'T'HH:mm:ssXXX", "yyyy-MM-dd'T'HH:mm:ss'Z'"};
+        for (String f : fmts) {
+            try {
+                java.text.SimpleDateFormat d = new java.text.SimpleDateFormat(f, java.util.Locale.US);
+                if (f.endsWith("'Z'")) d.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                return d.parse(s).getTime();
+            } catch (Exception ignored) {
+            }
+        }
+        return 0;
+    }
+
+    static String ago(long t) {
+        if (t <= 0) return "";
+        long m = Math.max(0, (System.currentTimeMillis() - t) / 60000);
+        if (m < 1) return "just now";
+        if (m < 60) return m + " min ago";
+        if (m < 48 * 60) return (m / 60) + " h ago";
+        return (m / 1440) + " days ago";
+    }
+
+    // ------------------------------------------------------------------ feed detail
+
+    private void openFeed() {
+        final boolean wasNews = showingNews;
+        Sheets.show(() -> {
+            Context c = Sheets.ctx();
+            boolean n = wasNews;
+            List<Item> items = n ? newsItems : trafficItems;
+            LinearLayout card = U.col(c);
+            card.setBackground(U.round(U.CARD, 22));
+            U.pad(card, 26, 20, 26, 16);
+            card.setLayoutParams(Sheets.centered(660, 440));
+            LinearLayout head = U.row(c);
+            TextView tg = U.text(c, n ? "NEWS" : "TRAFFIC", 12, n ? U.TEXT : 0xFF3A2600, true);
+            tg.setBackground(U.round(n ? U.ACCENT : U.AMBER, 6));
+            U.pad(tg, 9, 3, 9, 3);
+            head.addView(tg);
+            TextView title = U.line(c, n ? "Local news" : "Traffic", 20, U.TEXT, true);
+            LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+            tl.leftMargin = U.u(12);
+            head.addView(title, tl);
+            head.addView(U.button(c, "Edit source", false, SettingsPanels::news));
+            head.addView(U.gap(c, 12, 1));
+            View x = U.icon(c, R.drawable.ic_x, U.SUB);
+            x.setOnClickListener(v -> Sheets.close());
+            head.addView(x, U.lpu(24, 24));
+            card.addView(head);
+            String url = Store.str(n ? Store.NEWS_URL : Store.TRAFFIC_URL, "");
+            long at = n ? newsAt : trafficAt;
+            String src = (url.isEmpty() ? "Google News · " + place() : Uri.parse(url).getHost()) + (at > 0 ? " · updated " + ago(at) : "");
+            card.addView(U.line(c, src, 12, U.MUTED, false), Widgets.top(6));
+            LinearLayout list = U.col(c);
+            if (items.isEmpty()) list.addView(U.text(c, at > 0 ? "No headlines in this feed right now." : "Loading headlines…", 14, U.SUB, false), Widgets.top(12));
+            for (Item it : items) {
+                LinearLayout r = U.col(c);
+                U.pad(r, 0, 11, 0, 11);
+                r.addView(U.hr(c));
+                TextView t = U.text(c, it.title, 15, U.TEXT, true);
+                t.setLineSpacing(U.uf(2), 1);
+                r.addView(t, Widgets.top(10));
+                if (it.desc != null) {
+                    TextView d = U.text(c, it.desc, 12, U.SUB, false);
+                    d.setMaxLines(3);
+                    r.addView(d, Widgets.top(4));
+                }
+                LinearLayout meta = U.row(c);
+                String m = (it.source != null ? it.source : "") + (it.date > 0 ? (it.source != null ? " · " : "") + ago(it.date) : "");
+                meta.addView(U.line(c, m, 12, U.MUTED, false), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+                if (it.link != null) {
+                    TextView open = U.text(c, "Open in Chrome ›", 12, U.ACCENT_SOFT, true);
+                    U.pad(open, 10, 4, 0, 4);
+                    open.setOnClickListener(v -> openLink(c, it.link));
+                    meta.addView(open);
+                    r.setOnClickListener(v -> openLink(c, it.link));
+                }
+                r.addView(meta, Widgets.top(6));
+                list.addView(r);
+            }
+            android.widget.ScrollView sv = new android.widget.ScrollView(c);
+            sv.setVerticalScrollBarEnabled(false);
+            sv.addView(list);
+            LinearLayout.LayoutParams sl = U.weight(1, false);
+            sl.topMargin = U.u(4);
+            card.addView(sv, sl);
+            return card;
+        });
+    }
+
+    static void openLink(Context c, String url) {
+        android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            c.startActivity(new android.content.Intent(i).setPackage("com.android.chrome"));
+        } catch (Exception e) {
+            try {
+                c.startActivity(i);
+            } catch (Exception e2) {
+                android.widget.Toast.makeText(c, "No browser on this box", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        }
+        Sheets.close();
     }
 
     /** Smooth scrolling text, or one headline at a time when scrolling is off. */

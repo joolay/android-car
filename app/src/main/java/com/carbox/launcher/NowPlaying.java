@@ -25,7 +25,7 @@ final class NowPlaying {
     private final Context c;
     final FrameLayout view;
     private final ImageView art;
-    private final TextView title, artist, empty, badge;
+    private final TextView title, artist, empty;
     private final ImageView playBtn;
     private final LinearLayout lyricBox, content;
     private final TextView[] lyricLines = new TextView[3];
@@ -70,14 +70,6 @@ final class NowPlaying {
         FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams(U.MATCH, U.u(110), Gravity.TOP);
         view.addView(lyricBox, ll);
 
-        badge = U.text(c, "Spotify lyrics ›", 10, U.TEXT, true);
-        badge.setBackground(U.round(0xCC1DB954, 8));
-        U.pad(badge, 7, 3, 7, 3);
-        badge.setVisibility(View.GONE);
-        badge.setOnClickListener(v -> Apps.launchPkg(c, "com.spotify.music"));
-        FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.END);
-        bl.setMargins(0, U.u(8), U.u(8), 0);
-        view.addView(badge, bl);
 
         content = U.col(c);
         U.pad(content, 12, 0, 12, 10);
@@ -172,7 +164,6 @@ final class NowPlaying {
             art.setImageDrawable(null);
             content.setVisibility(View.INVISIBLE);
             lyricBox.setVisibility(View.GONE);
-            badge.setVisibility(View.GONE);
             empty.setVisibility(View.VISIBLE);
             if (!MediaListener.hasAccess(c)) {
                 empty.setText("Tap to allow notification access so music shows here");
@@ -199,8 +190,6 @@ final class NowPlaying {
         title.setText(t == null ? "" : t);
         artist.setText(a == null ? Apps.label(m.getPackageName()) : a);
         playBtn.setImageResource(MediaListener.playing() ? R.drawable.ic_pause : R.drawable.ic_play);
-        boolean spotify = "com.spotify.music".equals(m.getPackageName());
-        badge.setVisibility(spotify && Store.flag(Store.LYRICS, true) ? View.VISIBLE : View.GONE);
 
         String key = t + "|" + a;
         if (!key.equals(trackKey)) {

@@ -67,9 +67,14 @@ jobs:
           name: CarLauncher-apk
           path: CarLauncher.apk
 
-      # Also publish it as a Release so the APK is a direct download link
+      # Publish as a pre-release alpha named after versionName in app/build.gradle (e.g. 0.1 -> v0.1-alpha)
+      - name: Read version
+        run: echo "VER=$(grep -oP "versionName '\K[^']+" "$DIR/app/build.gradle")" >> "$GITHUB_ENV"
+
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: Car Launcher build ${{ github.run_number }}
+          tag_name: v${{ env.VER }}-alpha
+          name: Car Launcher ${{ env.VER }} alpha
+          prerelease: true
+          overwrite_files: true
           files: CarLauncher.apk

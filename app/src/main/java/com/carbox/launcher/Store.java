@@ -116,6 +116,10 @@ final class Store {
     static final String CALLS_FALLBACK = "calls_fallback"; // ask | box | none
     static final String BRIDGE_PKG = "bridge_pkg";
     static final String MIRROR_PKG = "mirror_pkg";
+    static final String CARPLAY_PKG = "carplay_pkg";
+    static final String AA_PKG = "aa_pkg";
+    static final String MAP_PROVIDER = "map_provider"; // osm | google
+    static final String MAP_KEY = "map_key";
     static final String NATIVE_PKG = "native_pkg";
     static final String TICKER_MODE = "ticker_mode";   // alt | news | traffic
     static final String TICKER_EVERY = "ticker_every"; // seconds

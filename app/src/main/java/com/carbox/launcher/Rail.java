@@ -26,7 +26,24 @@ final class Rail {
     final LinearLayout view;
     private final LinearLayout items;
     private ImageView wIcon, hotIcon, tsIcon;
-    private TextView wHi, wLo;
+    private TextView wHi, wLo, clock;
+
+    private final Runnable clockTick = this::tickClock;
+
+    private void tickClock() {
+        if (clock == null) return;
+        java.util.Calendar k = java.util.Calendar.getInstance();
+        int h = k.get(java.util.Calendar.HOUR_OF_DAY), m = k.get(java.util.Calendar.MINUTE);
+        String hs = Store.flag(Store.H24, true) ? U.two(h) : String.valueOf(h % 12 == 0 ? 12 : h % 12);
+        android.text.SpannableString s = new android.text.SpannableString(hs + ":" + U.two(m));
+        int st = hs.length();
+        s.setSpan(new android.text.style.AbsoluteSizeSpan(U.u(14)), st, s.length(), 0);
+        s.setSpan(new android.text.style.StyleSpan(Typeface.BOLD), 0, st, 0);
+        s.setSpan(new android.text.style.ForegroundColorSpan(U.TEXT2), st, s.length(), 0);
+        clock.setText(s);
+        U.ui.removeCallbacks(clockTick);
+        U.ui.postDelayed(clockTick, 60000 - (k.get(java.util.Calendar.SECOND) * 1000 + k.get(java.util.Calendar.MILLISECOND)) + 50);
+    }
     private StatusIcons.CellIcon cell;
     private StatusIcons.WifiIcon wifi;
     private StatusIcons.GpsIcon gps;
@@ -137,14 +154,12 @@ final class Rail {
             case "clock": {
                 LinearLayout l = U.col(c);
                 l.setGravity(Gravity.CENTER_HORIZONTAL);
-                TextClock t = new TextClock(c);
-                t.setFormat24Hour("HH:mm");
-                t.setFormat12Hour("h:mm");
-                t.setTextSize(TypedValue.COMPLEX_UNIT_PX, U.uf(22));
-                t.setTextColor(U.TEXT);
-                t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-                t.setIncludeFontPadding(false);
-                l.addView(t);
+                // bold hours with smaller minutes, kept on one line so it always fits the rail
+                clock = U.text(c, "", 20, U.TEXT, false);
+                clock.setSingleLine(true);
+                clock.setGravity(Gravity.CENTER);
+                l.addView(clock);
+                tickClock();
                 TextClock d = new TextClock(c);
                 d.setFormat24Hour("EEE");
                 d.setFormat12Hour("EEE");

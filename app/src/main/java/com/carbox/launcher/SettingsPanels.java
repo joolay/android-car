@@ -53,54 +53,6 @@ final class SettingsPanels {
         Context c = c();
         LinearLayout b = U.col(c);
 
-        // quick toggles
-        LinearLayout q = U.row(c);
-        q.addView(quick(c, R.drawable.ic_wifi, "Wi-Fi", Status.wifiOn, U.ACCENT, () -> Status.wifiPanel(c)), U.weight(1, true));
-        q.addView(quick(c, R.drawable.ic_bt, "Bluetooth", bluetoothOn(), U.ACCENT, () -> Status.open(c, Settings.ACTION_BLUETOOTH_SETTINGS)), margin());
-        q.addView(quick(c, R.drawable.ic_hot, "Hotspot", Status.hotspotOn, U.ACCENT, () -> Status.tetherSettings(c)), margin());
-        q.addView(quick(c, R.drawable.ic_vpnkey, "Tailscale", Status.vpnOn, U.GREEN, () -> {
-            if (!Status.tailscaleInstalled()) InfoPanels.quick("tailscale");
-            else {
-                Status.tailscale(!Status.vpnOn);
-                U.ui.postDelayed(Sheets::refresh, 2500);
-            }
-        }), margin());
-        q.addView(quick(c, R.drawable.ic_moon, "Night", Store.flag(Store.NIGHT, false), U.ACCENT, () -> {
-            Store.put(Store.NIGHT, !Store.flag(Store.NIGHT, false));
-            if (MainActivity.I != null) MainActivity.I.applyNight();
-            Sheets.refresh();
-        }), margin());
-        b.addView(q, U.lpu(U.MATCH, 66));
-
-        // brightness
-        LinearLayout br = U.row(c);
-        br.addView(U.icon(c, R.drawable.ic_sun, U.SUB), U.lpu(20, 20));
-        SeekBar sb = new SeekBar(c);
-        sb.setMax(255);
-        sb.setProgress(Actions.brightness(c));
-        sb.getProgressDrawable().setColorFilter(U.ACCENT, PorterDuff.Mode.SRC_IN);
-        sb.getThumb().setColorFilter(U.TEXT, PorterDuff.Mode.SRC_IN);
-        sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar s, int v, boolean user) {
-                if (user && Actions.canWriteSettings(c) && MainActivity.I != null) Actions.setBrightness(MainActivity.I, v);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar s) {
-                if (!Actions.canWriteSettings(c) && MainActivity.I != null) Actions.setBrightness(MainActivity.I, s.getProgress());
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar s) {
-            }
-        });
-        LinearLayout.LayoutParams sl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-        sl.leftMargin = U.u(8);
-        br.addView(sb, sl);
-        if (!Actions.canWriteSettings(c)) br.addView(U.text(c, "Tap to allow", 11, U.SUB, false));
-        b.addView(br, top(14));
-
         // assistant
         String as = Store.str(Store.ASSIST, "gemini");
         String ext = Store.str(Store.ASSIST_PKG, null);
@@ -109,7 +61,7 @@ final class SettingsPanels {
                     Store.put(Store.ASSIST, "gemini");
                     Sheets.refresh();
                 }),
-                U.seg(c, "external".equals(as) && ext != null ? Apps.label(ext) + " ›" : "External ›", "external".equals(as), SettingsPanels::assistantPicker)), top(6));
+                U.seg(c, "external".equals(as) && ext != null ? "External · " + Apps.label(ext) + " ›" : "External ›", "external".equals(as), SettingsPanels::assistantPicker)));
 
         // wallpaper
         String w = Store.str(Store.WALL, "black");
@@ -133,45 +85,58 @@ final class SettingsPanels {
                 })));
 
         // two-column list
+        int railOn = 0;
+        for (String[] e : Rail.order()) if ("1".equals(e[1])) railOn++;
         String[][] items = {
                 {"Navigation app", Actions.navPkg() == null ? "Choose" : Apps.label(Actions.navPkg())},
-                {"Right bar order", ""},
-                {"Hidden apps", Apps.hidden().isEmpty() ? "None" : String.valueOf(Apps.hidden().size())},
+                {"Map", MapPanel.google() ? "Google Maps" : "OpenStreetMap"},
+                {"Right bar icons", railOn + " of " + Rail.IDS.length + " shown"},
+                {"Hidden apps", Apps.hidden().isEmpty() ? "None" : Apps.hidden().size() + " hidden"},
                 {"News and traffic", tickerLabel()},
                 {"Calls", Widgets.callsLabel()},
                 {"Connections at start", connLabel()},
                 {"Splash screen", Store.flag(Store.SPLASH_ON, false) ? "On" : "Off"},
                 {"Calendar", Cal.altLabel()},
-                {"Units and clock", (Store.flag(Store.CELSIUS, true) ? "°C" : "°F") + " · " + (Store.flag(Store.H24, true) ? "24 h" : "12 h")},
                 {"Prayer times", Prayer.METHODS[Store.num(Store.PRAY_METHOD, 0)]},
+                {"Units and clock", (Store.flag(Store.CELSIUS, true) ? "°C" : "°F") + " · " + (Store.flag(Store.H24, true) ? "24 h" : "12 h")},
                 {"Auto start", Actions.autostart().length() + " apps"},
+                {"Night dimming", Store.flag(Store.NIGHT, false) ? "On" : "Off"},
                 {"Lyrics over album art", Store.flag(Store.LYRICS, true) ? "On" : "Off"},
-                {"Android settings", ""},
-                {"About", "Car Launcher"}};
-        Runnable[] actions = {SettingsPanels::navApp, SettingsPanels::railOrder, SettingsPanels::hiddenApps, SettingsPanels::news,
-                SettingsPanels::calls, SettingsPanels::connections, SettingsPanels::splash, SettingsPanels::calendar, SettingsPanels::units,
-                SettingsPanels::prayerTimes, AppPanels::autostart, () -> {
+                {"Bluetooth settings", ""},
+                {"Android settings", ""}};
+        Runnable[] actions = {SettingsPanels::navApp, SettingsPanels::map, SettingsPanels::railOrder, SettingsPanels::hiddenApps, SettingsPanels::news,
+                SettingsPanels::calls, SettingsPanels::connections, SettingsPanels::splash, SettingsPanels::calendar, SettingsPanels::prayerTimes,
+                SettingsPanels::units, AppPanels::autostart, () -> {
+            Store.put(Store.NIGHT, !Store.flag(Store.NIGHT, false));
+            if (MainActivity.I != null) MainActivity.I.applyNight();
+            Sheets.refresh();
+        }, () -> {
             Store.put(Store.LYRICS, !Store.flag(Store.LYRICS, true));
             Sheets.refresh();
             if (MainActivity.I != null) MainActivity.I.nowPlaying.update();
         }, () -> {
+            Status.open(c, Settings.ACTION_BLUETOOTH_SETTINGS);
+            Sheets.close();
+        }, () -> {
             Status.open(c, Settings.ACTION_SETTINGS);
             Sheets.close();
-        }, SettingsPanels::about};
+        }};
         LinearLayout cols = U.row(c);
         cols.setGravity(Gravity.TOP);
         LinearLayout l1 = U.col(c), l2 = U.col(c);
         for (int i = 0; i < items.length; i++) {
+            LinearLayout col = i % 2 == 0 ? l1 : l2;
+            col.addView(U.hr(c));
             LinearLayout it = Sheets.item(items[i][0], items[i][1].isEmpty() ? null : items[i][1], actions[i]);
-            (i % 2 == 0 ? l1 : l2).addView(it);
-            View hr = U.hr(c);
-            (i % 2 == 0 ? l1 : l2).addView(hr);
+            it.setMinimumHeight(U.u(30));
+            col.addView(it, U.lp(U.MATCH, U.WRAP));
         }
-        cols.addView(l1, U.weight(1, true));
+        // WRAP heights: MATCH_PARENT columns inside the scrolling panel measured as zero height on the box
+        cols.addView(l1, new LinearLayout.LayoutParams(0, U.WRAP, 1));
         cols.addView(U.gap(c, 28, 1));
-        cols.addView(l2, U.weight(1, true));
-        b.addView(cols, top(10));
-        return Sheets.panel("Settings", b, 700, 444);
+        cols.addView(l2, new LinearLayout.LayoutParams(0, U.WRAP, 1));
+        b.addView(cols, top(12));
+        return Sheets.panel("Settings", b, 640, 440);
     }
 
     private static LinearLayout.LayoutParams margin() {
@@ -302,6 +267,48 @@ final class SettingsPanels {
         });
     }
 
+    // ------------------------------------------------------------------ map
+
+    static void map() {
+        open(() -> {
+            Context c = c();
+            LinearLayout b = U.col(c);
+            String prov = Store.str(Store.MAP_PROVIDER, "osm");
+            b.addView(radio(c, "OpenStreetMap", "Free, no account needed. Dark style.", !"google".equals(prov), () -> {
+                Store.put(Store.MAP_PROVIDER, "osm");
+                reloadMap();
+                Sheets.refresh();
+            }));
+            b.addView(radio(c, "Google Maps", "Needs your own Google Maps API key. Dark style.", "google".equals(prov), () -> {
+                Store.put(Store.MAP_PROVIDER, "google");
+                reloadMap();
+                Sheets.refresh();
+            }));
+            if ("google".equals(prov)) {
+                b.addView(Sheets.section("Google Maps API key"));
+                final String[] key = {Store.str(Store.MAP_KEY, "")};
+                LinearLayout r = U.row(c);
+                r.addView(Widgets.field("Paste your key (starts with AIza…)", key[0], true, t -> key[0] = t), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+                r.addView(U.gap(c, 10, 1));
+                r.addView(U.button(c, "Save", true, () -> {
+                    Store.put(Store.MAP_KEY, key[0]);
+                    reloadMap();
+                    Sheets.refresh();
+                }));
+                b.addView(r, U.lp(U.MATCH, U.WRAP));
+                b.addView(U.text(c, Store.str(Store.MAP_KEY, "").isEmpty() ? "No key yet, so the map is using OpenStreetMap." : "Key saved. If Google refuses it, the map goes back to OpenStreetMap and tells you.",
+                        12, Store.str(Store.MAP_KEY, "").isEmpty() ? U.AMBER : U.GREEN, false), top(8));
+                b.addView(U.text(c, "Get a key at console.cloud.google.com: create a project, turn on \"Maps JavaScript API\", then Credentials → Create API key. Restrict the key to the Maps JavaScript API only. Google asks for a card, but light use like this should stay within its free monthly allowance.",
+                        12, U.SUB, false), top(10));
+            }
+            return Sheets.panel("Map", b, 620, 420);
+        });
+    }
+
+    private static void reloadMap() {
+        if (MainActivity.I != null) MainActivity.I.map.reload();
+    }
+
     // ------------------------------------------------------------------ right bar order
 
     static void railOrder() {
@@ -342,8 +349,8 @@ final class SettingsPanels {
                 }));
                 b.addView(r);
             }
-            b.addView(U.text(c, "Settings and the mic always stay at the bottom.", 12, U.SUB, false), top(8));
-            return Sheets.panel("Right bar order", b, 480, 440);
+            b.addView(U.text(c, "Switch an icon off to remove it from the right bar. Settings and the mic always stay at the bottom.", 12, U.SUB, false), top(8));
+            return Sheets.panel("Right bar icons", b, 480, 440);
         });
     }
 
@@ -432,36 +439,38 @@ final class SettingsPanels {
         open(() -> {
             Context c = c();
             LinearLayout b = U.col(c);
-            String m = Store.str(Store.CALLS, "box");
-            b.addView(radio(c, "Box dialler", "Calls from this box's own phone (needs a SIM)", "box".equals(m), () -> {
+            b.addView(U.text(c, "Quick dial, Contact tiles and the assistant all call through this.", 12, U.SUB, false));
+            String m = Store.str(Store.CALLS, "bt");
+            String bt = Actions.btDialler();
+            b.addView(radio(c, "Bluetooth dialler (default)", "Calls go through your paired phone · " + (bt == null ? "choose the app ›" : "app: " + Apps.label(bt) + " ›"),
+                    "bt".equals(m), () -> {
+                        Store.put(Store.CALLS, "bt");
+                        if (Actions.btDialler() == null) AppPanels.appPicker("Bluetooth dialler app", a -> {
+                            Store.put(Store.CALLS_BT_PKG, a.pkg);
+                            Sheets.back();
+                            Sheets.refresh();
+                        });
+                        else Sheets.refresh();
+                    }), top(6));
+            b.addView(radio(c, "Box dialler", "Calls go out over the SIM card in the car box", "box".equals(m), () -> {
                 Store.put(Store.CALLS, "box");
                 Sheets.refresh();
-            }));
-            String bt = Store.str(Store.CALLS_BT_PKG, null);
-            b.addView(radio(c, "Bluetooth phone app", bt == null ? "Choose the app that calls through your phone" : Apps.label(bt), "bt".equals(m), () -> {
-                Store.put(Store.CALLS, "bt");
-                if (Store.str(Store.CALLS_BT_PKG, null) == null) AppPanels.appPicker("Bluetooth phone app", a -> {
-                    Store.put(Store.CALLS_BT_PKG, a.pkg);
-                    Sheets.back();
-                    Sheets.refresh();
-                });
-                else Sheets.refresh();
             }));
             b.addView(radio(c, "Through Car Connect", "Opens CarPlay / Android Auto to call from your phone", "connect".equals(m), () -> {
                 Store.put(Store.CALLS, "connect");
                 Sheets.refresh();
             }));
             if ("bt".equals(m)) {
-                b.addView(Sheets.item("Change Bluetooth phone app", bt == null ? "Choose" : Apps.label(bt), () -> AppPanels.appPicker("Bluetooth phone app", a -> {
+                b.addView(Sheets.item("Bluetooth dialler app", bt == null ? "Choose" : Apps.label(bt), () -> AppPanels.appPicker("Bluetooth dialler app", a -> {
                     Store.put(Store.CALLS_BT_PKG, a.pkg);
                     Sheets.back();
                     Sheets.refresh();
                 })), top(6));
                 String fb = Store.str(Store.CALLS_FALLBACK, "ask");
-                b.addView(Sheets.row("If the phone isn't connected", segStr(c, Store.CALLS_FALLBACK, "ask", "Ask", fb),
+                b.addView(Sheets.row("If Bluetooth isn't connected", segStr(c, Store.CALLS_FALLBACK, "ask", "Ask", fb),
                         segStr(c, Store.CALLS_FALLBACK, "box", "Use box dialler", fb), segStr(c, Store.CALLS_FALLBACK, "none", "Do nothing", fb)));
             }
-            return Sheets.panel("Calls", b, 600, 420);
+            return Sheets.panel("Calls", b, 640, 430);
         });
     }
 

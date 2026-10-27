@@ -169,10 +169,51 @@ final class InfoPanels {
             TextView today2 = U.line(c, Cal.format(Cal.alt(), System.currentTimeMillis(), "d MMMM y"), 11, U.TEAL, false);
             right.addView(today2, top(3));
         }
-        List<Cal.Event> up = Cal.upcoming(c, 6);
+        List<Cal.Event> up = Cal.upcoming(c, 5);
         LinearLayout list = U.col(c);
         right.addView(list, top(10));
-        if (up.isEmpty()) list.addView(U.text(c, Cal.canReadCalendar(c) ? "Nothing coming up" : "Allow calendar access to see your events", 12, U.SUB, false));
+        if (up.isEmpty()) list.addView(U.text(c, "Nothing coming up", 12, U.SUB, false));
+        // explain why Google Calendar events are missing, with a button that fixes it
+        String problem = null, fix = null;
+        Runnable fixIt = null;
+        if (!Cal.canReadCalendar(c)) {
+            problem = "Calendar access is off, so Google events can't show.";
+            fix = "Allow";
+            fixIt = () -> {
+                if (MainActivity.I == null) return;
+                if (MainActivity.I.shouldShowRequestPermissionRationale(android.Manifest.permission.READ_CALENDAR) || !Store.flag("asked_cal", false)) {
+                    Store.put("asked_cal", true);
+                    MainActivity.I.requestPermissions(new String[]{android.Manifest.permission.READ_CALENDAR}, 4);
+                } else Apps.appInfo(c, c.getPackageName()); // denied for good: turn it on under Permissions
+                Sheets.close();
+            };
+        } else if (Cal.calendars(c).isEmpty()) {
+            problem = "No Google calendars on this box. Add your Google account and turn on Calendar sync.";
+            fix = "Accounts";
+            fixIt = () -> {
+                Status.open(c, android.provider.Settings.ACTION_SYNC_SETTINGS);
+                Sheets.close();
+            };
+        } else if (Cal.events(c, 60).isEmpty()) {
+            problem = "No Google events in the next 60 days. If that's wrong, check Calendar sync is on.";
+            fix = "Sync";
+            fixIt = () -> {
+                Status.open(c, android.provider.Settings.ACTION_SYNC_SETTINGS);
+                Sheets.close();
+            };
+        }
+        if (problem != null) {
+            LinearLayout pr = U.row(c);
+            pr.setBackground(U.round(0xFF2A2414, 10));
+            U.pad(pr, 10, 8, 8, 8);
+            pr.addView(U.text(c, problem, 11, 0xFFE8D5A8, false), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+            final Runnable fr = fixIt;
+            TextView fb = U.text(c, fix + " ›", 12, U.AMBER, true);
+            U.pad(fb, 8, 4, 2, 4);
+            fb.setOnClickListener(v -> fr.run());
+            pr.addView(fb);
+            list.addView(pr, top(4));
+        }
         for (Cal.Event e : up) {
             LinearLayout r = U.row(c);
             r.setGravity(Gravity.TOP);
@@ -420,97 +461,97 @@ final class InfoPanels {
     private static View quickCard(String id) {
         Context c = Sheets.ctx();
         LinearLayout card = U.col(c);
-        card.setBackground(U.round(U.CARD, 20));
-        U.pad(card, 22, 18, 22, 18);
-        card.setLayoutParams(Sheets.anchored(320, -2, 88, 100));
-        String title;
-        LinearLayout b = U.col(c);
+        card.setBackground(U.round(U.CARD2, 16));
+        U.pad(card, 16, 14, 16, 14);
+        card.setLayoutParams(Sheets.anchored(260, -2, 88, 110));
+        int icon, tint = U.TEXT;
+        String title, line1, line2 = null, hint;
+        Boolean on = null;           // null = no toggle
+        U.Cb<Boolean> toggle = null;
         switch (id) {
             case "cell":
+                icon = R.drawable.ic_bolt;
                 title = "Mobile data";
-                fact(c, b, "Status", !Status.sim ? "No SIM card" : Status.dataOn ? "Connected" : "Not connected");
-                if (Status.sim) {
-                    fact(c, b, "Network", (Status.operator == null || Status.operator.isEmpty() ? "—" : Status.operator) + (Status.netType != null ? " · " + Status.netType : ""));
-                    fact(c, b, "Signal", Status.cellLevel + " of 4");
-                }
-                b.addView(U.button(c, "Mobile data settings", true, () -> {
-                    Status.dataPanel(c);
-                    Sheets.close();
-                }), top(14));
+                line1 = !Status.sim ? "No SIM card" : Status.dataOn ? "Connected" : "Not connected";
+                if (Status.sim) line2 = (Status.operator == null || Status.operator.isEmpty() ? "" : Status.operator + " · ")
+                        + (Status.netType != null ? Status.netType + " · " : "") + signal(Status.cellLevel);
+                hint = "Hold the icon for mobile network settings";
+                on = Status.dataOn;
+                toggle = v -> Status.dataPanel(c);
                 break;
             case "wifi":
+                icon = R.drawable.ic_wifi;
                 title = "Wi-Fi";
-                fact(c, b, "Status", !Status.wifiOn ? "Off" : Status.wifiConnected ? "Connected" : "Searching");
-                if (Status.wifiConnected) {
-                    fact(c, b, "Network", Status.ssid == null ? "—" : Status.ssid);
-                    fact(c, b, "Signal", Status.wifiLevel + " of 4");
-                }
-                LinearLayout wb = U.row(c);
-                wb.addView(U.button(c, "Wi-Fi panel", true, () -> {
-                    Status.wifiPanel(c);
-                    Sheets.close();
-                }));
-                if (Store.str(Store.CONN_PHONE_SSID, null) != null) {
-                    wb.addView(U.gap(c, 8, 1));
-                    wb.addView(U.button(c, "Join phone", false, () -> {
-                        Actions.joinPhoneHotspot(c);
-                        Sheets.close();
-                    }));
-                }
-                b.addView(wb, top(14));
+                line1 = !Status.wifiOn ? "Off" : Status.wifiConnected ? (Status.ssid == null ? "Connected" : Status.ssid) : "Searching";
+                if (Status.wifiConnected) line2 = "Connected · " + signal(Status.wifiLevel);
+                hint = "Hold the icon for full Wi-Fi settings";
+                on = Status.wifiOn;
+                toggle = v -> Status.wifiPanel(c); // Android 13 only lets Settings switch Wi-Fi
                 break;
             case "gps":
+                icon = R.drawable.ic_navarrow;
                 title = "GPS";
-                boolean fix = Loc.fresh();
-                fact(c, b, "Status", !Loc.hasPermission() ? "No permission" : !Loc.gpsEnabled() ? "Location is off" : fix ? "Fix" : "Searching");
-                fact(c, b, "Satellites", (Loc.satsUsed < 0 ? "—" : Loc.satsUsed + " used") + (Loc.satsVisible > 0 ? " of " + Loc.satsVisible + " in view" : ""));
-                if (Loc.has()) fact(c, b, "Position", String.format(Locale.US, "%.5f, %.5f", Loc.lat, Loc.lon));
-                if (Loc.town != null) fact(c, b, "Near", Loc.town);
-                b.addView(U.button(c, "Location settings", true, () -> {
-                    Status.open(c, Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                    Sheets.close();
-                }), top(14));
+                line1 = !Loc.hasPermission() ? "No permission" : !Loc.gpsEnabled() ? "Location is off" : Loc.fresh() ? "Fix" : "Searching";
+                line2 = (Loc.satsUsed < 0 ? "" : Loc.satsUsed + " satellites used") + (Loc.satsVisible > 0 ? (Loc.satsUsed < 0 ? "" : " · ") + Loc.satsVisible + " in view" : "")
+                        + (Loc.town != null ? "\nNear " + Loc.town : "");
+                hint = "Hold the icon for location settings";
                 break;
             case "hotspot":
+                icon = R.drawable.ic_hot;
                 title = "Hotspot";
-                fact(c, b, "Status", Status.hotspotOn ? "On" : "Off");
-                b.addView(U.text(c, "Android 13 only lets the hotspot be switched in Settings.", 12, U.SUB, false), top(6));
-                b.addView(U.button(c, "Hotspot settings", true, () -> {
-                    Status.tetherSettings(c);
-                    Sheets.close();
-                }), top(14));
+                line1 = Status.hotspotOn ? "On" : "Off";
+                line2 = "Shares this box's mobile data";
+                hint = "Hold the icon for hotspot settings";
+                on = Status.hotspotOn;
+                toggle = v -> Status.tetherSettings(c);
                 break;
             default:
+                icon = R.drawable.ic_vpnkey;
                 title = "Tailscale";
                 if (!Status.tailscaleInstalled()) {
-                    b.addView(U.text(c, "Tailscale isn't installed on this box.", 13, U.SUB, false));
-                    b.addView(U.button(c, "Get Tailscale", true, () -> {
-                        try {
-                            c.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + Status.TS_PKG)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                        } catch (Exception ignored) {
-                        }
-                        Sheets.close();
-                    }), top(14));
+                    line1 = "Not installed";
+                    line2 = "Install Tailscale from the Play Store";
                 } else {
-                    b.addView(Sheets.switchRow(R.drawable.ic_vpnkey, Status.vpnOn ? U.GREEN : U.SUB, Status.vpnOn ? "Connected" : "Not connected",
-                            "Home Assistant and your other devices", Status.vpnOn, on -> {
-                                Status.tailscale(on);
-                                U.ui.postDelayed(Sheets::refresh, 2500);
-                            }));
-                    b.addView(U.button(c, "Open Tailscale", false, () -> {
-                        Apps.launchPkg(c, Status.TS_PKG);
-                        Sheets.close();
-                    }), top(10));
+                    line1 = Status.vpnOn ? "Connected" : "Not connected";
+                    line2 = HA.configured() ? (Status.vpnOn ? "Home Assistant reachable" : "Home Assistant needs Tailscale") : "Your devices over a private network";
+                    on = Status.vpnOn;
+                    toggle = v -> {
+                        Status.tailscale(v);
+                        U.ui.postDelayed(Sheets::refresh, 2500);
+                    };
                 }
+                tint = Status.vpnOn ? U.GREEN : U.TEXT;
+                hint = "Hold the icon to open Tailscale";
         }
         LinearLayout head = U.row(c);
-        head.addView(U.line(c, title, 17, U.TEXT, true), new LinearLayout.LayoutParams(0, U.WRAP, 1));
-        View x = U.icon(c, R.drawable.ic_x, U.SUB);
-        x.setOnClickListener(v -> Sheets.close());
-        head.addView(x, U.lpu(22, 22));
+        head.addView(U.icon(c, icon, tint), U.lpu(22, 22));
+        TextView t = U.line(c, title, 16, U.TEXT, true);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+        tl.leftMargin = U.u(10);
+        head.addView(t, tl);
+        if (on != null) {
+            final U.Cb<Boolean> fcb = toggle;
+            U.Toggle tg = new U.Toggle(c, on, v -> {
+                if (fcb != null) fcb.on(v);
+                if (!"tailscale".equals(id)) Sheets.close();
+            });
+            tg.setLayoutParams(U.lpu(34, 20));
+            head.addView(tg);
+        }
         card.addView(head);
-        card.addView(b, top(10));
+        card.addView(U.text(c, line1, 14, U.TEXT, false), top(10));
+        if (line2 != null && !line2.isEmpty()) card.addView(U.text(c, line2, 12, U.SUB, false), top(2));
+        View hr = new View(c);
+        hr.setBackgroundColor(U.CARD3);
+        LinearLayout.LayoutParams hl = U.lp(U.MATCH, Math.max(1, U.u(1)));
+        hl.topMargin = U.u(12);
+        card.addView(hr, hl);
+        card.addView(U.text(c, hint, 12, U.MUTED, false), top(8));
         return card;
+    }
+
+    static String signal(int level) {
+        return level >= 4 ? "strong signal" : level >= 2 ? "fair signal" : "weak signal";
     }
 
     private static void fact(Context c, LinearLayout b, String k, String v) {

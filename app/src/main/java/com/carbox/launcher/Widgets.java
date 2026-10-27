@@ -181,7 +181,7 @@ final class Widgets {
             l.addView(ic, U.lpu(48, 48));
             l.addView(new View(c), U.weight(1, false));
             l.addView(U.text(c, "Car Connect", 16, U.TEXT, true));
-            TextView sub = U.text(c, "CarPlay · Android Auto\nMirror · Native car", 11, 0xCCFFFFFF, false);
+            TextView sub = U.text(c, "CarPlay · Auto\nMirror · Native", 11, 0xCCFFFFFF, false);
             sub.setLineSpacing(U.uf(2), 1);
             l.addView(sub, top(4));
             l.setOnClickListener(x -> AppPanels.connect());
@@ -498,10 +498,7 @@ final class Widgets {
             b.setBackground(U.round(U.CARD2, 12));
             U.pad(b, 10, 0, 8, 0);
             b.addView(U.icon(c, icon, U.ACCENT_SOFT), U.lpu(22, 22));
-            LinearLayout t = U.col(c);
-            t.addView(U.line(c, name, 14, U.TEXT, true));
-            String addr = cfg.optString(key, "");
-            t.addView(U.line(c, addr.isEmpty() ? "Set address" : addr, 10, U.SUB, false));
+            TextView t = U.line(c, name, 14, U.TEXT, true);
             LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
             tl.leftMargin = U.u(8);
             b.addView(t, tl);
@@ -765,15 +762,19 @@ final class Widgets {
                         Sheets.refresh();
                     })));
                 }
-                b.addView(U.text(c, "Calls use your Calls setting (" + callsLabel() + ").", 12, U.SUB, false), top(10));
+                b.addView(U.text(c, "Calls go through: " + callsLabel() + ".", 12, U.SUB, false), top(10));
                 return Sheets.panel("Quick dial", b);
             }
         });
     }
 
     static String callsLabel() {
-        String m = Store.str(Store.CALLS, "box");
-        return "bt".equals(m) ? "Bluetooth phone app" : "connect".equals(m) ? "through Car Connect" : "box dialler";
+        String m = Store.str(Store.CALLS, "bt");
+        if ("bt".equals(m)) {
+            String p = Actions.btDialler();
+            return p == null ? "Bluetooth" : "Bluetooth · " + Apps.label(p);
+        }
+        return "connect".equals(m) ? "Car Connect" : "Box dialler";
     }
 
     // ------------------------------------------------------------------ Contact

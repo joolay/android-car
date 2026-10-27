@@ -342,42 +342,41 @@ final class AppPanels {
         Sheets.show(() -> {
             Context c = Sheets.ctx();
             LinearLayout b = U.col(c);
-            Apps.App bridge = Apps.get(keyFor(Store.BRIDGE_PKG));
-            if (bridge == null) bridge = Actions.findBridge();
-            b.addView(option(c, R.drawable.ic_cast, 0xFF1F4E9A, "CarPlay / Android Auto", bridge == null ? "Choose your bridge app" : bridge.label,
-                    () -> Actions.carConnect(c, "bridge"), () -> bridgePicker("CarPlay / Android Auto app", Store.BRIDGE_PKG)));
-            String mirror = Store.str(Store.MIRROR_PKG, null);
-            b.addView(option(c, R.drawable.ic_phone, 0xFF5A3A9A, "Mirror link", mirror == null ? "Choose your mirroring app" : Apps.label(mirror),
-                    () -> Actions.carConnect(c, "mirror"), () -> bridgePicker("Mirror link app", Store.MIRROR_PKG)), top(10));
-            String nat = Store.str(Store.NATIVE_PKG, null);
-            b.addView(option(c, R.drawable.ic_car, 0xFF2E3747, "Native car (SLDA)", nat == null ? "Choose the app that returns to the car screen" : Apps.label(nat),
-                    () -> Actions.carConnect(c, "native"), () -> bridgePicker("Native car shortcut", Store.NATIVE_PKG)), top(10));
-            return Sheets.panel("Car Connect", b, 560, 400);
+            Object[][] lines = {
+                    {"carplay", R.drawable.ic_phone, 0xFF1A2740, 0xFF85B7EB, "iPhone, through your bridge app"},
+                    {"aa", R.drawable.ic_navarrow, 0xFF143B2A, U.TEAL, "Android phone, through your bridge app"},
+                    {"mirror", R.drawable.ic_cast, 0xFF2A1F38, 0xFFC7A6FF, "Shows your phone's screen as it is"},
+                    {"native", R.drawable.ic_car, 0xFF3A2A1A, U.AMBER, "Back to the car's own system"}};
+            for (int i = 0; i < lines.length; i++) {
+                final String which = (String) lines[i][0];
+                Apps.App app = Actions.connectApp(which);
+                View row = option(c, (Integer) lines[i][1], (Integer) lines[i][2], (Integer) lines[i][3], Actions.connectTitle(which), (String) lines[i][4],
+                        app == null ? "Choose app" : app.label,
+                        () -> Actions.carConnect(c, which), () -> bridgePicker(Actions.connectTitle(which) + " app", Actions.connectKey(which)));
+                b.addView(row, U.lpu(U.MATCH, 72));
+                ((LinearLayout.LayoutParams) row.getLayoutParams()).topMargin = U.u(i == 0 ? 0 : 10);
+            }
+            b.addView(U.text(c, "Tap a line to open it. Tap the app name on the right to change which app it opens.", 12, U.SUB, false), top(12));
+            return Sheets.panel("Car Connect", b, 640, 430);
         });
     }
 
-    private static String keyFor(String storeKey) {
-        String pkg = Store.str(storeKey, null);
-        Apps.App a = pkg == null ? null : Apps.byPkg(pkg);
-        return a == null ? "" : a.key;
-    }
-
-    private static View option(Context c, int icon, int color, String title, String sub, Runnable open, Runnable change) {
+    private static View option(Context c, int icon, int bg, int tint, String title, String sub, String app, Runnable open, Runnable change) {
         LinearLayout r = U.row(c);
         r.setBackground(U.round(U.CARD2, 16));
-        U.pad(r, 14, 12, 14, 12);
+        U.pad(r, 16, 0, 12, 0);
         FrameLayout ic = new FrameLayout(c);
-        ic.setBackground(U.round(color, 12));
-        ic.addView(U.icon(c, icon, U.TEXT), U.flpu(24, 24, Gravity.CENTER));
+        ic.setBackground(U.round(bg, 13));
+        ic.addView(U.icon(c, icon, tint), U.flpu(26, 26, Gravity.CENTER));
         r.addView(ic, U.lpu(48, 48));
         LinearLayout t = U.col(c);
         t.addView(U.line(c, title, 16, U.TEXT, true));
         t.addView(U.line(c, sub, 12, U.SUB, false), top(3));
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-        tl.leftMargin = U.u(14);
+        tl.leftMargin = U.u(16);
         r.addView(t, tl);
-        TextView ch = U.text(c, "Change", 12, U.ACCENT_SOFT, true);
-        U.pad(ch, 10, 8, 4, 8);
+        TextView ch = U.line(c, app + " ›", 13, U.ACCENT_SOFT, true);
+        U.pad(ch, 12, 14, 4, 14);
         ch.setOnClickListener(v -> change.run());
         r.addView(ch);
         r.setOnClickListener(v -> open.run());
@@ -392,8 +391,13 @@ final class AppPanels {
             LinearLayout b = U.col(c);
             String cur = Store.str(storeKey, null);
             List<Apps.App> likely = new ArrayList<>();
-            for (Apps.App a : Apps.visible()) if (Actions.looksLikeBridge(a)) likely.add(a);
-            if (Store.BRIDGE_PKG.equals(storeKey)) {
+            boolean bridge = Store.BRIDGE_PKG.equals(storeKey) || Store.CARPLAY_PKG.equals(storeKey) || Store.AA_PKG.equals(storeKey);
+            for (Apps.App a : Apps.visible()) {
+                String l = a.label.toLowerCase(java.util.Locale.ROOT);
+                if (bridge ? Actions.looksLikeBridge(a) : Store.MIRROR_PKG.equals(storeKey) ? l.contains("mirror") : (l.equals("car") || l.contains("car")))
+                    likely.add(a);
+            }
+            if (bridge) {
                 b.addView(U.text(c, "Speed Play, ZLink, AutoKit, CarbitLink and TLink are found automatically.", 12, U.SUB, false));
                 if (likely.isEmpty()) b.addView(U.text(c, "No bridge app found on this box.", 14, U.TEXT2, false), top(10));
             }
