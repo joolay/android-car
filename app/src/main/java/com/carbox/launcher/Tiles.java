@@ -350,7 +350,7 @@ final class Tiles {
 
         /** Thin bar in the gap between the two rows showing which columns are on screen. */
         @Override
-        protected void onDrawForeground(android.graphics.Canvas cv) {
+        public void onDrawForeground(android.graphics.Canvas cv) {
             super.onDrawForeground(cv);
             int cols = columns();
             if (cols <= COLS) return;
