@@ -62,6 +62,7 @@ final class Keyboard {
 
     static boolean hide() {
         if (shown == null) return false;
+        stopVoice();
         if (shown.getParent() != null) ((ViewGroup) shown.getParent()).removeView(shown);
         shown = null;
         target = null;
@@ -95,7 +96,7 @@ final class Keyboard {
         LinearLayout kb = U.col(c);
         kb.setClickable(true);
         kb.setBackgroundColor(U.CARD);
-        U.pad(kb, 12, 10, 12, 10);
+        U.pad(kb, 8, 10, 8, 6);
 
         // the field being edited, with Paste / Clear
         LinearLayout top = U.row(c);
@@ -106,15 +107,21 @@ final class Keyboard {
         TextView lab = U.line(c, label.toUpperCase(Locale.ROOT), 10, U.SUB, false);
         lab.setLetterSpacing(0.04f);
         box.addView(lab);
-        preview = U.line(c, "", 16, U.TEXT, false);
+        preview = U.line(c, "", 18, U.TEXT, false);
         preview.setEllipsize(android.text.TextUtils.TruncateAt.START);
         box.addView(preview);
-        top.addView(box, new LinearLayout.LayoutParams(0, U.u(44), 1));
-        if (secret) top.addView(action(c, reveal ? "Hide" : "Show", () -> {
+        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(0, U.u(48), 1);
+        bl.setMargins(U.u(4), 0, 0, U.u(4));
+        top.addView(box, bl);
+        if (listening) {
+            box.setBackground(U.outline(U.BG, U.RED, 2, 10));
+            lab.setText(label.toUpperCase(Locale.ROOT) + " · LISTENING");
+            top.addView(action(c, "Stop", Keyboard::stopVoice));
+        } else if (secret) top.addView(action(c, reveal ? "Hide" : "Show", () -> {
             reveal = !reveal;
             render();
         }));
-        top.addView(action(c, "Paste", () -> {
+        if (!listening) top.addView(action(c, "Paste", () -> {
             ClipboardManager cm = (ClipboardManager) c.getSystemService(Context.CLIPBOARD_SERVICE);
             ClipData d = cm == null ? null : cm.getPrimaryClip();
             if (d != null && d.getItemCount() > 0) {
@@ -125,18 +132,18 @@ final class Keyboard {
                 }
             }
         }));
-        top.addView(action(c, "Clear", () -> {
+        if (!listening) top.addView(action(c, "Clear", () -> {
             text.setLength(0);
             commit();
         }));
         kb.addView(top, U.lp(U.MATCH, U.WRAP));
 
         String[][] rows = symbols
-                ? new String[][]{"1234567890".split(""), {"@", "#", "&", "_", "-", "/", ":", ";", "(", ")"}, {"=", "+", "%", "'", "\"", "!", "?", "*"}}
+                ? new String[][]{"1234567890".split(""), {"@", "#", "&", "_", "-", "/", ":", ";", "(", ")"}, {"=", ",", "+", "%", "'", "\"", "!", "?"}}
                 : new String[][]{"qwertyuiop".split(""), "asdfghjkl".split(""), "zxcvbnm".split("")};
         for (int r = 0; r < 3; r++) {
             LinearLayout row = U.row(c);
-            if (r == 1 && !symbols) U.pad(row, 30, 0, 30, 0);
+            if (r == 1 && !symbols) U.pad(row, 36, 0, 36, 0);
             if (r == 2) row.addView(special(c, symbols ? "=" : null, symbols ? 0 : R.drawable.ic_shift, () -> {
                 if (symbols) type("=");
                 else {
@@ -154,8 +161,7 @@ final class Keyboard {
                 repeat(bs);
                 row.addView(bs, weightLp(1.5f));
             }
-            LinearLayout.LayoutParams rl = U.lpu(U.MATCH, 46);
-            rl.topMargin = U.u(6);
+            LinearLayout.LayoutParams rl = U.lpu(U.MATCH, KEY_H);
             kb.addView(row, rl);
         }
         LinearLayout last = U.row(c);
@@ -163,16 +169,15 @@ final class Keyboard {
             symbols = !symbols;
             render();
         }, false), weightLp(1.5f));
-        last.addView(key(c, ",", () -> type(",")), weightLp(1));
+        View mic = special(c, null, R.drawable.ic_mic, Keyboard::voice, false);
+        mic.findViewWithTag("face").setBackground(U.round(listening ? U.RED : 0xFF1F4E9A, 11));
+        last.addView(mic, weightLp(1.5f));
         last.addView(key(c, "space", () -> type(" ")), weightLp(5));
         last.addView(key(c, ".", () -> type(".")), weightLp(1));
-        TextView done = U.text(c, "Done", 15, U.TEXT, true);
-        done.setGravity(Gravity.CENTER);
-        done.setBackground(U.round(U.ACCENT, 9));
-        done.setOnClickListener(v -> hide());
+        View done = special(c, "Done", 0, Keyboard::hide, false);
+        done.findViewWithTag("face").setBackground(U.round(U.ACCENT, 11));
         last.addView(done, weightLp(2));
-        LinearLayout.LayoutParams ll = U.lpu(U.MATCH, 46);
-        ll.topMargin = U.u(6);
+        LinearLayout.LayoutParams ll = U.lpu(U.MATCH, KEY_H);
         kb.addView(last, ll);
 
         shown.addView(kb, new FrameLayout.LayoutParams(U.MATCH, U.WRAP, Gravity.BOTTOM));
@@ -217,45 +222,206 @@ final class Keyboard {
         });
     }
 
+    static final float KEY_H = 66; // 58 du key + 8 du gap, and the gap is touchable too
+
     private static LinearLayout.LayoutParams weightLp(float w) {
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, U.MATCH, w);
-        lp.setMargins(U.u(3), 0, U.u(3), 0);
-        return lp;
+        return new LinearLayout.LayoutParams(0, U.MATCH, w);
     }
 
-    private static TextView key(Context c, String s, Runnable r) {
-        TextView t = U.text(c, s, s.length() > 1 ? 15 : 20, U.TEXT, false);
-        t.setGravity(Gravity.CENTER);
-        t.setBackground(U.round(0xFF3A4456, 9));
-        t.setOnTouchListener((v, e) -> {
-            if (e.getAction() == MotionEvent.ACTION_DOWN) v.setBackground(U.round(0xFF55627A, 9));
-            else if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL)
-                v.setBackground(U.round(0xFF3A4456, 9));
+    /** A cell that is touchable edge to edge, with the visible key face inset by 4 du. */
+    private static FrameLayout cell(Context c, View face, int color) {
+        FrameLayout f = new FrameLayout(c);
+        face.setTag("face");
+        face.setBackground(U.round(color, 11));
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(U.MATCH, U.MATCH);
+        lp.setMargins(U.u(4), U.u(4), U.u(4), U.u(4));
+        f.addView(face, lp);
+        f.setClipChildren(false);
+        return f;
+    }
+
+    private static View key(Context c, String s, Runnable r) {
+        TextView face = U.text(c, s, s.length() > 1 ? 17 : 25, U.TEXT, false);
+        face.setGravity(Gravity.CENTER);
+        FrameLayout f = cell(c, face, 0xFF3A4456);
+        f.setOnTouchListener((v, e) -> {
+            if (e.getAction() == MotionEvent.ACTION_DOWN) {
+                face.setBackground(U.round(0xFF55627A, 11));
+                if (s.length() == 1) bubble(v, s);
+            } else if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL) {
+                face.setBackground(U.round(0xFF3A4456, 11));
+                hideBubble();
+            }
             return false;
         });
-        t.setOnClickListener(v -> r.run());
-        return t;
-    }
-
-    private static View special(Context c, String label, int icon, Runnable r, boolean on) {
-        FrameLayout f = new FrameLayout(c);
-        f.setBackground(U.round(on ? U.ACCENT : U.CARD3, 9));
-        if (icon != 0) {
-            ImageView iv = U.icon(c, icon, U.TEXT);
-            f.addView(iv, U.flpu(22, 22, Gravity.CENTER));
-        } else {
-            TextView t = U.text(c, label, 15, U.TEXT, false);
-            f.addView(t, U.flp(U.WRAP, U.WRAP, Gravity.CENTER));
-        }
         f.setOnClickListener(v -> r.run());
         return f;
     }
 
+    private static TextView bubbleView;
+
+    /** Enlarged copy of the key above your finger, so you can see what you pressed. */
+    private static void bubble(View keyView, String s) {
+        hideBubble();
+        if (shown == null) return;
+        Context c = shown.getContext();
+        bubbleView = U.text(c, s, 38, U.TEXT, false);
+        bubbleView.setGravity(Gravity.CENTER);
+        bubbleView.setBackground(U.round(0xFF6B7A95, 14));
+        bubbleView.setElevation(U.uf(8));
+        int[] k = new int[2], o = new int[2];
+        keyView.getLocationInWindow(k);
+        shown.getLocationInWindow(o);
+        int w = U.u(64), h = U.u(76);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, h, Gravity.TOP | Gravity.START);
+        lp.leftMargin = Math.max(0, k[0] - o[0] + keyView.getWidth() / 2 - w / 2);
+        lp.topMargin = Math.max(0, k[1] - o[1] - h + U.u(10));
+        shown.addView(bubbleView, lp);
+    }
+
+    private static void hideBubble() {
+        if (bubbleView != null && bubbleView.getParent() != null) ((ViewGroup) bubbleView.getParent()).removeView(bubbleView);
+        bubbleView = null;
+    }
+
+    private static View special(Context c, String label, int icon, Runnable r, boolean on) {
+        View face;
+        if (icon != 0) {
+            FrameLayout ff = new FrameLayout(c);
+            ff.addView(U.icon(c, icon, U.TEXT), U.flpu(26, 26, Gravity.CENTER));
+            face = ff;
+        } else {
+            TextView t = U.text(c, label, 17, U.TEXT, "Done".equals(label));
+            t.setGravity(Gravity.CENTER);
+            face = t;
+        }
+        FrameLayout f = cell(c, face, on ? U.ACCENT : U.CARD3);
+        f.setOnClickListener(v -> r.run());
+        return f;
+    }
+
+    // ------------------------------------------------------------------ voice input
+
+    private static boolean listening;
+    private static android.speech.SpeechRecognizer recognizer;
+    private static int voiceStart;
+    static final int REQ_VOICE = 52, REQ_MIC = 53;
+
+    private static void voice() {
+        if (listening) {
+            stopVoice();
+            return;
+        }
+        MainActivity a = MainActivity.I;
+        if (a == null) return;
+        if (android.speech.SpeechRecognizer.isRecognitionAvailable(a)) {
+            if (a.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                a.requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, REQ_MIC);
+                return;
+            }
+            startRecognizer(a);
+        } else {
+            // no in-app recogniser: use the system voice typing screen
+            android.content.Intent i = new android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, label);
+            try {
+                a.startActivityForResult(i, REQ_VOICE);
+            } catch (Exception e) {
+                android.widget.Toast.makeText(a, "Voice typing isn't available on this box", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    /** Called by MainActivity when the microphone permission is granted. */
+    static void micGranted() {
+        if (shown != null && MainActivity.I != null) startRecognizer(MainActivity.I);
+    }
+
+    /** Called by MainActivity with the result of the system voice typing screen. */
+    static void voiceResult(android.content.Intent data) {
+        if (shown == null || data == null) return;
+        java.util.ArrayList<String> r = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
+        if (r != null && !r.isEmpty()) appendSpoken(r.get(0));
+    }
+
+    private static void appendSpoken(String t) {
+        if (t == null || t.isEmpty()) return;
+        if (text.length() > 0 && text.charAt(text.length() - 1) != ' ') text.append(' ');
+        text.append(t);
+        commit();
+    }
+
+    private static void startRecognizer(MainActivity a) {
+        stopVoice();
+        recognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(a);
+        voiceStart = text.length();
+        final String before = text.toString();
+        recognizer.setRecognitionListener(new android.speech.RecognitionListener() {
+            @Override public void onReadyForSpeech(android.os.Bundle p) { }
+            @Override public void onBeginningOfSpeech() { }
+            @Override public void onRmsChanged(float v) { }
+            @Override public void onBufferReceived(byte[] b) { }
+            @Override public void onEndOfSpeech() { }
+            @Override public void onEvent(int t, android.os.Bundle p) { }
+
+            @Override
+            public void onError(int err) {
+                stopVoice();
+                if (err != android.speech.SpeechRecognizer.ERROR_NO_MATCH && err != android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT && MainActivity.I != null)
+                    android.widget.Toast.makeText(MainActivity.I, "Voice typing didn't work (needs internet or offline speech)", android.widget.Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onPartialResults(android.os.Bundle r) {
+                show(r, false);
+            }
+
+            @Override
+            public void onResults(android.os.Bundle r) {
+                show(r, true);
+                stopVoice();
+            }
+
+            private void show(android.os.Bundle r, boolean fin) {
+                java.util.ArrayList<String> l = r.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION);
+                if (l == null || l.isEmpty() || text == null) return;
+                text.setLength(0);
+                text.append(before);
+                appendSpoken(l.get(0));
+            }
+        });
+        android.content.Intent i = new android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+        listening = true;
+        render();
+        try {
+            recognizer.startListening(i);
+        } catch (Exception e) {
+            stopVoice();
+        }
+    }
+
+    private static void stopVoice() {
+        boolean was = listening;
+        listening = false;
+        if (recognizer != null) {
+            try {
+                recognizer.destroy();
+            } catch (Exception ignored) {
+            }
+            recognizer = null;
+        }
+        if (was && shown != null) render();
+    }
+
     private static TextView action(Context c, String s, Runnable r) {
         TextView t = U.button(c, s, false, r);
-        t.setMinHeight(U.u(44));
-        LinearLayout.LayoutParams lp = U.lp(U.WRAP, U.u(44));
-        lp.leftMargin = U.u(10);
+        t.setMinHeight(U.u(48));
+        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, U.uf(15));
+        LinearLayout.LayoutParams lp = U.lp(U.WRAP, U.u(48));
+        lp.setMargins(U.u(10), 0, U.u(4), U.u(4));
         t.setLayoutParams(lp);
         return t;
     }

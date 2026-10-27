@@ -189,6 +189,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
+        if (req == Keyboard.REQ_VOICE && res == RESULT_OK) Keyboard.voiceResult(data);
         if (req == REQ_WALLPAPER && res == RESULT_OK && data != null && data.getData() != null) {
             Uri u = data.getData();
             try {
@@ -250,6 +251,10 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int req, String[] p, int[] r) {
         super.onRequestPermissionsResult(req, p, r);
+        if (req == Keyboard.REQ_MIC) {
+            if (r.length > 0 && r[0] == PackageManager.PERMISSION_GRANTED) Keyboard.micGranted();
+            return;
+        }
         Loc.stop();
         Loc.start();
         Status.refreshAndNotify();
