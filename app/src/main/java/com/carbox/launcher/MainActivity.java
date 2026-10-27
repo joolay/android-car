@@ -37,6 +37,7 @@ public class MainActivity extends Activity {
     Dock dock;
     Rail rail;
     private boolean resumed;
+    boolean pendingAutostart;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -55,8 +56,8 @@ public class MainActivity extends Activity {
         askPermissions();
         Actions.connectionsAtStart(this);
         U.ui.postDelayed(Actions.tsWatch, 60000);
-        U.ui.postDelayed(() -> Actions.runAutostart(this), 1200);
-        Splash.maybeShow(this, "start");
+        // splash first; hotspot settings and auto-start apps only once it has closed
+        if (!Splash.maybeShow(this, "start", () -> Actions.afterSplash(this))) Actions.afterSplash(this);
     }
 
     private void build() {
@@ -278,6 +279,11 @@ public class MainActivity extends Activity {
         map.start();
         rail.paused(false);
         dock.render();
+        if (pendingAutostart) {
+            // back from hotspot settings: now open the auto-start apps
+            pendingAutostart = false;
+            U.ui.postDelayed(() -> Actions.runAutostart(this), 1200);
+        }
     }
 
     @Override

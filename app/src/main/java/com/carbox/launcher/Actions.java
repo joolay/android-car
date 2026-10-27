@@ -293,13 +293,30 @@ final class Actions {
 
     // ------------------------------------------------------------------ connections at start
 
+    /** Connections that happen quietly in the background: Tailscale and joining the phone's hotspot. */
     static void connectionsAtStart(Activity a) {
         if (Store.flag(Store.CONN_TS, false) && Status.tailscaleInstalled()) Status.tailscale(true);
         if (Store.flag(Store.CONN_PHONE, false)) joinPhoneHotspot(a);
-        if (Store.flag(Store.CONN_HOTSPOT, false)) {
+    }
+
+    /**
+     * Things that open other screens (hotspot settings, auto-start apps). Run only after the splash
+     * screen has finished, once per car start, so they never cover the splash.
+     */
+    static void afterSplash(MainActivity a) {
+        long bootAt = System.currentTimeMillis() - SystemClock.elapsedRealtime();
+        boolean firstThisBoot = Math.abs(Store.lng("hotspot_boot", 0) - bootAt) >= 60000;
+        if (firstThisBoot && Store.flag(Store.CONN_HOTSPOT, false)) {
+            Store.put("hotspot_boot", bootAt);
             Status.refresh();
-            if (!Status.hotspotOn) U.ui.postDelayed(() -> Status.tetherSettings(a), 4000);
+            if (!Status.hotspotOn) {
+                // Android 13 only lets Settings turn the hotspot on; auto start waits until you come back
+                a.pendingAutostart = true;
+                U.ui.postDelayed(() -> Status.tetherSettings(a), 1500);
+                return;
+            }
         }
+        U.ui.postDelayed(() -> runAutostart(a), 1200);
     }
 
     static void joinPhoneHotspot(Context c) {

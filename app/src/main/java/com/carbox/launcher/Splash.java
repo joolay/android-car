@@ -24,21 +24,26 @@ final class Splash {
     private static long endsAt, startedAt;
 
     static void maybeShow(Activity a, String trigger) {
-        if (!Store.flag(Store.SPLASH_ON, false)) return;
+        maybeShow(a, trigger, null);
+    }
+
+    /** Returns true if the splash is showing; `after` then runs once it closes. */
+    static boolean maybeShow(Activity a, String trigger, Runnable after) {
+        if (!Store.flag(Store.SPLASH_ON, false)) return false;
         String when = Store.str(Store.SPLASH_WHEN, "start");
-        if ("nav".equals(when) != "nav".equals(trigger)) return;
+        if ("nav".equals(when) != "nav".equals(trigger)) return false;
         if ("day".equals(when) && "start".equals(trigger)) {
             String today = new SimpleDateFormat("yyyyMMdd", Locale.US).format(new Date());
-            if (today.equals(Store.str(Store.SPLASH_LAST_DAY, ""))) return;
+            if (today.equals(Store.str(Store.SPLASH_LAST_DAY, ""))) return false;
             Store.put(Store.SPLASH_LAST_DAY, today);
         }
         if ("start".equals(trigger)) {
             // once per car start (boot), not every time the launcher reopens
             long bootAt = System.currentTimeMillis() - SystemClock.elapsedRealtime();
-            if (Math.abs(Store.lng("splash_boot", 0) - bootAt) < 60000) return;
+            if (Math.abs(Store.lng("splash_boot", 0) - bootAt) < 60000) return false;
             Store.put("splash_boot", bootAt);
         }
-        show(a);
+        return show(a, after);
     }
 
     private static Runnable afterClose;
@@ -48,11 +53,11 @@ final class Splash {
     }
 
     /** afterClose runs when the splash finishes (timeout or tap), e.g. to reopen the setup page after a preview. */
-    static void show(Activity a, Runnable after) {
+    static boolean show(Activity a, Runnable after) {
         cancel();
         afterClose = after;
         View content = build(a, Store.str(Store.PRAYER_LAYOUT, "stacked"));
-        if (content == null) return;
+        if (content == null) return false;
         FrameLayout layer = new FrameLayout(a);
         layer.setClickable(true);
         layer.setOnClickListener(v -> dismiss());
@@ -66,6 +71,7 @@ final class Splash {
         startedAt = SystemClock.elapsedRealtime();
         endsAt = secs <= 0 ? 0 : startedAt + secs * 1000L;
         U.ui.post(countdown);
+        return true;
     }
 
     private static final Runnable countdown = new Runnable() {
