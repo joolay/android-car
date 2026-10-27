@@ -126,6 +126,59 @@ final class Widgets {
         }
     }
 
+    /**
+     * A live, non-touchable preview of a widget: built at real tile size, then scaled to fit
+     * whatever space it's given (the widget gallery and the tile editor).
+     */
+    static View preview(Context c, JSONObject spec) {
+        final View live;
+        try {
+            W w = make(c, -1, spec);
+            try {
+                w.tick();
+            } catch (Exception ignored) {
+            }
+            live = w.v;
+        } catch (Exception e) {
+            return new View(c);
+        }
+        int tw = U.u(122), th = U.u(165);
+        if (MainActivity.I != null && MainActivity.I.tiles.view.getWidth() > 0) {
+            View t = MainActivity.I.tiles.view;
+            tw = Math.round((t.getWidth() - U.u(8) * 3) / 4f);
+            th = Math.round((t.getHeight() - U.u(8)) / 2f);
+        }
+        final int fw = tw, fh = th;
+        FrameLayout box = new FrameLayout(c) {
+            @Override
+            protected void onMeasure(int ws, int hs) {
+                int w = MeasureSpec.getSize(ws), h = MeasureSpec.getMode(hs) == MeasureSpec.UNSPECIFIED ? Math.round(w * fh / (float) fw) : MeasureSpec.getSize(hs);
+                setMeasuredDimension(w, h);
+                live.measure(MeasureSpec.makeMeasureSpec(fw, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(fh, MeasureSpec.EXACTLY));
+            }
+
+            @Override
+            protected void onLayout(boolean changed, int l, int t, int r, int b) {
+                float s = Math.min((r - l) / (float) fw, (b - t) / (float) fh);
+                live.layout(0, 0, fw, fh);
+                live.setPivotX(0);
+                live.setPivotY(0);
+                live.setScaleX(s);
+                live.setScaleY(s);
+                live.setTranslationX(((r - l) - fw * s) / 2f);
+            }
+
+            @Override
+            public boolean onInterceptTouchEvent(android.view.MotionEvent e) {
+                return true; // a picture of the widget, not the widget
+            }
+        };
+        box.setClipChildren(true);
+        box.addView(live);
+        MapPanel.clip(box, 14);
+        return box;
+    }
+
     /** Settings page for widgets that need setting up. */
     static void configure(int index) {
         JSONObject spec = Tiles.specs().optJSONObject(index);

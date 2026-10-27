@@ -66,6 +66,15 @@ final class TileEditor {
         boolean folder = spec == null || "f".equals(spec.optString("t"));
         String id = spec == null ? "none" : spec.optString("id");
         boolean empty = !folder && "none".equals(id);
+        if (!folder && !empty) { // widgets: show the real thing, shrunk to fit
+            FrameLayout f = new FrameLayout(c);
+            f.addView(Widgets.preview(c, spec), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            TextView num = U.text(c, String.valueOf(index + 1), 11, U.TEXT, true);
+            num.setGravity(Gravity.CENTER);
+            num.setBackground(U.oval(0xCC0B0E13));
+            f.addView(num, U.flpu(22, 22, Gravity.TOP | Gravity.END));
+            return f;
+        }
         LinearLayout l = U.col(c);
         l.setBackground(empty ? U.outline(U.CARD2, U.LINE, 1, 14) : U.round(folder ? U.CARD2 : 0xFF1A2740, 14));
         U.pad(l, 12, 12, 12, 10);
@@ -271,6 +280,11 @@ final class TileEditor {
                     }
                     if (e.getActionMasked() == MotionEvent.ACTION_UP && !moved) {
                         if (dragIndex >= count) {
+                            int e0 = Tiles.emptyIndex();
+                            if (e0 >= 0) { // only one empty tile at a time: fill that one
+                                AppPanels.gallery(e0);
+                                return true;
+                            }
                             Tiles.addTile();
                             fill();
                             hs.post(() -> hs.fullScroll(View.FOCUS_RIGHT));

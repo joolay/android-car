@@ -56,7 +56,21 @@ final class Tiles {
         refresh();
     }
 
+    /** Index of the empty tile, or -1. Only one is allowed at a time. */
+    static int emptyIndex() {
+        JSONArray s = specs();
+        for (int i = 0; i < s.length(); i++) {
+            JSONObject o = s.optJSONObject(i);
+            if (o != null && "w".equals(o.optString("t")) && "none".equals(o.optString("id"))) return i;
+        }
+        return -1;
+    }
+
     static void addTile() {
+        if (emptyIndex() >= 0) {
+            android.widget.Toast.makeText(MainActivity.I, "Fill the empty tile first", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
         JSONArray s = specs();
         s.put(widget("none"));
         save(s);

@@ -608,23 +608,27 @@ final class AppPanels {
             List<View> cells = new ArrayList<>();
             for (String[] w : Widgets.CATALOG) {
                 if (!Faith.widgetAllowed(w[0])) continue; // faith add-on not selected
+                // a live preview of the widget as it will look on the tile, with its name under it
                 LinearLayout card = U.col(c);
-                card.setBackground(U.round(U.CARD2, 14));
-                U.pad(card, 14, 12, 14, 12);
-                card.addView(U.line(c, w[1], 15, U.TEXT, true));
-                TextView d = U.text(c, w[2], 12, U.SUB, false);
-                d.setMaxLines(2);
-                card.addView(d, top(4));
-                card.setMinimumHeight(U.u(70));
+                U.pad(card, 4, 4, 4, 6);
+                card.setBackground(U.round(U.CARD2, 16));
+                card.addView(Widgets.preview(c, Tiles.widget(w[0])), U.lp(U.MATCH, U.WRAP));
+                TextView nm = U.line(c, w[1], 13, U.TEXT, true);
+                nm.setGravity(android.view.Gravity.CENTER);
+                card.addView(nm, top(6));
                 card.setOnClickListener(v -> {
                     Tiles.setSpec(index, Tiles.widget(w[0]));
-                    Sheets.close();
+                    // from the tile editor: go back to it; otherwise close
+                    List<Sheets.Page> st = Sheets.saveStack();
+                    int ed = st.indexOf(TileEditor.page);
+                    if (ed >= 0) Sheets.restoreStack(st.subList(0, ed + 1));
+                    else Sheets.close();
                     if (Widgets.configurable(w[0])) Widgets.configure(index);
                 });
                 U.press(card);
                 cells.add(card);
             }
-            return Sheets.panel("Widgets", grid(c, cells, 3, 10), 700, 440);
+            return Sheets.panel("Choose a widget", grid(c, cells, 4, 10), 760, 450);
         };
         if (Sheets.open()) Sheets.push(page);
         else Sheets.show(page);
