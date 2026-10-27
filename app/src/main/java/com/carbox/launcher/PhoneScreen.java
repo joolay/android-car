@@ -277,63 +277,83 @@ final class PhoneScreen {
 
     private static void keypad(Context c, LinearLayout body) {
         LinearLayout row = U.row(c);
+
+        // left: the number, a contact match, then backspace and call
         LinearLayout left = U.col(c);
         left.setGravity(Gravity.CENTER);
-        display = U.line(c, "", 34, U.TEXT, false);
+        display = U.line(c, "", 36, U.TEXT, true);
         display.setGravity(Gravity.CENTER);
+        display.setHint("Enter a number");
+        display.setHintTextColor(U.MUTED);
         display.setEllipsize(android.text.TextUtils.TruncateAt.START);
         left.addView(display, U.lp(U.MATCH, U.WRAP));
-        match = U.line(c, "", 13, U.SUB, false);
+        match = U.line(c, "", 14, U.ACCENT_SOFT, false);
         match.setGravity(Gravity.CENTER);
         left.addView(match, Widgets.top(6));
+
+        LinearLayout actions = U.row(c);
+        actions.setGravity(Gravity.CENTER);
         FrameLayout call = new FrameLayout(c);
         call.setBackground(U.oval(U.GREEN));
-        call.addView(U.icon(c, R.drawable.ic_call, U.TEXT), U.flpu(32, 32, Gravity.CENTER));
+        call.addView(U.icon(c, R.drawable.ic_call, U.TEXT), U.flpu(34, 34, Gravity.CENTER));
         call.setOnClickListener(v -> {
             if (number.length() > 0) dial(number.toString());
         });
         U.press(call);
-        LinearLayout.LayoutParams cl = U.lpu(72, 72);
-        cl.topMargin = U.u(26);
-        cl.gravity = Gravity.CENTER_HORIZONTAL;
-        left.addView(call, cl);
+        actions.addView(call, U.lpu(80, 80));
+        FrameLayout del = new FrameLayout(c);
+        del.setBackground(U.oval(U.CARD2));
+        del.addView(U.icon(c, R.drawable.ic_backspace, U.TEXT2), U.flpu(26, 26, Gravity.CENTER));
+        Keyboard.repeat(del, () -> {
+            if (number.length() > 0) number.setLength(number.length() - 1);
+            updateNumber(c);
+        });
+        del.setOnLongClickListener(v -> { // hold to clear
+            number.setLength(0);
+            updateNumber(c);
+            return true;
+        });
+        LinearLayout.LayoutParams dl = U.lpu(56, 56);
+        dl.leftMargin = U.u(22);
+        actions.addView(del, dl);
+        left.addView(actions, Widgets.top(28));
         row.addView(left, new LinearLayout.LayoutParams(0, U.MATCH, 1));
 
+        // right: a standard 3 × 4 keypad, digits centred with their letters underneath
         LinearLayout pad = U.col(c);
         pad.setGravity(Gravity.CENTER_VERTICAL);
-        String[][] keys = {{"1", ""}, {"2", "ABC"}, {"3", "DEF"}, {"4", "GHI"}, {"5", "JKL"}, {"6", "MNO"}, {"7", "PQRS"}, {"8", "TUV"}, {"9", "WXYZ"}, {"*", ""}, {"0", "+"}, {"⌫", ""}};
+        String[][] keys = {{"1", " "}, {"2", "ABC"}, {"3", "DEF"}, {"4", "GHI"}, {"5", "JKL"}, {"6", "MNO"}, {"7", "PQRS"}, {"8", "TUV"}, {"9", "WXYZ"}, {"*", " "}, {"0", "+"}, {"#", " "}};
         for (int r = 0; r < 4; r++) {
             LinearLayout kr = U.row(c);
             for (int k = 0; k < 3; k++) {
                 String[] key = keys[r * 3 + k];
                 LinearLayout b = U.col(c);
                 b.setGravity(Gravity.CENTER);
-                b.setBackground(U.round(U.CARD3, 14));
-                b.addView(U.text(c, key[0], 26, U.TEXT, false));
-                if (!key[1].isEmpty()) b.addView(U.text(c, key[1], 10, U.SUB, false));
-                if ("⌫".equals(key[0])) {
-                    Keyboard.repeat(b, () -> {
-                        if (number.length() > 0) number.setLength(number.length() - 1);
-                        updateNumber(c);
-                    });
-                } else {
-                    b.setOnClickListener(v -> {
-                        number.append(key[0]);
-                        updateNumber(c);
-                    });
-                    if ("0".equals(key[0])) b.setOnLongClickListener(v -> {
-                        number.append('+');
-                        updateNumber(c);
-                        return true;
-                    });
-                }
-                LinearLayout.LayoutParams kl = new LinearLayout.LayoutParams(0, U.u(62), 1);
-                kl.setMargins(U.u(4), U.u(4), U.u(4), U.u(4));
+                b.setBackground(U.round(U.CARD2, 18));
+                TextView d = U.text(c, key[0], 28, U.TEXT, false);
+                d.setGravity(Gravity.CENTER);
+                b.addView(d, new LinearLayout.LayoutParams(U.WRAP, U.WRAP));
+                TextView l = U.text(c, key[1], 10, U.SUB, true);
+                l.setGravity(Gravity.CENTER);
+                l.setLetterSpacing(0.15f);
+                b.addView(l, new LinearLayout.LayoutParams(U.WRAP, U.WRAP));
+                b.setOnClickListener(v -> {
+                    number.append(key[0]);
+                    updateNumber(c);
+                });
+                if ("0".equals(key[0])) b.setOnLongClickListener(v -> { // hold 0 for +
+                    number.append('+');
+                    updateNumber(c);
+                    return true;
+                });
+                U.press(b);
+                LinearLayout.LayoutParams kl = new LinearLayout.LayoutParams(0, U.u(64), 1);
+                kl.setMargins(U.u(5), U.u(5), U.u(5), U.u(5));
                 kr.addView(b, kl);
             }
             pad.addView(kr);
         }
-        row.addView(pad, U.lpu(310, U.MATCH));
+        row.addView(pad, U.lpu(330, U.MATCH));
         FrameLayout wrap = new FrameLayout(c);
         wrap.addView(row, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         View close = square(c, R.drawable.ic_x, PhoneScreen::hide);
