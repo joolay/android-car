@@ -42,6 +42,7 @@ final class Widgets {
             {"carconnect", "Car Connect", "CarPlay, Android Auto, mirror or native car"},
             {"speed", "Speed", "Current speed and today's top speed"},
             {"trip", "Trip", "Distance, time driving and average speed"},
+            {"rest", "Driving timer", "Time since your last break, with a beep or voice reminder to rest"},
             {"heading", "Heading", "Compass direction and altitude"},
             {"weather", "Weather", "Weather where you are"},
             {"goto", "Go to", "One tap to navigate home or to work"},
@@ -59,7 +60,7 @@ final class Widgets {
     }
 
     static boolean configurable(String id) {
-        return "goto".equals(id) || "quickdial".equals(id) || "contact".equals(id) || "ha".equals(id);
+        return "goto".equals(id) || "quickdial".equals(id) || "contact".equals(id) || "ha".equals(id) || "rest".equals(id);
     }
 
     abstract static class W {
@@ -98,6 +99,8 @@ final class Widgets {
                 return new Speed(c, index, spec);
             case "trip":
                 return new Trip(c, index, spec);
+            case "rest":
+                return new RestW(c, index, spec);
             case "heading":
                 return new Heading(c, index, spec);
             case "weather":
@@ -132,6 +135,7 @@ final class Widgets {
         else if ("quickdial".equals(id)) quickDialSetup(index);
         else if ("contact".equals(id)) contactSetup(index);
         else if ("ha".equals(id)) HA.setup(index);
+        else if ("rest".equals(id)) Rest.setup();
     }
 
     // ------------------------------------------------------------------ shared bits
@@ -317,6 +321,99 @@ final class Widgets {
             drive.setText(U.dur(Loc.tripMovingMs) + " driving");
             double hrs = Loc.tripMovingMs / 3600000.0;
             avg.setText(hrs > 0.01 ? "Avg " + Math.round(d / hrs) + (m ? " mph" : " km/h") : "Avg --");
+        }
+    }
+
+    // ------------------------------------------------------------------ Driving timer
+
+    /** Thin rounded progress bar. */
+    static final class Bar extends View {
+        float value;
+        int color = U.ACCENT;
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF r = new RectF();
+
+        Bar(Context c) {
+            super(c);
+        }
+
+        @Override
+        protected void onDraw(Canvas cv) {
+            float h = getHeight(), rad = h / 2;
+            r.set(0, 0, getWidth(), h);
+            p.setColor(U.CARD3);
+            cv.drawRoundRect(r, rad, rad, p);
+            r.right = Math.max(h, getWidth() * Math.max(0, Math.min(1, value)));
+            p.setColor(color);
+            if (value > 0) cv.drawRoundRect(r, rad, rad, p);
+        }
+    }
+
+    static final class RestW extends W {
+        private final LinearLayout box;
+        private final TextView head, time, sub;
+        private final Bar bar;
+
+        RestW(Context c, int i, JSONObject s) {
+            super(c, i, s);
+            box = card(c, U.CARD);
+            head = label(c, "DRIVING");
+            box.addView(head);
+            box.addView(new View(c), U.weight(1, false));
+            time = U.text(c, "0:00", 30, U.TEXT, true);
+            box.addView(time);
+            bar = new Bar(c);
+            LinearLayout.LayoutParams bl = U.lp(U.MATCH, U.u(6));
+            bl.topMargin = U.u(6);
+            box.addView(bar, bl);
+            box.addView(new View(c), U.weight(1, false));
+            sub = U.line(c, "", 12, U.TEXT2, false);
+            box.addView(sub);
+            box.setOnClickListener(x -> Rest.setup());
+            U.press(box);
+            v = box;
+            tick();
+        }
+
+        @Override
+        void tick() {
+            long min = Rest.driveMs / 60000;
+            time.setText((min / 60) + ":" + U.two((int) (min % 60)));
+            bar.value = Rest.progress();
+            boolean due = Rest.due();
+            long stopped = Rest.stoppedMs();
+            int bg;
+            if (!Rest.on()) {
+                head.setText("DRIVING");
+                sub.setText("Reminders off");
+                bar.color = U.MUTED;
+                bg = U.CARD;
+            } else if (due && stopped > 60000) {
+                long left = Rest.breakMin() - stopped / 60000;
+                head.setText("RESTING");
+                sub.setText(left > 0 ? "Break done in " + left + " min" : "Break done");
+                bar.color = U.TEAL;
+                bg = U.CARD;
+            } else if (due) {
+                head.setText("TAKE A BREAK");
+                sub.setText("Stop and rest " + Rest.breakMin() + " min");
+                bar.color = U.AMBER;
+                bg = 0xFF4A3410;
+            } else {
+                head.setText("DRIVING");
+                long leftMin = Rest.limitMin() - min;
+                String s = "Break in " + U.dur(leftMin * 60000);
+                if (Rest.limitKm() > 0) {
+                    boolean m = mph();
+                    double left = (Rest.limitKm() * 1000.0 - Rest.meters) / (m ? 1609.34 : 1000.0);
+                    s += " · " + Math.max(0, Math.round(left)) + (m ? " mi" : " km");
+                }
+                sub.setText(s);
+                bar.color = bar.value > 0.85f ? U.AMBER : U.ACCENT;
+                bg = U.CARD;
+            }
+            box.setBackground(U.round(bg, 16));
+            bar.invalidate();
         }
     }
 

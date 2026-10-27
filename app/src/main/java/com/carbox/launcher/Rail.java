@@ -63,14 +63,10 @@ final class Rail {
         view.addView(items, U.lp(U.MATCH, U.WRAP));
         view.addView(new View(c), new LinearLayout.LayoutParams(1, 0, 1));
 
-        View gear = circle(R.drawable.ic_gear, U.CARD2, 40, 22);
-        gear.setOnClickListener(v -> SettingsPanels.main());
-        view.addView(gear, U.lpu(40, 40));
+        // Settings now lives in All apps; the rail keeps just the voice button at the bottom
         View mic = circle(R.drawable.ic_mic, U.ACCENT, 48, 26);
         mic.setOnClickListener(v -> Actions.assistant(c));
-        LinearLayout.LayoutParams mlp = U.lpu(48, 48);
-        mlp.topMargin = U.u(16);
-        view.addView(mic, mlp);
+        view.addView(mic, U.lpu(48, 48));
 
         build();
         Status.listen(this::updateStatus);

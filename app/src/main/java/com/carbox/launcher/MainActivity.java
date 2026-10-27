@@ -51,6 +51,7 @@ public class MainActivity extends Activity {
         Apps.init(this);
         Status.init(this);
         Loc.init(this);
+        Rest.init(this);
         build();
         immersive();
         askPermissions();

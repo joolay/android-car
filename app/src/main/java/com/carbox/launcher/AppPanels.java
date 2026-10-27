@@ -55,6 +55,24 @@ final class AppPanels {
         return l;
     }
 
+    /** Car Launcher Settings as an app-style cell: gear on a rounded tile, same size as app icons. */
+    static View settingsCell(Context c) {
+        LinearLayout l = U.col(c);
+        l.setGravity(Gravity.CENTER_HORIZONTAL);
+        U.pad(l, 2, 8, 2, 6);
+        FrameLayout ic = new FrameLayout(c);
+        ic.setBackground(U.round(U.CARD3, 12));
+        ic.addView(U.icon(c, R.drawable.ic_gear, U.TEXT), U.flpu(28, 28, Gravity.CENTER));
+        FrameLayout f = new FrameLayout(c);
+        f.addView(ic, U.flpu(46, 46, Gravity.CENTER));
+        l.addView(f, U.lpu(52, 50));
+        TextView t = U.line(c, "Settings", 11, U.TEXT2, false);
+        t.setGravity(Gravity.CENTER);
+        l.addView(t, top(4));
+        U.press(l);
+        return l;
+    }
+
     /** Lay views out in rows of `cols`. */
     static LinearLayout grid(Context c, List<View> cells, int cols, float gap) {
         LinearLayout g = U.col(c);
@@ -169,6 +187,16 @@ final class AppPanels {
     private static void fillApps(Context c, LinearLayout results) {
         results.removeAllViews();
         List<View> cells = new ArrayList<>();
+        // Car Launcher's own Settings, first in the grid (also found by searching "settings")
+        String q = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!selecting && (q.isEmpty() || "settings".startsWith(q) || "car launcher settings".contains(q))) {
+            View s = settingsCell(c);
+            s.setOnClickListener(v -> {
+                Sheets.close();
+                SettingsPanels.main();
+            });
+            cells.add(s);
+        }
         for (Apps.App a : Apps.search(query)) {
             View cell = appCell(c, a, selecting && selection.contains(a.key), Actions.isAutostart(a.key));
             cell.setOnClickListener(v -> {

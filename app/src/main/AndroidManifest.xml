@@ -36,6 +36,8 @@
         <intent><action android:name="android.speech.action.VOICE_SEARCH_HANDS_FREE" /></intent>
         <intent><action android:name="android.intent.action.DIAL" /></intent>
         <intent><action android:name="android.speech.RecognitionService" /></intent>
+        <!-- text-to-speech engine for the driving timer's voice reminder -->
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
         <intent><action android:name="android.speech.action.RECOGNIZE_SPEECH" /></intent>
         <intent><action android:name="android.media.browse.MediaBrowserService" /></intent>
         <intent><action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" /></intent>
