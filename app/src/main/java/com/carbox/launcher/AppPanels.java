@@ -565,7 +565,7 @@ final class AppPanels {
     // ------------------------------------------------------------------ tile menu & widget gallery
 
     static void tileMenu(int index) {
-        Sheets.show(() -> {
+        Sheets.Page p = () -> {
             Context c = Sheets.ctx();
             JSONObject spec = Tiles.specs().optJSONObject(index);
             boolean isFolder = spec == null || "f".equals(spec.optString("t"));
@@ -584,16 +584,22 @@ final class AppPanels {
                 }));
             }
             b.addView(Sheets.item("Remove tile", null, () -> {
-                Sheets.close();
                 Tiles.removeTile(index);
+                Sheets.back(); // back to the tile editor (or closed)
             }));
             b.addView(U.button(c, "Done editing", true, () -> {
                 Sheets.close();
-                if (MainActivity.I != null) MainActivity.I.tiles.setEditing(false);
+                if (MainActivity.I != null) {
+                    MainActivity.I.tiles.setEditing(false);
+                    MainActivity.I.tiles.refresh();
+                }
             }), top(14));
             String title = isFolder ? spec.optString("name", "Folder") + " folder" : Widgets.name(id);
             return Sheets.panel(title, b, 440, 360);
-        });
+        };
+        // from the tile editor: open on top of it, so Back returns there
+        if (Sheets.open()) Sheets.push(p);
+        else Sheets.show(p);
     }
 
     static void gallery(int index) {

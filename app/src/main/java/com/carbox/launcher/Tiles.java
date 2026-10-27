@@ -208,7 +208,7 @@ final class Tiles {
             f.addView(more, ml);
         } else {
             f.setOnLongClickListener(v -> {
-                setEditing(true);
+                TileEditor.open(); // full-screen tile editor
                 return true;
             });
         }
@@ -260,7 +260,7 @@ final class Tiles {
                     cell.addView(iv, U.flpu(38, 38, Gravity.CENTER));
                     cell.setOnClickListener(v -> Apps.launch(a, ap));
                     cell.setOnLongClickListener(v -> {
-                        setEditing(true);
+                        TileEditor.open(); // full-screen tile editor
                         return true;
                     });
                 }
@@ -348,7 +348,7 @@ final class Tiles {
             setClipChildren(false);
             setWillNotDraw(false);
             setOnLongClickListener(v -> { // long-press an empty spot (or an empty grid) to edit
-                setEditing(true);
+                TileEditor.open(); // full-screen tile editor
                 return true;
             });
         }
