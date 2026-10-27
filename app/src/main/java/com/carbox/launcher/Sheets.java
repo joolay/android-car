@@ -187,7 +187,7 @@ final class Sheets {
     /** Tappable list row: title, value, chevron. */
     static LinearLayout item(String title, String value, Runnable click) {
         LinearLayout r = U.row(ctx);
-        r.setMinimumHeight(U.u(44));
+        r.setMinimumHeight(U.u(52));
         r.addView(U.line(ctx, title, 15, U.TEXT, false), new LinearLayout.LayoutParams(0, U.WRAP, 1));
         if (value != null) r.addView(U.line(ctx, value, 13, U.SUB, false));
         if (click != null) {
@@ -200,7 +200,8 @@ final class Sheets {
     /** Title + subtitle + switch. */
     static LinearLayout switchRow(int icon, int iconTint, String title, String sub, boolean on, U.Cb<Boolean> cb) {
         LinearLayout r = U.row(ctx);
-        U.pad(r, 0, 9, 0, 9);
+        U.pad(r, 0, 12, 0, 12);
+        r.setMinimumHeight(U.u(56));
         if (icon != 0) {
             r.addView(U.icon(ctx, icon, iconTint), U.lpu(26, 26));
             r.addView(U.gap(ctx, 14, 1));

@@ -38,7 +38,7 @@ final class Salah {
     };
 
     private static void tick() {
-        if (!Store.flag(PAUSE, true) && !Store.flag(ANNOUNCE, true)) return;
+        if (!Faith.islam() || (!Store.flag(PAUSE, true) && !Store.flag(ANNOUNCE, true))) return;
         double[] t = Prayer.times(0);
         if (t == null) return;
         Calendar k = Calendar.getInstance();

@@ -97,6 +97,7 @@ final class SettingsPanels {
                 {"Connections at start", connLabel()},
                 {"Splash screen", Store.flag(Store.SPLASH_ON, false) ? "On" : "Off"},
                 {"Calendar", Cal.altLabel()},
+                {"Faith add-ons", Faith.label()},
                 {"Prayer times", Prayer.METHODS[Store.num(Store.PRAY_METHOD, 0)]},
                 {"Units and clock", (Store.flag(Store.CELSIUS, true) ? "°C" : "°F") + " · " + (Store.flag(Store.H24, true) ? "24 h" : "12 h")},
                 {"Auto start", Actions.autostart().length() + " apps"},
@@ -104,8 +105,19 @@ final class SettingsPanels {
                 {"Keyboard", "Car keyboard" + (CarIME.isDefault(c) ? " · on" : "")},
                 {"Android settings", ""}};
         Runnable[] actions = {SettingsPanels::navApp, SettingsPanels::map, SettingsPanels::railOrder, SettingsPanels::hiddenApps, SettingsPanels::news,
-                SettingsPanels::calls, SettingsPanels::connections, SettingsPanels::splash, SettingsPanels::calendar, SettingsPanels::prayerTimes,
+                SettingsPanels::calls, SettingsPanels::connections, SettingsPanels::splash, SettingsPanels::calendar, Faith::picker, SettingsPanels::prayerTimes,
                 SettingsPanels::units, AppPanels::autostart, SettingsPanels::music, SettingsPanels::keyboard, SettingsPanels::androidSettings};
+        // faith add-ons: hide prayer settings unless Islam is selected
+        if (!Faith.islam()) {
+            List<String[]> li = new ArrayList<>();
+            List<Runnable> la = new ArrayList<>();
+            for (int i = 0; i < items.length; i++) if (!"Prayer times".equals(items[i][0])) {
+                li.add(items[i]);
+                la.add(actions[i]);
+            }
+            items = li.toArray(new String[0][]);
+            actions = la.toArray(new Runnable[0]);
+        }
         LinearLayout cols = U.row(c);
         cols.setGravity(Gravity.TOP);
         LinearLayout l1 = U.col(c), l2 = U.col(c);
@@ -113,7 +125,7 @@ final class SettingsPanels {
             LinearLayout col = i % 2 == 0 ? l1 : l2;
             col.addView(U.hr(c));
             LinearLayout it = Sheets.item(items[i][0], items[i][1].isEmpty() ? null : items[i][1], actions[i]);
-            it.setMinimumHeight(U.u(30));
+            it.setMinimumHeight(U.u(48)); // finger-sized rows
             col.addView(it, U.lp(U.MATCH, U.WRAP));
         }
         // WRAP heights: MATCH_PARENT columns inside the scrolling panel measured as zero height on the box
@@ -371,6 +383,9 @@ final class SettingsPanels {
             boolean fb = BackButtonService.enabled(c);
             b.addView(check(c, R.drawable.ic_back, U.CARD3, "Floating back button (optional)", "A back button over other apps; hold it for shortcuts",
                     fb ? "Done" : "Set up", fb, SettingsPanels::floatingBack));
+            boolean fa = Store.flag("faith_seen", false);
+            b.addView(check(c, R.drawable.ic_moon, U.CARD3, "Faith add-ons", "Prayer times, qibla, travel prayers: " + Faith.label(),
+                    fa ? "Done" : "Choose", fa, Faith::picker));
             boolean opt = Store.flag("opt_seen", false);
             b.addView(check(c, R.drawable.ic_bolt, U.CARD3, "Startup optimiser (recommended)", "Find apps that clash with Car Launcher or slow the start-up",
                     opt ? "Done" : "Check", opt, Optimiser::show));
@@ -1058,6 +1073,7 @@ final class SettingsPanels {
             LinearLayout b = U.col(c);
             String cur = Store.str(Store.PRAYER_ID, null);
             for (String faith : Prayers.FAITHS) {
+                if (!Faith.allows(faith)) continue; // only the selected faith add-on
                 b.addView(Sheets.section(faith));
                 for (Prayers.P p : Prayers.ALL) {
                     if (!p.faith.equals(faith)) continue;
@@ -1102,7 +1118,7 @@ final class SettingsPanels {
             LinearLayout b = U.col(c);
             b.addView(Sheets.section("Second calendar"));
             List<View> chips = new ArrayList<>();
-            for (String[] a : Cal.ALTS) chips.add(segStr(c, Store.CAL_ALT, a[0], a[1], Cal.alt()));
+            for (String[] a : Cal.ALTS) if (Faith.calendarAllowed(a[0])) chips.add(segStr(c, Store.CAL_ALT, a[0], a[1], Cal.alt()));
             b.addView(AppPanels.grid(c, chips, 4, 8));
             if (Cal.alt().startsWith("islamic")) {
                 int adj = Store.num(Store.CAL_ADJ, 0);

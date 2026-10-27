@@ -202,8 +202,9 @@ final class U {
         TextView t = text(c, label, 14, TEXT, false);
         t.setGravity(Gravity.CENTER);
         t.setSingleLine(true);
-        pad(t, 14, 8, 14, 8);
-        t.setBackground(round(on ? ACCENT : CARD2, 16));
+        pad(t, 16, 12, 16, 12); // finger-sized
+        t.setMinHeight(u(44));
+        t.setBackground(round(on ? ACCENT : CARD2, 20));
         if (click != null) t.setOnClickListener(v -> click.run());
         return t;
     }
@@ -212,8 +213,9 @@ final class U {
         TextView t = text(c, label, 14, TEXT, primary);
         t.setGravity(Gravity.CENTER);
         t.setSingleLine(true);
-        pad(t, 18, 9, 18, 9);
-        t.setBackground(round(primary ? ACCENT : CARD2, 16));
+        pad(t, 20, 12, 20, 12); // finger-sized
+        t.setMinHeight(u(44));
+        t.setBackground(round(primary ? ACCENT : CARD2, 20));
         if (click != null) t.setOnClickListener(v -> click.run());
         return t;
     }

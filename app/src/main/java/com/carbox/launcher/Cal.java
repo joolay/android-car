@@ -27,7 +27,8 @@ final class Cal {
             {"indian", "Indian (Saka)"}, {"persian", "Persian"}, {"ethiopic", "Ethiopian"}, {"buddhist", "Buddhist"}, {"none", "None"}};
 
     static String alt() {
-        return Store.str(Store.CAL_ALT, "islamic-umalqura");
+        String a = Store.str(Store.CAL_ALT, "islamic-umalqura");
+        return Faith.calendarAllowed(a) ? a : "none"; // Hijri / Hebrew only with that faith add-on
     }
 
     static String altLabel() {

@@ -35,7 +35,7 @@ final class AppPanels {
         FrameLayout f = new FrameLayout(c);
         ImageView iv = new ImageView(c);
         iv.setImageDrawable(a.icon);
-        f.addView(iv, U.flpu(46, 46, Gravity.CENTER));
+        f.addView(iv, U.flpu(52, 52, Gravity.CENTER));
         if (badge) {
             FrameLayout b = new FrameLayout(c);
             b.setBackground(U.oval(U.GREEN));
@@ -48,8 +48,8 @@ final class AppPanels {
             b.addView(U.icon(c, R.drawable.ic_check, U.TEXT), U.flpu(11, 11, Gravity.CENTER));
             f.addView(b, U.flpu(18, 18, Gravity.TOP | Gravity.START));
         }
-        l.addView(f, U.lpu(52, 50));
-        TextView t = U.line(c, a.label, 11, U.TEXT2, false);
+        l.addView(f, U.lpu(58, 56));
+        TextView t = U.line(c, a.label, 12, U.TEXT2, false);
         t.setGravity(Gravity.CENTER);
         l.addView(t, top(4));
         return l;
@@ -64,9 +64,9 @@ final class AppPanels {
         ic.setBackground(U.round(U.CARD3, 12));
         ic.addView(U.icon(c, R.drawable.ic_gear, U.TEXT), U.flpu(28, 28, Gravity.CENTER));
         FrameLayout f = new FrameLayout(c);
-        f.addView(ic, U.flpu(46, 46, Gravity.CENTER));
-        l.addView(f, U.lpu(52, 50));
-        TextView t = U.line(c, "Settings", 11, U.TEXT2, false);
+        f.addView(ic, U.flpu(52, 52, Gravity.CENTER));
+        l.addView(f, U.lpu(58, 56));
+        TextView t = U.line(c, "Settings", 12, U.TEXT2, false);
         t.setGravity(Gravity.CENTER);
         l.addView(t, top(4));
         U.press(l);
@@ -607,6 +607,7 @@ final class AppPanels {
             Context c = Sheets.ctx();
             List<View> cells = new ArrayList<>();
             for (String[] w : Widgets.CATALOG) {
+                if (!Faith.widgetAllowed(w[0])) continue; // faith add-on not selected
                 LinearLayout card = U.col(c);
                 card.setBackground(U.round(U.CARD2, 14));
                 U.pad(card, 14, 12, 14, 12);

@@ -14,7 +14,7 @@ import java.util.List;
 final class Dock {
     private final Activity a;
     final LinearLayout view;
-    static final int SLOTS = 6; // at most 6 app icons, then All apps
+    static final int SLOTS = 5; // dialler + at most 5 app icons = 6, then All apps
 
     Dock(Activity a) {
         this.a = a;
@@ -35,6 +35,15 @@ final class Dock {
         int left = Math.max(0, SLOTS - pinned.size());
         List<Apps.App> recent = Apps.recents(left);
         // icons share the width evenly, so 6 icons spread out instead of bunching on the left
+        spacer();
+        // the dialler is always first
+        FrameLayout dial = new FrameLayout(a);
+        dial.setBackground(U.oval(U.GREEN));
+        dial.addView(U.icon(a, R.drawable.ic_call, U.TEXT), U.flpu(22, 22, Gravity.CENTER));
+        dial.setOnClickListener(v -> PhoneScreen.show(null));
+        dial.setContentDescription("Phone");
+        U.press(dial);
+        view.addView(dial, U.lpu(42, 42));
         spacer();
         for (Apps.App ap : pinned) {
             add(ap, true);

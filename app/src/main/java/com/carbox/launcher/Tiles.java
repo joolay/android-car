@@ -128,7 +128,7 @@ final class Tiles {
     private static JSONArray defaults() {
         JSONArray s = new JSONArray();
         s.put(widget("carconnect"));
-        s.put(widget("nextprayer"));
+        s.put(widget(Faith.islam() ? "nextprayer" : "weather"));
         s.put(widget("ha"));
         JSONArray music = new JSONArray();
         for (String p : Actions.MUSIC) {
@@ -137,7 +137,7 @@ final class Tiles {
         }
         s.put(folder("Music", music));
         s.put(widget("speed"));
-        s.put(widget("qibla"));
+        s.put(widget(Faith.islam() ? "qibla" : "trip"));
         s.put(widget("goto"));
         JSONArray apps = new JSONArray();
         int n = 0;
