@@ -374,7 +374,7 @@ final class SettingsPanels {
             b.addView(check(c, R.drawable.ic_mic, U.CARD3, "Car keyboard (optional)", "Big keys and voice typing in every app",
                     kb ? "Done" : "Set up", kb, SettingsPanels::keyboard));
             boolean fb = BackButtonService.enabled(c);
-            b.addView(check(c, R.drawable.ic_back, U.CARD3, "Floating back button (optional)", "A back button over other apps; hold it for Home",
+            b.addView(check(c, R.drawable.ic_back, U.CARD3, "Floating back button (optional)", "A back button over other apps; hold it for shortcuts",
                     fb ? "Done" : "Set up", fb, SettingsPanels::floatingBack));
             b.addView(U.text(c, "Find this again any time in Settings → Android settings → Set-up checklist.", 12, U.SUB, false), top(10));
             return Sheets.panel("Welcome to Car Launcher", b, 640, 440);
@@ -407,12 +407,14 @@ final class SettingsPanels {
         open(floatPage = () -> {
             Context c = c();
             LinearLayout b = U.col(c);
-            b.addView(U.text(c, "A round back button that floats over other apps (never on the home screen). Tap goes back a page; at the app's first page it brings you home. Hold for Home. Drag it to move it.", 13, U.SUB, false));
+            b.addView(U.text(c, "A round back button that floats over other apps (never on the home screen). Tap goes back a page; at the app's first page it brings you home. Hold for a menu of shortcuts. Drag it to move it.", 13, U.SUB, false));
             boolean on = BackButtonService.enabled(c);
             if (!on) b.addView(step(c, 1, "Allow restricted settings", "Android 13 asks this for apps installed from a file: App info → ⋮ → Allow restricted settings",
                     "App info", false, () -> Apps.appInfo(c, c.getPackageName())), top(10));
             b.addView(step(c, on ? 1 : 2, "Turn on \"Car Launcher back button\"", "In Android's Accessibility list. It's only used to press Back and Home for you.",
                     on ? "Done" : "Turn on", on, () -> Status.open(c, Settings.ACTION_ACCESSIBILITY_SETTINGS)), on ? top(10) : U.lp(U.MATCH, U.WRAP));
+            b.addView(Sheets.item("Hold menu", QuickActions.chosen().size() + " buttons", SettingsPanels::holdMenu), top(4));
+            b.addView(U.hr(c));
             String sz = Store.str("fb_size", "m");
             b.addView(Sheets.row("Size", sizeSeg(c, "s", "Small", sz), sizeSeg(c, "m", "Medium", sz), sizeSeg(c, "l", "Large", sz)), top(8));
             b.addView(Sheets.switchRow(0, 0, "Only when I touch the screen", "Appears when you tap or scroll, then fades after 4 seconds", BackButtonService.onlyOnTouch(), v -> {
@@ -424,6 +426,55 @@ final class SettingsPanels {
                 BackButtonService.refresh();
             }));
             return Sheets.panel("Floating back button", b, 640, 432);
+        });
+    }
+
+    static void holdMenu() {
+        Sheets.push(() -> {
+            Context c = c();
+            LinearLayout b = U.col(c);
+            java.util.List<String> chosen = QuickActions.chosen();
+            b.addView(U.text(c, "Hold the back button to open these in a circle around it. Tap to add or remove (3 to 8). Numbers show the order, starting at the top.",
+                    12, U.SUB, false));
+            java.util.List<View> cells = new java.util.ArrayList<>();
+            for (Object[] a : QuickActions.ALL) {
+                final String id = (String) a[0];
+                int pos = chosen.indexOf(id);
+                boolean on = pos >= 0;
+                LinearLayout r = U.row(c);
+                r.setBackground(on ? U.outline(0xFF1A2740, U.ACCENT, 2, 10) : U.round(U.CARD2, 10));
+                U.pad(r, 10, 0, 10, 0);
+                FrameLayout ic = new FrameLayout(c);
+                ic.setBackground(U.oval(on ? U.ACCENT : U.CARD3));
+                ic.addView(U.icon(c, (Integer) a[2], U.TEXT), U.flpu(16, 16, Gravity.CENTER));
+                r.addView(ic, U.lpu(28, 28));
+                LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+                tl.leftMargin = U.u(10);
+                r.addView(U.line(c, (String) a[1], 13, U.TEXT, false), tl);
+                if (on) r.addView(U.text(c, String.valueOf(pos + 1), 12, U.ACCENT_SOFT, true));
+                r.setMinimumHeight(U.u(40));
+                r.setOnClickListener(v -> {
+                    java.util.List<String> l = new java.util.ArrayList<>(QuickActions.chosen());
+                    if (l.contains(id)) {
+                        if (l.size() <= QuickActions.MIN) {
+                            android.widget.Toast.makeText(c, "Keep at least 3 buttons", android.widget.Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        l.remove(id);
+                    } else {
+                        if (l.size() >= QuickActions.MAX) {
+                            android.widget.Toast.makeText(c, "Up to 8 buttons — remove one first", android.widget.Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        l.add(id);
+                    }
+                    Store.putList("fb_menu", l);
+                    Sheets.refresh();
+                });
+                cells.add(r);
+            }
+            b.addView(AppPanels.grid(c, cells, 3, 8), top(10));
+            return Sheets.panel("Hold menu", b, 700, 440);
         });
     }
 

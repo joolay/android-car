@@ -32,6 +32,7 @@ public class BackButtonService extends AccessibilityService {
         I = this;
         U.init((Context) this);
         Store.init(this);
+        Apps.init(this);
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         build();
     }
@@ -83,7 +84,10 @@ public class BackButtonService extends AccessibilityService {
 
     private void setVisible(boolean v) {
         visible = v;
-        if (!v) awake = false;
+        if (!v) {
+            awake = false;
+            if (menu != null) closeMenu();
+        }
         apply();
     }
 
@@ -178,6 +182,111 @@ public class BackButtonService extends AccessibilityService {
         super.onDestroy();
     }
 
+    // ------------------------------------------------------------------ hold menu
+
+    private FrameLayout menu;
+    private final java.util.List<View> menuItems = new java.util.ArrayList<>();
+    private final java.util.List<String> menuIds = new java.util.ArrayList<>();
+    private String hot;
+
+    /** 3–8 buttons in a circle around the back button. */
+    private void openMenu() {
+        closeMenu();
+        U.ui.removeCallbacks(sleep); // keep the back button up while the menu is open
+        android.graphics.Point screen = new android.graphics.Point();
+        wm.getDefaultDisplay().getRealSize(screen);
+        int item = U.u(64), radius = U.u(118), reach = radius + item / 2 + U.u(26);
+        int size = U.u(sizeDu());
+        // centre on the back button, pulled in from the edges so the whole circle fits
+        int cx = Math.max(reach, Math.min(screen.x - reach, lp.x + size / 2));
+        int cy = Math.max(reach, Math.min(screen.y - reach, lp.y + size / 2));
+
+        menu = new FrameLayout(this);
+        menu.setBackgroundColor(0x8C000000);
+        menu.setOnClickListener(v -> closeMenu());
+        java.util.List<String> ids = QuickActions.chosen();
+        menuItems.clear();
+        menuIds.clear();
+        for (int i = 0; i < ids.size(); i++) {
+            Object[] a = QuickActions.find(ids.get(i));
+            double ang = -Math.PI / 2 + i * 2 * Math.PI / ids.size();
+            int x = (int) (cx + radius * Math.cos(ang)), y = (int) (cy + radius * Math.sin(ang));
+            FrameLayout b = new FrameLayout(this);
+            b.setBackground(U.oval((Integer) a[3]));
+            b.setElevation(U.uf(6));
+            b.addView(U.icon(this, (Integer) a[2], U.TEXT), new FrameLayout.LayoutParams(U.u(28), U.u(28), Gravity.CENTER));
+            final String id = (String) a[0];
+            b.setOnClickListener(v -> {
+                closeMenu();
+                QuickActions.run(this, id);
+            });
+            FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(item, item, Gravity.TOP | Gravity.START);
+            bl.leftMargin = x - item / 2;
+            bl.topMargin = y - item / 2;
+            menu.addView(b, bl);
+            menuItems.add(b);
+            menuIds.add(id);
+            android.widget.TextView t = U.text(this, (String) a[1], 12, U.TEXT, false);
+            t.setGravity(Gravity.CENTER);
+            t.setShadowLayer(U.uf(3), 0, U.uf(1), 0xFF000000);
+            FrameLayout.LayoutParams tl = new FrameLayout.LayoutParams(U.u(110), android.view.ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START);
+            tl.leftMargin = x - U.u(55);
+            tl.topMargin = y + item / 2 + U.u(3);
+            menu.addView(t, tl);
+        }
+        // centre: close
+        FrameLayout close = new FrameLayout(this);
+        android.graphics.drawable.GradientDrawable cbg = U.oval(0xFF171C24);
+        cbg.setStroke(U.u(2), 0x59FFFFFF);
+        close.setBackground(cbg);
+        close.addView(U.icon(this, R.drawable.ic_x, U.TEXT), new FrameLayout.LayoutParams(U.u(26), U.u(26), Gravity.CENTER));
+        close.setOnClickListener(v -> closeMenu());
+        FrameLayout.LayoutParams cl = new FrameLayout.LayoutParams(U.u(60), U.u(60), Gravity.TOP | Gravity.START);
+        cl.leftMargin = cx - U.u(30);
+        cl.topMargin = cy - U.u(30);
+        menu.addView(close, cl);
+
+        WindowManager.LayoutParams mlp = new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT);
+        mlp.gravity = Gravity.TOP | Gravity.START;
+        try {
+            wm.addView(menu, mlp);
+            menu.setAlpha(0f);
+            menu.animate().alpha(1f).setDuration(120).start();
+        } catch (Exception e) {
+            menu = null;
+        }
+    }
+
+    /** While still holding: light up the button under the finger. */
+    private void highlight(float rx, float ry) {
+        hot = null;
+        for (int i = 0; i < menuItems.size(); i++) {
+            View v = menuItems.get(i);
+            int[] p = new int[2];
+            v.getLocationOnScreen(p);
+            float cx = p[0] + v.getWidth() / 2f, cy = p[1] + v.getHeight() / 2f;
+            boolean on = Math.hypot(rx - cx, ry - cy) < v.getWidth() * 0.75f;
+            v.setScaleX(on ? 1.18f : 1f);
+            v.setScaleY(on ? 1.18f : 1f);
+            if (on) hot = menuIds.get(i);
+        }
+    }
+
+    private void closeMenu() {
+        hot = null;
+        if (menu != null) {
+            try {
+                wm.removeView(menu);
+            } catch (Exception ignored) {
+            }
+            menu = null;
+        }
+        if (onlyOnTouch() && awake) setAwake(true); // restart the fade timer
+    }
+
     /** Tap = Back, hold = Home, drag = move (position remembered). */
     private final class Touch implements View.OnTouchListener {
         private float downX, downY;
@@ -187,7 +296,7 @@ public class BackButtonService extends AccessibilityService {
         private final Runnable hold = () -> {
             held = true;
             button.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-            performGlobalAction(GLOBAL_ACTION_HOME);
+            openMenu();
         };
 
         @Override
@@ -210,6 +319,10 @@ public class BackButtonService extends AccessibilityService {
                     U.ui.postDelayed(hold, 600);
                     return true;
                 case MotionEvent.ACTION_MOVE:
+                    if (held) {
+                        highlight(e.getRawX(), e.getRawY());
+                        return true;
+                    }
                     float dx = e.getRawX() - downX, dy = e.getRawY() - downY;
                     if (!moved && Math.hypot(dx, dy) > slop * 2) {
                         moved = true;
@@ -225,10 +338,19 @@ public class BackButtonService extends AccessibilityService {
                 case MotionEvent.ACTION_CANCEL:
                     v.setAlpha(1f);
                     U.ui.removeCallbacks(hold);
+                    if (held) {
+                        // slid onto a menu button and let go: run it; otherwise the menu stays open for a tap
+                        if (e.getActionMasked() == MotionEvent.ACTION_UP && hot != null) {
+                            String id = hot;
+                            closeMenu();
+                            QuickActions.run(BackButtonService.this, id);
+                        }
+                        return true;
+                    }
                     if (moved) {
                         Store.put("fb_x", lp.x);
                         Store.put("fb_y", lp.y);
-                    } else if (!held && e.getActionMasked() == MotionEvent.ACTION_UP) {
+                    } else if (e.getActionMasked() == MotionEvent.ACTION_UP) {
                         performGlobalAction(GLOBAL_ACTION_BACK);
                     }
                     return true;

@@ -8,7 +8,7 @@
     <string name="kb_name">Car keyboard</string>
     <string name="kb_subtype">English</string>
     <string name="fb_name">Car Launcher back button</string>
-    <string name="fb_desc">Shows a floating back button over other apps (not on the home screen). Tap to go back a page, hold for Home. It only presses Back and Home for you and does not read what is on the screen.</string>
+    <string name="fb_desc">Shows a floating back button over other apps (not on the home screen). Tap to go back a page, hold for a menu of shortcuts such as Home, split screen and music controls. It only presses Back and Home for you and does not read what is on the screen.</string>
 
     <style name="LauncherTheme" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/bg</item>
