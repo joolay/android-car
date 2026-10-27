@@ -10,12 +10,28 @@ android {
         applicationId 'com.carbox.launcher'
         minSdk 26
         targetSdk 33
-        versionCode 4
+        // always newer than the last build (GitHub's run number), so Android installs it as an update
+        versionCode Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '4') + 4
         versionName '0.2'
     }
 
+    // one fixed signing key for every build. Without it each GitHub build signs with a brand-new
+    // random debug key, and Android refuses to update an app signed with a different key.
+    signingConfigs {
+        fixed {
+            storeFile file('carlauncher.keystore')
+            storePassword 'carlauncher'
+            keyAlias 'carlauncher'
+            keyPassword 'carlauncher'
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.fixed
+        }
         release {
+            signingConfig signingConfigs.fixed
             minifyEnabled false
         }
     }
