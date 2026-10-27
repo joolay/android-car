@@ -18,62 +18,73 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The grid of tiles, 2 rows high. Four columns fit on screen; with more than 8 tiles the extra
- * columns sit to the right and the grid swipes sideways, snapping to whole columns.
+ * The tiles, 2 rows high, filled column by column. Up to 4 columns (8 tiles) show at once; any
+ * number of tiles can be added and the grid slides sideways, revealing the next column as you go.
  * Each tile is a folder of apps or a widget. Long-press a tile to enter edit mode, then drag to
  * reorder (drag to the edge to scroll); tap a tile's ⋯ for Replace with widget etc.
  */
 final class Tiles {
     static final int COLS = 4, ROWS = 2, COUNT = COLS * ROWS; // on screen at once
-    static final String N = "tiles_n";
 
-    /** Tiles switched on: 8 to 16, always a whole number of columns. */
+    /** How many tiles there are: any number, set by adding and removing tiles. */
     static int count() {
-        int n = Store.num(N, COUNT);
-        return Math.max(COUNT, Math.min(16, n - n % ROWS));
+        return specs().length();
     }
 
-    static void setCount(int n) {
-        Store.put(N, n);
-        if (MainActivity.I != null) MainActivity.I.tiles.refresh();
-    }
-
-    static int columns() {
-        return count() / ROWS;
-    }
-
-    /** Where tile i sits: the first 8 fill the 4 visible columns row by row (as before); extra tiles fill extra columns top to bottom. */
+    /** Column by column: tiles 0 and 1 are the first column, 2 and 3 the next, and so on. */
     static int colOf(int i) {
-        return i < COUNT ? i % COLS : COLS + (i - COUNT) / ROWS;
+        return i / ROWS;
     }
 
     static int rowOf(int i) {
-        return i < COUNT ? i / COLS : (i - COUNT) % ROWS;
+        return i % ROWS;
     }
 
     static int indexOf(int col, int row) {
-        return col < COLS ? row * COLS + col : COUNT + (col - COLS) * ROWS + row;
-    }
-    private final MainActivity a;
-    final Grid view;
-    private final List<Widgets.W> widgets = new ArrayList<>();
-    private boolean editing, running;
-
-    Tiles(MainActivity a) {
-        this.a = a;
-        view = new Grid(a);
-        Apps.listen(this::refresh);
-        refresh();
+        return col * ROWS + row;
     }
 
-    // ------------------------------------------------------------------ specs
+    static void addTile() {
+        JSONArray s = specs();
+        s.put(widget("none"));
+        save(s);
+        if (MainActivity.I != null) {
+            MainActivity.I.tiles.refresh();
+            MainActivity.I.tiles.view.scrollToEnd();
+        }
+    }
+
+    static void removeTile(int i) {
+        JSONArray s = specs(), out = new JSONArray();
+        for (int k = 0; k < s.length(); k++) if (k != i) out.put(s.opt(k));
+        save(out);
+        Store.put("tiles_empty", out.length() == 0);
+        if (MainActivity.I != null) MainActivity.I.tiles.refresh();
+    }
 
     static JSONArray specs() {
         JSONArray s = Store.arr(Store.TILES);
-        if (s.length() == 0) s = defaults();
-        while (s.length() < COUNT) s.put(folder("Apps", new JSONArray()));
-        while (s.length() < count()) s.put(widget("none")); // new tiles start empty: tap to choose a widget
+        if (s.length() == 0 && !Store.flag("tiles_empty", false)) s = defaults();
+        if (!Store.flag("tiles_cm", false) && s.length() > 0) s = toColumns(s);
         return s;
+    }
+
+    /**
+     * One-off: tiles used to be stored row by row (0-3 top row, 4-7 bottom). Re-order them column by
+     * column so they stay where they were on screen, and drop extra tiles the old "Home tiles" count hid.
+     */
+    private static JSONArray toColumns(JSONArray s) {
+        int keep = Math.min(s.length(), Math.max(COUNT, Store.num("tiles_n", COUNT)));
+        JSONArray out = new JSONArray();
+        for (int c = 0; c < COLS; c++)
+            for (int r = 0; r < ROWS; r++) {
+                int old = r * COLS + c;
+                if (old < Math.min(keep, COUNT)) out.put(s.opt(old));
+            }
+        for (int i = COUNT; i < keep; i++) out.put(s.opt(i)); // the extra columns were already column by column
+        Store.put("tiles_cm", true);
+        save(out);
+        return out;
     }
 
     static void save(JSONArray s) {
@@ -123,6 +134,11 @@ final class Tiles {
             apps.put(ap.key);
         }
         s.put(folder("Apps", apps));
+        // the list above is row by row; tiles are now stored column by column
+        JSONArray cm = new JSONArray();
+        for (int c = 0; c < COLS; c++) for (int r = 0; r < ROWS; r++) cm.put(s.opt(r * COLS + c));
+        s = cm;
+        Store.put("tiles_cm", true);
         if (!Apps.all.isEmpty()) save(s); // wait until the app list has loaded before remembering defaults
         return s;
     }
@@ -143,11 +159,12 @@ final class Tiles {
         view.removeAllViews();
         widgets.clear();
         JSONArray s = specs();
-        for (int i = 0, n = count(); i < n; i++) {
+        for (int i = 0, n = s.length(); i < n; i++) {
             JSONObject spec = s.optJSONObject(i);
-            if (spec == null) spec = folder("Apps", new JSONArray());
+            if (spec == null) spec = widget("none");
             view.addView(tile(i, spec));
         }
+        if (editing) view.addView(addTileView()); // "+" slot after the last tile
         if (running) for (Widgets.W w : widgets) w.tick();
         view.clampScroll();
     }
@@ -184,6 +201,21 @@ final class Tiles {
             });
         }
         return f;
+    }
+
+    private View addTileView() {
+        LinearLayout l = U.col(a);
+        l.setGravity(Gravity.CENTER);
+        l.setBackground(U.outline(0, U.ACCENT, 2, 16));
+        TextView plus = U.text(a, "+", 30, U.ACCENT_SOFT, true);
+        plus.setGravity(Gravity.CENTER);
+        l.addView(plus);
+        TextView t = U.text(a, "Add tile", 13, U.ACCENT_SOFT, false);
+        t.setGravity(Gravity.CENTER);
+        l.addView(t);
+        l.setOnClickListener(v -> addTile());
+        U.press(l);
+        return l;
     }
 
     private View folderView(int index, JSONObject spec) {
@@ -281,9 +313,10 @@ final class Tiles {
     };
 
     /**
-     * Lays tiles out 2 rows high with 8 du gaps, 4 columns per screen width, extra columns off to the
-     * right. Swipes sideways (snapping to columns), draws a small position bar in the gap between the
-     * rows, and handles dragging in edit mode.
+     * Lays tiles out 2 rows high, column by column, 4 columns to a screen width. Slides sideways with
+     * the finger and keeps gliding after a flick, then settles on a whole column. Columns sliding in
+     * at either edge grow and fade in as they're revealed. A small bar between the rows shows where
+     * you are. In edit mode tiles can be dragged, and holding one at the edge scrolls.
      */
     final class Grid extends ViewGroup {
         private int dragIndex = -1;
@@ -292,15 +325,20 @@ final class Tiles {
         private int scrollStart;
         private final int slop;
         private android.view.VelocityTracker vt;
-        private android.animation.ValueAnimator snap;
+        private final android.widget.OverScroller scroller;
         private final android.graphics.Paint bar = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         private final android.graphics.RectF r = new android.graphics.RectF();
 
         Grid(Context c) {
             super(c);
             slop = ViewConfiguration.get(c).getScaledTouchSlop();
+            scroller = new android.widget.OverScroller(c, new android.view.animation.DecelerateInterpolator(1.6f));
             setClipChildren(false);
             setWillNotDraw(false);
+            setOnLongClickListener(v -> { // long-press an empty spot (or an empty grid) to edit
+                setEditing(true);
+                return true;
+            });
         }
 
         private float gap() {
@@ -319,6 +357,10 @@ final class Tiles {
             return cellW() + gap();
         }
 
+        private int columns() {
+            return (getChildCount() + ROWS - 1) / ROWS;
+        }
+
         private int maxScroll() {
             return Math.max(0, Math.round((columns() - COLS) * colStep()));
         }
@@ -327,6 +369,11 @@ final class Tiles {
             if (getWidth() == 0) return;
             int x = Math.max(0, Math.min(maxScroll(), getScrollX()));
             if (x != getScrollX()) scrollTo(x, 0);
+            reveal();
+        }
+
+        void scrollToEnd() {
+            post(() -> glideTo(maxScroll()));
         }
 
         @Override
@@ -348,6 +395,33 @@ final class Tiles {
             clampScroll();
         }
 
+        @Override
+        protected void onScrollChanged(int l, int t, int ol, int ot) {
+            super.onScrollChanged(l, t, ol, ot);
+            reveal();
+        }
+
+        /** Tiles partly off either edge shrink a little and fade, so the next column eases into view. */
+        private void reveal() {
+            float w = getWidth(), sx = getScrollX();
+            if (w == 0) return;
+            for (int i = 0; i < getChildCount(); i++) {
+                View v = getChildAt(i);
+                if (i == dragIndex && dragging) continue;
+                float left = v.getLeft() - sx, right = v.getRight() - sx, cw = v.getWidth();
+                float out = 0; // how much of the tile is off screen, 0..1
+                if (left < 0) out = Math.min(1, -left / cw);
+                else if (right > w) out = Math.min(1, (right - w) / cw);
+                float k = 1 - out;
+                v.setAlpha(0.25f + 0.75f * k);
+                float scale = 0.88f + 0.12f * k;
+                v.setScaleX(scale);
+                v.setScaleY(scale);
+                v.setPivotX(left < 0 ? cw : 0);
+                v.setPivotY(v.getHeight() / 2f);
+            }
+        }
+
         /** Thin bar in the gap between the two rows showing which columns are on screen. */
         @Override
         public void onDrawForeground(android.graphics.Canvas cv) {
@@ -359,41 +433,51 @@ final class Tiles {
             bar.setColor(0x33FFFFFF);
             cv.drawRoundRect(r, h / 2, h / 2, bar);
             float part = w * COLS / cols, pos = maxScroll() == 0 ? 0 : getScrollX() / (float) maxScroll();
-            r.left = x0 + (w - part) * pos;
+            r.left = x0 + (w - part) * Math.max(0, Math.min(1, pos));
             r.right = r.left + part;
             bar.setColor(0xCCFFFFFF);
             cv.drawRoundRect(r, h / 2, h / 2, bar);
         }
 
         private int indexAt(float x, float y) {
-            int col = Math.max(0, Math.min(columns() - 1, (int) ((x + getScrollX()) / colStep())));
+            int col = Math.max(0, (int) ((x + getScrollX()) / colStep()));
             int row = Math.max(0, Math.min(ROWS - 1, (int) (y / (cellH() + gap()))));
-            return indexOf(col, row);
+            return Math.min(getChildCount() - 1, indexOf(col, row));
         }
 
-        // ---- swiping between columns
+        // ---- sliding
 
-        private void snapTo(int target) {
-            if (snap != null) snap.cancel();
-            target = Math.max(0, Math.min(maxScroll(), target));
-            snap = android.animation.ValueAnimator.ofInt(getScrollX(), target);
-            snap.setDuration(220);
-            snap.setInterpolator(new android.view.animation.DecelerateInterpolator());
-            snap.addUpdateListener(an -> {
-                scrollTo((Integer) an.getAnimatedValue(), 0);
-                invalidate();
-            });
-            snap.start();
+        private int snap(float x) {
+            return Math.max(0, Math.min(maxScroll(), Math.round(Math.round(x / colStep()) * colStep())));
         }
 
-        /** Settle on a whole column, or jump a full screen of 4 columns on a quick flick. */
-        private void settle(float velocity) {
-            float step = colStep();
-            int col = Math.round(getScrollX() / step);
-            float fling = U.uf(500);
-            if (velocity < -fling) col = (int) Math.ceil(scrollStart / step) + COLS;   // flicked left: next screen
-            else if (velocity > fling) col = (int) Math.floor(scrollStart / step) - COLS; // flicked right: back
-            snapTo(Math.round(col * step));
+        private void glideTo(int x) {
+            scroller.forceFinished(true);
+            scroller.startScroll(getScrollX(), 0, x - getScrollX(), 0, 320);
+            postInvalidateOnAnimation();
+        }
+
+        /** Keep gliding after a flick, then come to rest on a whole column. */
+        private void fling(float velocity) {
+            scroller.forceFinished(true);
+            scroller.fling(getScrollX(), 0, Math.round(-velocity), 0, 0, maxScroll(), 0, 0);
+            int end = snap(scroller.getFinalX());
+            scroller.forceFinished(true);
+            int dist = Math.abs(end - getScrollX());
+            scroller.startScroll(getScrollX(), 0, end - getScrollX(), 0, Math.max(220, Math.min(700, (int) (dist / U.uf(1.2f)))));
+            postInvalidateOnAnimation();
+        }
+
+        @Override
+        public void computeScroll() {
+            if (scroller.computeScrollOffset()) {
+                scrollTo(scroller.getCurrX(), 0);
+                postInvalidateOnAnimation();
+            }
+        }
+
+        private boolean sideways(float dx, float dy) {
+            return Math.abs(dx) > slop && Math.abs(dx) > Math.abs(dy) * 1.2f;
         }
 
         @Override
@@ -406,28 +490,30 @@ final class Tiles {
                     dragging = false;
                     swiping = false;
                     scrollStart = getScrollX();
-                    if (snap != null) snap.cancel();
+                    boolean wasMoving = !scroller.isFinished();
+                    scroller.forceFinished(true);
                     if (vt != null) vt.recycle();
                     vt = android.view.VelocityTracker.obtain();
                     vt.addMovement(e);
-                    return false;
+                    return wasMoving && !editing; // a touch while gliding just stops it
                 case MotionEvent.ACTION_MOVE:
                     if (vt != null) vt.addMovement(e);
                     float dx = e.getX() - downX, dy = e.getY() - downY;
                     if (editing) {
-                        if (!dragging && Math.hypot(dx, dy) > slop) {
+                        if (!dragging && Math.hypot(dx, dy) > slop && dragIndex < count()) {
                             dragging = true;
                             View v = getChildAt(dragIndex);
                             if (v != null) {
                                 // raise it above the others without changing child order (layout is by index)
                                 v.setTranslationZ(U.uf(12));
+                                v.setAlpha(1f);
                                 v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(100).start();
                             }
                             return true;
                         }
                         return false;
                     }
-                    if (columns() > COLS && Math.abs(dx) > slop * 1.5f && Math.abs(dx) > Math.abs(dy) * 1.2f) {
+                    if (maxScroll() > 0 && sideways(dx, dy)) {
                         swiping = true;
                         lastX = e.getX();
                         getParent().requestDisallowInterceptTouchEvent(true);
@@ -441,13 +527,12 @@ final class Tiles {
         private final Runnable edgeScroll = new Runnable() {
             @Override
             public void run() {
-                if (!dragging) return;
-                int dir = edgeDir;
-                if (dir != 0) {
-                    int before = getScrollX();
-                    snapTo(Math.round((Math.round(before / colStep()) + dir) * colStep()));
-                    U.ui.postDelayed(this, 650);
-                } else edgePending = false;
+                if (!dragging || edgeDir == 0) {
+                    edgePending = false;
+                    return;
+                }
+                glideTo(snap(getScrollX() + edgeDir * colStep()));
+                U.ui.postDelayed(this, 650);
             }
         };
         private int edgeDir;
@@ -456,18 +541,23 @@ final class Tiles {
         @Override
         public boolean onTouchEvent(MotionEvent e) {
             if (vt != null) vt.addMovement(e);
-            // a swipe that started on the gap between tiles never passes through onInterceptTouchEvent
-            if (!editing && !swiping && e.getActionMasked() == MotionEvent.ACTION_MOVE && columns() > COLS
-                    && Math.abs(e.getX() - downX) > slop * 1.5f && Math.abs(e.getX() - downX) > Math.abs(e.getY() - downY) * 1.2f) {
-                swiping = true;
-                lastX = e.getX();
-            }
-            if (swiping) {
+            if (!editing) {
+                // a slide that started on a gap between tiles never passes through onInterceptTouchEvent
+                if (!swiping && e.getActionMasked() == MotionEvent.ACTION_MOVE && maxScroll() > 0 && sideways(e.getX() - downX, e.getY() - downY)) {
+                    swiping = true;
+                    lastX = e.getX();
+                    MotionEvent cancel = MotionEvent.obtain(e);
+                    cancel.setAction(MotionEvent.ACTION_CANCEL);
+                    super.onTouchEvent(cancel); // no long-press once sliding
+                    cancel.recycle();
+                }
+                if (!swiping) return super.onTouchEvent(e) || true;
                 switch (e.getActionMasked()) {
                     case MotionEvent.ACTION_MOVE:
-                        int x = Math.round(getScrollX() - (e.getX() - lastX));
-                        // a little resistance past either end
-                        if (x < 0 || x > maxScroll()) x = Math.round(getScrollX() - (e.getX() - lastX) / 3f);
+                        float d = e.getX() - lastX;
+                        int x = getScrollX() - Math.round(d);
+                        // stretchy past either end
+                        if (x < 0 || x > maxScroll()) x = getScrollX() - Math.round(d / 3f);
                         scrollTo(x, 0);
                         lastX = e.getX();
                         invalidate();
@@ -480,12 +570,12 @@ final class Tiles {
                             vt.computeCurrentVelocity(1000);
                             v = vt.getXVelocity();
                         }
-                        settle(v);
+                        fling(v);
                         return true;
                 }
                 return true;
             }
-            if (!editing || !dragging) return true;
+            if (!editing || !dragging) return super.onTouchEvent(e);
             View v = getChildAt(dragIndex);
             switch (e.getActionMasked()) {
                 case MotionEvent.ACTION_MOVE:
@@ -493,9 +583,9 @@ final class Tiles {
                         v.setTranslationX(e.getX() + getScrollX() - downX - scrollStart);
                         v.setTranslationY(e.getY() - downY);
                     }
-                    // hold a tile near the left or right edge to scroll to more columns
+                    // hold a tile near the left or right edge to bring in more columns
                     float edge = U.uf(36);
-                    edgeDir = columns() <= COLS ? 0 : e.getX() > getWidth() - edge ? 1 : e.getX() < edge ? -1 : 0;
+                    edgeDir = maxScroll() == 0 ? 0 : e.getX() > getWidth() - edge ? 1 : e.getX() < edge ? -1 : 0;
                     if (edgeDir != 0 && !edgePending) {
                         edgePending = true;
                         U.ui.postDelayed(edgeScroll, 450);
@@ -506,7 +596,7 @@ final class Tiles {
                     edgeDir = 0;
                     edgePending = false;
                     U.ui.removeCallbacks(edgeScroll);
-                    int to = indexAt(e.getX(), e.getY());
+                    int to = Math.min(count() - 1, indexAt(e.getX(), e.getY()));
                     dragging = false;
                     if (e.getActionMasked() == MotionEvent.ACTION_UP && to != dragIndex) move(dragIndex, to);
                     dragIndex = -1;

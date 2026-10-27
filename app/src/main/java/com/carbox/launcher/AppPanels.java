@@ -583,6 +583,10 @@ final class AppPanels {
                     folder(index);
                 }));
             }
+            b.addView(Sheets.item("Remove tile", null, () -> {
+                Sheets.close();
+                Tiles.removeTile(index);
+            }));
             b.addView(U.button(c, "Done editing", true, () -> {
                 Sheets.close();
                 if (MainActivity.I != null) MainActivity.I.tiles.setEditing(false);

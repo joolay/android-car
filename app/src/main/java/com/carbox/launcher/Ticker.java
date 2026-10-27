@@ -444,7 +444,7 @@ final class Ticker {
         b.setBackground(U.round(0xFF1A2740, 12));
         U.pad(b, 12, 0, 6, 0);
         b.addView(U.icon(c, R.drawable.ic_drag, U.TEXT2), U.lpu(16, 16));
-        TextView t = U.line(c, "Drag tiles to reorder. Long-press a tile to start.", 13, U.TEXT2, false);
+        TextView t = U.line(c, "Drag to reorder; tap ⋯ to change or remove. + adds a tile.", 13, U.TEXT2, false);
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
         tl.leftMargin = U.u(10);
         b.addView(t, tl);

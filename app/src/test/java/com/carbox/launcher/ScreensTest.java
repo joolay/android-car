@@ -99,7 +99,7 @@ public class ScreensTest {
         Rest.meters = 142000;
 
         // 3. twelve tiles: first screen (with the position bar between the rows), then swiped to the end
-        Tiles.setCount(12);
+        for (int k = 0; k < 4; k++) Tiles.addTile();
         JSONArraySet(8, "trip");
         JSONArraySet(9, "weather");
         JSONArraySet(10, "heading");
@@ -109,7 +109,7 @@ public class ScreensTest {
         a.tiles.view.clampScroll();
         shot("4-tiles-12-swiped-right");
         a.tiles.view.scrollTo(0, 0);
-        Tiles.setCount(8);
+        for (int k = 0; k < 4; k++) Tiles.removeTile(Tiles.count() - 1);
 
         // 5. All apps with Settings first
         AppPanels.allApps(false);
@@ -119,11 +119,6 @@ public class ScreensTest {
         // 6. Driving timer settings
         Rest.setup();
         shot("6-driving-timer-settings");
-        Sheets.close();
-
-        // 7. Home tiles setting
-        SettingsPanels.tileCount();
-        shot("7-home-tiles-setting");
         Sheets.close();
 
         // 8. Settings main page

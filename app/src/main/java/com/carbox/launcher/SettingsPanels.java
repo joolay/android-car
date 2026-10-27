@@ -91,7 +91,6 @@ final class SettingsPanels {
                 {"Navigation app", Actions.navPkg() == null ? "Choose" : Apps.label(Actions.navPkg())},
                 {"Map", MapPanel.google() ? "Google Maps" : "OpenStreetMap"},
                 {"Right bar icons", railOn + " of " + Rail.IDS.length + " shown"},
-                {"Home tiles", Tiles.count() + " tiles · " + Tiles.count() / Tiles.ROWS + " columns"},
                 {"Hidden apps", Apps.hidden().isEmpty() ? "None" : Apps.hidden().size() + " hidden"},
                 {"News and traffic", tickerLabel()},
                 {"Calls", Widgets.callsLabel()},
@@ -105,7 +104,7 @@ final class SettingsPanels {
                 {"Music", Music.label() + (Store.flag(Store.MUSIC_AUTOPLAY, false) ? " · auto play" : "")},
                 {"Keyboard", "Car keyboard" + (CarIME.isDefault(c) ? " · on" : "")},
                 {"Android settings", ""}};
-        Runnable[] actions = {SettingsPanels::navApp, SettingsPanels::map, SettingsPanels::railOrder, SettingsPanels::tileCount, SettingsPanels::hiddenApps, SettingsPanels::news,
+        Runnable[] actions = {SettingsPanels::navApp, SettingsPanels::map, SettingsPanels::railOrder, SettingsPanels::hiddenApps, SettingsPanels::news,
                 SettingsPanels::calls, SettingsPanels::connections, SettingsPanels::splash, SettingsPanels::calendar, SettingsPanels::prayerTimes,
                 SettingsPanels::units, AppPanels::autostart, () -> {
             Store.put(Store.NIGHT, !Store.flag(Store.NIGHT, false));
@@ -655,25 +654,6 @@ final class SettingsPanels {
             }
             b.addView(U.text(c, "Switch an icon off to remove it from the right bar; the others spread out to fill the space. The clock stays at the top and the mic at the bottom.", 12, U.SUB, false), top(8));
             return Sheets.panel("Right bar icons", b, 480, 440);
-        });
-    }
-
-    // ------------------------------------------------------------------ number of home tiles
-
-    static void tileCount() {
-        open(() -> {
-            Context c = c();
-            LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Four columns fit on screen. With more tiles, swipe the tiles sideways to reach the extra columns. New tiles start empty: tap one to choose a widget.", 13, U.SUB, false));
-            int n = Tiles.count();
-            List<View> segs = new ArrayList<>();
-            for (int k : new int[]{8, 10, 12, 14, 16}) segs.add(U.seg(c, String.valueOf(k), k == n, () -> {
-                Tiles.setCount(k);
-                Sheets.refresh();
-            }));
-            b.addView(Sheets.row("Tiles", segs.toArray(new View[0])), top(12));
-            b.addView(U.text(c, "Going back to fewer tiles only hides the extra ones; they come back as they were.", 12, U.SUB, false), top(10));
-            return Sheets.panel("Home tiles", b, 560, 300);
         });
     }
 
