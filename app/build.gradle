@@ -12,7 +12,8 @@ android {
         targetSdk 33
         // always newer than the last build (GitHub's run number), so Android installs it as an update
         versionCode Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '4') + 4
-        versionName '0.2'
+        // set by the build workflow: 0.3, 0.4, ... (alpha) until the major number in version-major.txt changes
+        versionName (System.getenv('VER') ?: '0.2') + '-alpha'
     }
 
     // one fixed signing key for every build. Without it each GitHub build signs with a brand-new

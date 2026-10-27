@@ -48,6 +48,17 @@ jobs:
           echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           echo "sdk.dir=$SDK" > "$DIR/local.properties"
 
+      # Next build number: v<major>.<n>-alpha, one more than the last published build of this major
+      # version (failed builds publish nothing, so numbers never skip). version-major.txt holds the major.
+      - name: Work out version
+        run: |
+          git fetch --tags --force -q || true
+          MAJOR=$(cat "$DIR/version-major.txt" 2>/dev/null || echo 0)
+          LAST=$(git tag -l "v$MAJOR.*-alpha" | sed -E "s/^v$MAJOR\.([0-9]+)-alpha$/\1/" | grep -E '^[0-9]+$' | sort -n | tail -1)
+          NEXT=$(( ${LAST:--1} + 1 ))
+          echo "VER=$MAJOR.$NEXT" >> "$GITHUB_ENV"
+          echo "Building $MAJOR.$NEXT alpha"
+
       - name: Build APK
         run: |
           cd "$DIR"
@@ -67,10 +78,7 @@ jobs:
           name: CarLauncher-apk
           path: CarLauncher.apk
 
-      # Publish as a pre-release alpha named after versionName in app/build.gradle (e.g. 0.1 -> v0.1-alpha)
-      - name: Read version
-        run: echo "VER=$(grep -oP "versionName '\K[^']+" "$DIR/app/build.gradle")" >> "$GITHUB_ENV"
-
+      # Publish as its own pre-release, e.g. v0.3-alpha
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VER }}-alpha
