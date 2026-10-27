@@ -50,8 +50,25 @@ final class Dock {
         }
         divider();
         FrameLayout all = new FrameLayout(a);
-        all.setBackground(U.round(U.ACCENT, 10));
-        all.addView(U.icon(a, R.drawable.ic_apps, U.TEXT), U.flpu(24, 24, Gravity.CENTER));
+        // All apps: a little mosaic of four coloured squares on a dark tile
+        all.setBackground(U.round(U.CARD2, 10));
+        LinearLayout mosaic = U.col(a);
+        int[][] colors = {{U.ACCENT, U.GREEN}, {U.AMBER, U.RED}};
+        for (int r = 0; r < 2; r++) {
+            LinearLayout row = U.row(a);
+            for (int k = 0; k < 2; k++) {
+                View sq = new View(a);
+                sq.setBackground(U.round(colors[r][k], 3.5f));
+                LinearLayout.LayoutParams sl = U.lpu(10, 10);
+                if (k == 1) sl.leftMargin = U.u(3);
+                row.addView(sq, sl);
+            }
+            LinearLayout.LayoutParams rl = U.lp(U.WRAP, U.WRAP);
+            if (r == 1) rl.topMargin = U.u(3);
+            mosaic.addView(row, rl);
+        }
+        all.addView(mosaic, new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.CENTER));
+        all.setContentDescription("All apps");
         all.setOnClickListener(v -> AppPanels.allApps(false));
         U.press(all);
         LinearLayout.LayoutParams lp = U.lpu(40, 40);
