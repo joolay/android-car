@@ -22,6 +22,7 @@ final class Sheets {
 
     private static FrameLayout layer, tileLayer, fullLayer;
     private static boolean full; // true: over the whole screen (tile editor); false: inside the tile grid
+    private static final List<Boolean> modes = new ArrayList<>(); // full-screen or not, per open page
     private static Context ctx;
     private static final List<Page> stack = new ArrayList<>();
     private static final List<Runnable> onClose = new ArrayList<>();
@@ -41,6 +42,8 @@ final class Sheets {
     static void showFull(Page p) {
         stack.clear();
         stack.add(p);
+        modes.clear();
+        modes.add(true);
         scrimColor = 0x99000000;
         full = true;
         render();
@@ -54,6 +57,8 @@ final class Sheets {
     static void show(Page p) {
         stack.clear();
         stack.add(p);
+        modes.clear();
+        modes.add(false);
         scrimColor = 0x99000000;
         full = false;
         render();
@@ -62,12 +67,23 @@ final class Sheets {
     /** Open a page on top of the current one (back arrow returns). */
     static void push(Page p) {
         stack.add(p);
+        modes.add(full);
+        render();
+    }
+
+    /** Open a page on top, over the whole screen (Back returns to the page before, in its own size). */
+    static void pushFull(Page p) {
+        stack.add(p);
+        modes.add(true);
+        full = true;
         render();
     }
 
     static void back() {
         if (stack.size() > 1) {
             stack.remove(stack.size() - 1);
+            if (!modes.isEmpty()) modes.remove(modes.size() - 1);
+            if (!modes.isEmpty()) full = modes.get(modes.size() - 1);
             render();
         } else close();
     }
@@ -80,6 +96,7 @@ final class Sheets {
     static void close() {
         Keyboard.hide();
         stack.clear();
+        modes.clear();
         if (tileLayer != null) tileLayer.removeAllViews();
         if (fullLayer != null) fullLayer.removeAllViews();
         full = false;
@@ -99,8 +116,16 @@ final class Sheets {
 
     static void restoreStack(List<Page> pages) {
         if (pages == null || pages.isEmpty()) return;
+        List<Boolean> m = new ArrayList<>();
+        for (Page pg : pages) {
+            int at = stack.indexOf(pg);
+            m.add(at >= 0 && at < modes.size() ? modes.get(at) : full);
+        }
         stack.clear();
         stack.addAll(pages);
+        modes.clear();
+        modes.addAll(m);
+        full = m.get(m.size() - 1);
         scrimColor = 0x99000000;
         render();
     }
@@ -138,6 +163,8 @@ final class Sheets {
     static void showCard(Page p) {
         stack.clear();
         stack.add(p);
+        modes.clear();
+        modes.add(true);
         scrimColor = 0x59000000;
         full = true; // rail pop-ups sit next to the rail, over the whole screen, as before
         render();

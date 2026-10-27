@@ -619,36 +619,136 @@ final class AppPanels {
         else Sheets.show(p);
     }
 
+    /**
+     * Full-screen widget chooser: live previews in two rows that scroll sideways, with Folder as one
+     * of the choices. index >= 0: replace that tile. index < 0: manage the home screen — widgets
+     * already on it have a blue border; tap to add one, tap a blue one to take it off.
+     */
     static void gallery(int index) {
-        Sheets.Page page = () -> {
-            Context c = Sheets.ctx();
-            List<View> cells = new ArrayList<>();
-            for (String[] w : Widgets.CATALOG) {
-                if (!Faith.widgetAllowed(w[0])) continue; // faith add-on not selected
-                // a live preview of the widget as it will look on the tile, with its name under it
-                LinearLayout card = U.col(c);
-                U.pad(card, 4, 4, 4, 6);
-                card.setBackground(U.round(U.CARD2, 16));
-                card.addView(Widgets.preview(c, Tiles.widget(w[0])), U.lp(U.MATCH, U.WRAP));
-                TextView nm = U.line(c, w[1], 13, U.TEXT, true);
-                nm.setGravity(android.view.Gravity.CENTER);
-                card.addView(nm, top(6));
-                card.setOnClickListener(v -> {
-                    Tiles.setSpec(index, Tiles.widget(w[0]));
-                    // from the tile editor: go back to it; otherwise close
-                    List<Sheets.Page> st = Sheets.saveStack();
-                    int ed = st.indexOf(TileEditor.page);
-                    if (ed >= 0) Sheets.restoreStack(st.subList(0, ed + 1));
-                    else Sheets.close();
-                    if (Widgets.configurable(w[0])) Widgets.configure(index);
-                });
-                U.press(card);
-                cells.add(card);
+        Sheets.Page page = () -> galleryPage(index);
+        if (Sheets.open()) Sheets.pushFull(page);
+        else Sheets.showFull(page);
+    }
+
+    private static View galleryPage(int index) {
+        Context c = Sheets.ctx();
+        boolean manage = index < 0;
+        LinearLayout card = U.col(c);
+        card.setBackground(U.round(U.CARD, 18));
+        U.pad(card, 20, 14, 20, 14);
+        card.setLayoutParams(Sheets.centered(784, 464));
+
+        LinearLayout head = U.row(c);
+        LinearLayout titles = U.col(c);
+        titles.addView(U.line(c, manage ? "Widgets on your home screen" : "Choose a widget", 20, U.TEXT, true));
+        titles.addView(U.line(c, manage ? "Blue = on your home screen · tap to add or take off · swipe for more" : "Tap one to put it on this tile · swipe for more", 12, U.SUB, false), top(2));
+        head.addView(titles, new LinearLayout.LayoutParams(0, U.WRAP, 1));
+        head.addView(U.button(c, "Done", true, () -> {
+            Sheets.back();
+            if (MainActivity.I != null) MainActivity.I.tiles.refresh();
+        }));
+        card.addView(head);
+
+        // what's on the home screen now
+        JSONArray specs = Tiles.specs();
+        java.util.Map<String, Integer> on = new java.util.HashMap<>();
+        for (int i = 0; i < specs.length(); i++) {
+            JSONObject o = specs.optJSONObject(i);
+            if (o == null) continue;
+            String k = "f".equals(o.optString("t")) ? "folder" : o.optString("id");
+            Integer n = on.get(k);
+            on.put(k, n == null ? 1 : n + 1);
+        }
+        String current = null;
+        if (!manage) {
+            JSONObject o = specs.optJSONObject(index);
+            if (o != null) current = "f".equals(o.optString("t")) ? "folder" : o.optString("id");
+        }
+
+        List<String[]> choices = new ArrayList<>();
+        choices.add(new String[]{"folder", "Folder", "Apps grouped on one tile"});
+        for (String[] w : Widgets.CATALOG) if (Faith.widgetAllowed(w[0])) choices.add(w);
+
+        LinearLayout cols = U.row(c);
+        cols.setGravity(Gravity.TOP);
+        for (int k = 0; k < choices.size(); k += 2) {
+            LinearLayout col = U.col(c);
+            for (int r = 0; r < 2 && k + r < choices.size(); r++) {
+                String[] w = choices.get(k + r);
+                boolean sel = manage ? on.containsKey(w[0]) : w[0].equals(current);
+                LinearLayout cell = U.col(c);
+                U.pad(cell, 5, 5, 5, 6);
+                cell.setBackground(sel ? U.outline(0xFF15233A, U.ACCENT, 3, 16) : U.round(U.CARD2, 16));
+                View pv = "folder".equals(w[0]) ? folderPreview(c) : Widgets.preview(c, Tiles.widget(w[0]));
+                cell.addView(pv, new LinearLayout.LayoutParams(U.MATCH, 0, 1));
+                Integer n = on.get(w[0]);
+                TextView nm = U.line(c, w[1] + (manage && n != null && n > 1 ? " ×" + n : ""), 12, sel ? U.ACCENT_SOFT : U.TEXT, true);
+                nm.setGravity(Gravity.CENTER);
+                cell.addView(nm, top(5));
+                cell.setOnClickListener(v -> pick(index, w[0], manage && on.containsKey(w[0]) && !"folder".equals(w[0])));
+                U.press(cell);
+                LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(U.u(132), 0, 1);
+                cl.setMargins(U.u(5), U.u(5), U.u(5), U.u(5));
+                col.addView(cell, cl);
             }
-            return Sheets.panel("Choose a widget", grid(c, cells, 4, 10), 760, 450);
-        };
-        if (Sheets.open()) Sheets.push(page);
-        else Sheets.show(page);
+            cols.addView(col, new LinearLayout.LayoutParams(U.WRAP, U.MATCH));
+        }
+        android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(c);
+        hs.setHorizontalScrollBarEnabled(false);
+        hs.setFillViewport(true);
+        hs.addView(cols, new android.widget.FrameLayout.LayoutParams(U.WRAP, U.MATCH));
+        LinearLayout.LayoutParams hl = U.weight(1, false);
+        hl.topMargin = U.u(10);
+        card.addView(hs, hl);
+        return card;
+    }
+
+    /** What a new folder tile looks like. */
+    private static View folderPreview(Context c) {
+        LinearLayout l = U.col(c);
+        l.setGravity(Gravity.CENTER);
+        l.setBackground(U.round(U.CARD, 14));
+        FrameLayout ic = new FrameLayout(c);
+        ic.setBackground(U.oval(U.CARD3));
+        ic.addView(U.icon(c, R.drawable.ic_folder, U.TEXT), U.flpu(26, 26, Gravity.CENTER));
+        l.addView(ic, U.lpu(52, 52));
+        l.addView(U.line(c, "Apps", 14, U.TEXT, true), top(8));
+        return l;
+    }
+
+    /** Act on a choice: replace the tile, or (manage) add it / take it off the home screen. */
+    private static void pick(int index, String id, boolean takeOff) {
+        boolean folder = "folder".equals(id);
+        JSONObject spec = folder ? Tiles.folder("Apps", new JSONArray()) : Tiles.widget(id);
+        int at;
+        if (index >= 0) {
+            Tiles.setSpec(index, spec);
+            at = index;
+        } else if (takeOff) {
+            JSONArray s = Tiles.specs();
+            for (int i = s.length() - 1; i >= 0; i--) {
+                JSONObject o = s.optJSONObject(i);
+                if (o != null && id.equals(o.optString("id")) && "w".equals(o.optString("t"))) {
+                    Tiles.removeTile(i);
+                    break;
+                }
+            }
+            Sheets.refresh();
+            return;
+        } else {
+            JSONArray s = Tiles.specs();
+            s.put(spec);
+            Tiles.save(s);
+            if (MainActivity.I != null) MainActivity.I.tiles.refresh();
+            at = s.length() - 1;
+        }
+        if (folder) {
+            editFolder(at);
+            return;
+        }
+        if (index >= 0) Sheets.back(); // back to where we came from (the editor or the home screen)
+        else Sheets.refresh();
+        if (Widgets.configurable(id)) Widgets.configure(at);
     }
 
     // ------------------------------------------------------------------ auto start

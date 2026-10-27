@@ -40,7 +40,7 @@ final class TileEditor {
         LinearLayout head = U.row(c);
         LinearLayout titles = U.col(c);
         titles.addView(U.line(c, "Edit tiles", 20, U.TEXT, true));
-        titles.addView(U.line(c, "Hold a tile and drag to move it · tap to change or remove · swipe to see more", 12, U.SUB, false), Widgets.top(2));
+        titles.addView(U.line(c, "Hold a tile and drag to move it · tap to change or remove · + to add widgets", 12, U.SUB, false), Widgets.top(2));
         head.addView(titles, new LinearLayout.LayoutParams(0, U.WRAP, 1));
         head.addView(U.button(c, "Done", true, () -> {
             Sheets.close();
@@ -110,7 +110,7 @@ final class TileEditor {
         TextView plus = U.text(c, "+", 30, U.ACCENT_SOFT, true);
         plus.setGravity(Gravity.CENTER);
         l.addView(plus);
-        TextView t = U.text(c, "Add tile", 13, U.ACCENT_SOFT, false);
+        TextView t = U.text(c, "Add widgets", 13, U.ACCENT_SOFT, false);
         t.setGravity(Gravity.CENTER);
         l.addView(t);
         return l;
@@ -280,14 +280,9 @@ final class TileEditor {
                     }
                     if (e.getActionMasked() == MotionEvent.ACTION_UP && !moved) {
                         if (dragIndex >= count) {
+                            // no empty tiles any more: pick widgets straight away (blue = already on the home screen)
                             int e0 = Tiles.emptyIndex();
-                            if (e0 >= 0) { // only one empty tile at a time: fill that one
-                                AppPanels.gallery(e0);
-                                return true;
-                            }
-                            Tiles.addTile();
-                            fill();
-                            hs.post(() -> hs.fullScroll(View.FOCUS_RIGHT));
+                            AppPanels.gallery(e0 >= 0 ? e0 : -1);
                         } else AppPanels.tileMenu(dragIndex);
                     }
                     return true;
