@@ -178,6 +178,17 @@ public class MainActivity extends Activity {
         }
     }
 
+    static final int REQ_AUDIO = 71;
+
+    /** Pick an audio file (e.g. a recitation recording) to play instead of the built-in voice. */
+    void pickAudio() {
+        try {
+            startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("audio/*"), REQ_AUDIO);
+        } catch (Exception e) {
+            android.widget.Toast.makeText(this, "No file picker on this box", android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
     void pickWallpaperImage() {
         Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*");
         try {
@@ -196,6 +207,15 @@ public class MainActivity extends Activity {
         super.onActivityResult(req, res, data);
         if (req == Keyboard.REQ_VOICE && res == RESULT_OK) Keyboard.voiceResult(data);
         if (req == 62) Sheets.refresh(); // back from "make Car Launcher the Phone app"
+        if (req == REQ_AUDIO && res == RESULT_OK && data != null && data.getData() != null) {
+            try {
+                getContentResolver().takePersistableUriPermission(data.getData(), Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            } catch (Exception ignored) {
+            }
+            Store.put("splash_audio_uri", data.getData().toString());
+            Store.put("splash_audio", "own");
+            Sheets.refresh();
+        }
         if (req == REQ_WALLPAPER && res == RESULT_OK && data != null && data.getData() != null) {
             Uri u = data.getData();
             try {

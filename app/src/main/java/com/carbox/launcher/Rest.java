@@ -239,6 +239,40 @@ final class Rest {
         else duck(false);
     }
 
+    private static android.media.MediaPlayer player;
+
+    /**
+     * Play a recording over the music (ducking it): an app asset such as "voice/islam1_orig.mp3",
+     * or a file the user picked. Returns false if it can't be played, so the caller can fall back.
+     */
+    static boolean play(Context c, String asset, android.net.Uri uri) {
+        init(c);
+        try {
+            if (player != null) player.release();
+            player = new android.media.MediaPlayer();
+            player.setAudioAttributes(attrs());
+            if (uri != null) player.setDataSource(ctx, uri);
+            else {
+                android.content.res.AssetFileDescriptor fd = ctx.getAssets().openFd(asset);
+                player.setDataSource(fd.getFileDescriptor(), fd.getStartOffset(), fd.getLength());
+                fd.close();
+            }
+            player.setOnCompletionListener(mp -> {
+                duck(false);
+                mp.release();
+                if (player == mp) player = null;
+            });
+            player.prepare();
+            duck(true);
+            player.start();
+            return true;
+        } catch (Exception e) {
+            if (player != null) player.release();
+            player = null;
+            return false;
+        }
+    }
+
     private static AudioAttributes attrs() {
         return new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)

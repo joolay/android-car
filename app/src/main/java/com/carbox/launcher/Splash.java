@@ -56,6 +56,15 @@ final class Splash {
 
     /** Recite the chosen prayer (or own text) aloud: original language, or English if chosen or no voice for it. */
     static void recite(Context c) {
+        // 1. the user's own recording, 2. the built-in natural recording, 3. text-to-speech
+        String own = Store.str("splash_audio_uri", "");
+        if ("own".equals(Store.str("splash_audio", "builtin")) && !own.isEmpty() && Rest.play(c, null, android.net.Uri.parse(own))) return;
+        if (!"custom".equals(Store.str(Store.SPLASH_TYPE, "prayer"))) {
+            String id = Store.str(Store.PRAYER_ID, null);
+            String lang = "orig".equals(Store.str("splash_voice_lang", "orig")) ? "orig" : "en";
+            if (id != null && (Rest.play(c, "voice/" + id + "_" + lang + ".mp3", null)
+                    || ("orig".equals(lang) && Rest.play(c, "voice/" + id + "_en.mp3", null)))) return;
+        }
         String text, fallback = null;
         Locale loc = null;
         if ("custom".equals(Store.str(Store.SPLASH_TYPE, "prayer"))) {

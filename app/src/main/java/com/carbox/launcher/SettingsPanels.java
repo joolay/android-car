@@ -892,6 +892,14 @@ final class SettingsPanels {
                 b.addView(Sheets.row("Recite in", segStr(c, "splash_voice_lang", "orig", "Original language", lang),
                         segStr(c, "splash_voice_lang", "en", "English", lang)), top(4));
             }
+            if (!"screen".equals(mode)) {
+                String src = Store.str("splash_audio", "builtin");
+                boolean has = !Store.str("splash_audio_uri", "").isEmpty();
+                b.addView(Sheets.row("Recording", segStr(c, "splash_audio", "builtin", "Built-in voice", src),
+                        U.seg(c, "own".equals(src) && has ? "My recording ✓" : "My recording…", "own".equals(src), () -> {
+                            if (MainActivity.I != null) MainActivity.I.pickAudio();
+                        })), top(4));
+            }
             if ("custom".equals(type)) {
                 b.addView(Sheets.section("Custom text"));
                 b.addView(Widgets.field("Main text", ct, false, t -> Store.put(Store.CUSTOM_TEXT, t)), U.lp(U.MATCH, U.WRAP));
