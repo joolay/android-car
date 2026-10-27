@@ -373,6 +373,9 @@ final class SettingsPanels {
                     usage ? "Done" : "Allow", usage, () -> Status.open(c, Settings.ACTION_USAGE_ACCESS_SETTINGS)));
             b.addView(check(c, R.drawable.ic_mic, U.CARD3, "Car keyboard (optional)", "Big keys and voice typing in every app",
                     kb ? "Done" : "Set up", kb, SettingsPanels::keyboard));
+            boolean fb = BackButtonService.enabled(c);
+            b.addView(check(c, R.drawable.ic_back, U.CARD3, "Floating back button (optional)", "A back button over other apps; hold it for Home",
+                    fb ? "Done" : "Set up", fb, SettingsPanels::floatingBack));
             b.addView(U.text(c, "Find this again any time in Settings → Android settings → Set-up checklist.", 12, U.SUB, false), top(10));
             return Sheets.panel("Welcome to Car Launcher", b, 640, 440);
         });
@@ -396,6 +399,36 @@ final class SettingsPanels {
         w.addView(U.hr(c));
         w.addView(r);
         return w;
+    }
+
+    static Sheets.Page floatPage;
+
+    static void floatingBack() {
+        open(floatPage = () -> {
+            Context c = c();
+            LinearLayout b = U.col(c);
+            b.addView(U.text(c, "A round back button that floats over other apps (never on the home screen). Tap goes back a page; at the app's first page it brings you home. Hold for Home. Drag it to move it.", 13, U.SUB, false));
+            boolean on = BackButtonService.enabled(c);
+            if (!on) b.addView(step(c, 1, "Allow restricted settings", "Android 13 asks this for apps installed from a file: App info → ⋮ → Allow restricted settings",
+                    "App info", false, () -> Apps.appInfo(c, c.getPackageName())), top(10));
+            b.addView(step(c, on ? 1 : 2, "Turn on \"Car Launcher back button\"", "In Android's Accessibility list. It's only used to press Back and Home for you.",
+                    on ? "Done" : "Turn on", on, () -> Status.open(c, Settings.ACTION_ACCESSIBILITY_SETTINGS)), on ? top(10) : U.lp(U.MATCH, U.WRAP));
+            String sz = Store.str("fb_size", "m");
+            b.addView(Sheets.row("Size", sizeSeg(c, "s", "Small", sz), sizeSeg(c, "m", "Medium", sz), sizeSeg(c, "l", "Large", sz)), top(8));
+            b.addView(Sheets.switchRow(0, 0, "Show button", null, Store.flag("fb_on", true), v -> {
+                Store.put("fb_on", v);
+                BackButtonService.refresh();
+            }));
+            return Sheets.panel("Floating back button", b, 640, 432);
+        });
+    }
+
+    private static TextView sizeSeg(Context c, String v, String label, String cur) {
+        return U.seg(c, label, v.equals(cur), () -> {
+            Store.put("fb_size", v);
+            BackButtonService.refresh();
+            Sheets.refresh();
+        });
     }
 
     static Sheets.Page keyboardPage;
@@ -447,6 +480,8 @@ final class SettingsPanels {
             Context c = c();
             LinearLayout b = U.col(c);
             b.addView(Sheets.item("Set-up checklist", null, SettingsPanels::setupChecklist));
+            b.addView(U.hr(c));
+            b.addView(Sheets.item("Floating back button", BackButtonService.enabled(c) ? "On" : "Off", SettingsPanels::floatingBack));
             b.addView(U.hr(c));
             String[][] items = {{"All Android settings", Settings.ACTION_SETTINGS}, {"Bluetooth", Settings.ACTION_BLUETOOTH_SETTINGS},
                     {"Wi-Fi", Settings.ACTION_WIFI_SETTINGS}, {"Sound", Settings.ACTION_SOUND_SETTINGS}, {"Display", Settings.ACTION_DISPLAY_SETTINGS},
