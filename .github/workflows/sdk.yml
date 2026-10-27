@@ -1,0 +1,33 @@
+name: Export SDK jars for local compile checks
+
+on:
+  push:
+    paths:
+      - .github/workflows/sdk.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Collect jars
+        run: |
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+          mkdir out
+          cp "$SDK/platforms/android-34/android.jar" out/
+          cp "$SDK/build-tools/34.0.0/core-lambda-stubs.jar" out/
+          ls -la out
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: sdk-jars
+          name: SDK jars (for compile checks)
+          prerelease: true
+          files: |
+            out/android.jar
+            out/core-lambda-stubs.jar
