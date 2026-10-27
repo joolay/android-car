@@ -755,6 +755,25 @@ final class SettingsPanels {
                 b.addView(Sheets.row("If Bluetooth isn't connected", segStr(c, Store.CALLS_FALLBACK, "ask", "Ask", fb),
                         segStr(c, Store.CALLS_FALLBACK, "box", "Use box dialler", fb), segStr(c, Store.CALLS_FALLBACK, "none", "Do nothing", fb)));
             }
+            b.addView(Sheets.section("Call screen"), top(4));
+            b.addView(Sheets.switchRow(R.drawable.ic_call, U.GREEN, "Car Launcher call screen", "Big full-screen Answer / Decline for BT Phone calls (uses notification access)",
+                    Store.flag("call_screen", true), v -> Store.put("call_screen", v)));
+            boolean dialer = Actions.isDefaultDialer(c);
+            b.addView(Sheets.item("Make Car Launcher the box's Phone app", dialer ? "On" : "Off", () -> {
+                if (dialer) {
+                    Status.open(c, Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS);
+                    return;
+                }
+                try {
+                    android.app.role.RoleManager rm = (android.app.role.RoleManager) c.getSystemService(Context.ROLE_SERVICE);
+                    if (rm != null && rm.isRoleAvailable(android.app.role.RoleManager.ROLE_DIALER) && MainActivity.I != null)
+                        MainActivity.I.startActivityForResult(rm.createRequestRoleIntent(android.app.role.RoleManager.ROLE_DIALER), 62);
+                    else Status.open(c, Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS);
+                } catch (Exception e) {
+                    Status.open(c, Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS);
+                }
+            }));
+            b.addView(U.text(c, "Optional. If this box handles Bluetooth calls through Android, every call then uses Car Launcher's screen with mute, keypad and audio controls. If it doesn't, nothing changes and BT Phone keeps working.", 12, U.SUB, false), top(4));
             return Sheets.panel("Calls", b, 640, 430);
         });
     }

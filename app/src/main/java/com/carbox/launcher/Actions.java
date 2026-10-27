@@ -127,6 +127,8 @@ final class Actions {
             return;
         }
         if ("bt".equals(mode)) {
+            // Car Launcher is the box's Phone app and Android has a Bluetooth calling account: call directly
+            if (placeOverBluetooth(a, number)) return;
             String pkg = btDialler();
             if (pkg == null && !Store.flag("bt_asked", false)) {
                 // first call and no BT phone app recognised: ask once which app it is, then dial
@@ -139,6 +141,14 @@ final class Actions {
                 return;
             }
             if (pkg != null) {
+                // ask BT Phone to call straight away; if it only accepts "dial", it opens with the number filled in
+                if (a.checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+                    try {
+                        a.startActivity(new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + Uri.encode(number))).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                        return;
+                    } catch (Exception ignored) {
+                    }
+                }
                 Intent d = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number))).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 try {
                     a.startActivity(d);
@@ -166,6 +176,41 @@ final class Actions {
             a.startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (Exception e) {
             Toast.makeText(a, "No dialler on this box", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    static boolean isDefaultDialer(Context c) {
+        android.telecom.TelecomManager tm = (android.telecom.TelecomManager) c.getSystemService(Context.TELECOM_SERVICE);
+        return tm != null && c.getPackageName().equals(tm.getDefaultDialerPackage());
+    }
+
+    /** A Bluetooth (hands-free) calling account in Android's calling system, if the box has one. */
+    static android.telecom.PhoneAccountHandle bluetoothAccount(Context c) {
+        if (c.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) return null;
+        android.telecom.TelecomManager tm = (android.telecom.TelecomManager) c.getSystemService(Context.TELECOM_SERVICE);
+        if (tm == null) return null;
+        try {
+            for (android.telecom.PhoneAccountHandle h : tm.getCallCapablePhoneAccounts()) {
+                String p = h.getComponentName().getPackageName().toLowerCase(java.util.Locale.ROOT);
+                String cls = h.getComponentName().getClassName().toLowerCase(java.util.Locale.ROOT);
+                if (p.contains("bluetooth") || cls.contains("hfp") || cls.contains("bluetooth")) return h;
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private static boolean placeOverBluetooth(Activity a, String number) {
+        if (!isDefaultDialer(a) || a.checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) return false;
+        android.telecom.PhoneAccountHandle h = bluetoothAccount(a);
+        if (h == null) return false;
+        try {
+            android.os.Bundle extras = new android.os.Bundle();
+            extras.putParcelable(android.telecom.TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, h);
+            ((android.telecom.TelecomManager) a.getSystemService(Context.TELECOM_SERVICE)).placeCall(Uri.fromParts("tel", number, null), extras);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 

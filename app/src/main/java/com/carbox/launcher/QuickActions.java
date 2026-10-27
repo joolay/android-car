@@ -78,16 +78,11 @@ final class QuickActions {
             case "screenoff":
                 s.performGlobalAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN);
                 break;
-            case "dial": {
-                String p = Actions.btDialler();
-                if (p == null || !Apps.launchPkg(c, p)) {
-                    try {
-                        c.startActivity(new android.content.Intent(android.content.Intent.ACTION_DIAL).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
-                    } catch (Exception ignored) {
-                    }
-                }
+            case "dial":
+                // Car Launcher's own phone screen (contacts, keypad)
+                c.startActivity(new android.content.Intent(c, MainActivity.class).putExtra("open", "phone")
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
                 break;
-            }
             case "assistant":
                 Actions.assistant(c);
                 break;

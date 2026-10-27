@@ -60,6 +60,7 @@ public class MainActivity extends Activity {
         Music.atStart(this);
         // splash next; hotspot settings and auto-start apps only once it has closed
         if (!Splash.maybeShow(this, "start", () -> Actions.afterSplash(this))) Actions.afterSplash(this);
+        U.ui.post(() -> handleOpen(getIntent()));
     }
 
     private void build() {
@@ -193,6 +194,7 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
         if (req == Keyboard.REQ_VOICE && res == RESULT_OK) Keyboard.voiceResult(data);
+        if (req == 62) Sheets.refresh(); // back from "make Car Launcher the Phone app"
         if (req == REQ_WALLPAPER && res == RESULT_OK && data != null && data.getData() != null) {
             Uri u = data.getData();
             try {
@@ -261,6 +263,10 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int req, String[] p, int[] r) {
         super.onRequestPermissionsResult(req, p, r);
+        if (req == 61) { // contacts / call history for the phone screen
+            PhoneScreen.refresh();
+            return;
+        }
         if (req == 54) { // microphone for the Car keyboard
             Sheets.refresh();
             return;
@@ -326,14 +332,31 @@ public class MainActivity extends Activity {
         super.onNewIntent(i);
         // Home pressed while already home: close any panel and leave edit mode
         Keyboard.hide();
+        if (handleOpen(i)) return;
+        PhoneScreen.hide();
         if (Sheets.open()) Sheets.close();
         if (tiles.editing()) tiles.setEditing(false);
         Splash.cancel();
     }
 
+    /** "Open the phone" from the hold menu, or a dial request from another app (tel: number). */
+    private boolean handleOpen(Intent i) {
+        if (i == null) return false;
+        if ("phone".equals(i.getStringExtra("open"))) {
+            PhoneScreen.show(null);
+            return true;
+        }
+        if (Intent.ACTION_DIAL.equals(i.getAction()) || Intent.ACTION_VIEW.equals(i.getAction()) && i.getData() != null && "tel".equals(i.getData().getScheme())) {
+            PhoneScreen.show(i.getData() != null ? i.getData().getSchemeSpecificPart() : "");
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public void onBackPressed() {
         if (Keyboard.hide()) return;
+        if (PhoneScreen.hide()) return;
         if (Splash.dismiss()) return;
         if (Sheets.open()) {
             Sheets.back();

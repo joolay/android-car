@@ -168,6 +168,13 @@ public class MediaListener extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
+        // calls from BT Phone: show Car Launcher's own call screen and press BT Phone's buttons
+        final Notification cn = sbn.getNotification();
+        if (CallState.isCallNotification(this, sbn.getPackageName(), cn)) {
+            final String key = sbn.getKey(), pkg = sbn.getPackageName();
+            if (Store.flag("call_screen", true)) U.ui.post(() -> CallState.fromNotification(this, key, pkg, cn));
+            return;
+        }
         if (!isNavApp(sbn.getPackageName())) return;
         Notification n = sbn.getNotification();
         if ((n.flags & Notification.FLAG_ONGOING_EVENT) == 0) return;
@@ -203,6 +210,8 @@ public class MediaListener extends NotificationListenerService {
 
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
+        final String key = sbn.getKey();
+        U.ui.post(() -> CallState.notificationRemoved(key));
         if (!isNavApp(sbn.getPackageName()) || !sbn.getPackageName().equals(navPkg)) return;
         Notification n = sbn.getNotification();
         if ((n.flags & Notification.FLAG_ONGOING_EVENT) == 0) return;

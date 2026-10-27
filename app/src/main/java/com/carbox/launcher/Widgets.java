@@ -45,6 +45,7 @@ final class Widgets {
             {"heading", "Heading", "Compass direction and altitude"},
             {"weather", "Weather", "Weather where you are"},
             {"goto", "Go to", "One tap to navigate home or to work"},
+            {"phone", "Phone", "Contacts, favourites, recent calls and keypad"},
             {"quickdial", "Quick dial", "Four favourite contacts"},
             {"contact", "Contact", "One contact with their photo"},
             {"nextprayer", "Next prayer", "The next prayer and a countdown"},
@@ -105,6 +106,8 @@ final class Widgets {
                 return new GoTo(c, index, spec);
             case "quickdial":
                 return new QuickDial(c, index, spec);
+            case "phone":
+                return new PhoneW(c, index, spec);
             case "contact":
                 return new Contact(c, index, spec);
             case "nextprayer":
@@ -697,6 +700,28 @@ final class Widgets {
         } catch (Exception ignored) {
         }
         if (n == 0 && !q.matches("[+0-9 ()-]{3,}")) list.addView(U.text(c, "No contacts found", 13, U.SUB, false));
+    }
+
+    // ------------------------------------------------------------------ Phone
+
+    static final class PhoneW extends W {
+        PhoneW(Context c, int i, JSONObject s) {
+            super(c, i, s);
+            LinearLayout l = U.col(c);
+            l.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF1F7A46, 0xFF0F3D26}));
+            ((GradientDrawable) l.getBackground()).setCornerRadius(U.uf(16));
+            U.pad(l, 14, 16, 14, 16);
+            FrameLayout ic = new FrameLayout(c);
+            ic.setBackground(U.oval(0x33FFFFFF));
+            ic.addView(U.icon(c, R.drawable.ic_call, U.TEXT), U.flpu(26, 26, Gravity.CENTER));
+            l.addView(ic, U.lpu(48, 48));
+            l.addView(new View(c), U.weight(1, false));
+            l.addView(U.text(c, "Phone", 16, U.TEXT, true));
+            l.addView(U.text(c, "Contacts · Keypad\nRecents", 11, 0xCCFFFFFF, false), top(4));
+            l.setOnClickListener(x -> PhoneScreen.show(null));
+            U.press(l);
+            v = l;
+        }
     }
 
     // ------------------------------------------------------------------ Quick dial
