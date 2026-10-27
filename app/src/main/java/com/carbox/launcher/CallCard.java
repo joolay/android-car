@@ -30,6 +30,7 @@ final class CallCard {
         if (shown == null) {
             shown = new FrameLayout(a);
             shown.setClickable(true);
+            shown.setTag(CallCard.class); // so the navigation card stays underneath
             a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH)); // on top of tiles and panels
             CallState.listen(update);
             U.ui.post(tick);

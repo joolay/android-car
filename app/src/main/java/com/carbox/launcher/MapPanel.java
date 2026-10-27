@@ -172,7 +172,7 @@ final class MapPanel {
 
     private void updateNav() {
         MediaListener.Nav n = MediaListener.nav;
-        if (n == null) {
+        if (n == null || NavCard.inTiles()) { // instructions shown in the tile area instead: keep the map
             navCard.setVisibility(View.GONE);
             mapLayer.setVisibility(View.VISIBLE);
             return;

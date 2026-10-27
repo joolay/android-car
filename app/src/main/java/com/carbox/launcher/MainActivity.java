@@ -55,6 +55,7 @@ public class MainActivity extends Activity {
         Rest.init(this);
         Salah.start(this);
         HfpCalls.start(this);
+        NavCard.start();
         build();
         immersive();
         askPermissions();
@@ -327,6 +328,7 @@ public class MainActivity extends Activity {
         Loc.start();
         Status.start();
         if (CallState.state != CallState.NONE) CallCard.show(); // back home during a call
+        NavCard.update();
         Weather.maybeFetch();
         ticker.start();
         tiles.start();

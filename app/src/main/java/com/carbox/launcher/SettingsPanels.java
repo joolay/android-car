@@ -631,6 +631,9 @@ final class SettingsPanels {
                 b.addView(U.text(c, "Get a key at console.cloud.google.com: create a project, turn on \"Maps JavaScript API\", then Credentials → Create API key. Restrict the key to the Maps JavaScript API only. Google asks for a card, but light use like this should stay within its free monthly allowance.",
                         12, U.SUB, false), top(10));
             }
+            String nw = Store.str(NavCard.WHERE, "tiles");
+            b.addView(Sheets.row("Turn-by-turn", U.seg(c, "In the tile area", "tiles".equals(nw), () -> { Store.put(NavCard.WHERE, "tiles"); NavCard.update(); reloadMap(); Sheets.refresh(); }),
+                    U.seg(c, "In the map panel", "map".equals(nw), () -> { Store.put(NavCard.WHERE, "map"); NavCard.update(); reloadMap(); Sheets.refresh(); })), top(8));
             return Sheets.panel("Map", b, 620, 420);
         });
     }
