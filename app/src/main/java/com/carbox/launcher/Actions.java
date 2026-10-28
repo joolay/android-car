@@ -390,7 +390,8 @@ final class Actions {
                 return;
             }
         }
-        U.ui.postDelayed(() -> runAutostart(a), 1200);
+        // auto-start apps wait for the music to get going (up to 15 s), so they don't interrupt it
+        U.ui.postDelayed(() -> Music.whenStarted(a, () -> runAutostart(a), 15000), 1200);
     }
 
     static void joinPhoneHotspot(Context c) {

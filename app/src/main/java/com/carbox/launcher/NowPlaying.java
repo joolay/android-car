@@ -183,7 +183,10 @@ final class NowPlaying {
         MediaController.TransportControls t = m.getTransportControls();
         if (which == 0) t.skipToPrevious();
         else if (which == 2) t.skipToNext();
-        else if (MediaListener.playing()) t.pause();
+        else if (MediaListener.playing()) {
+            Music.userPaused();
+            t.pause();
+        }
         else t.play();
     }
 

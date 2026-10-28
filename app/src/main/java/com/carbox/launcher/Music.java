@@ -70,6 +70,7 @@ final class Music {
         if (Math.abs(Store.lng("music_boot", 0) - bootAt) < 60000) return;
         Store.put("music_boot", bootAt);
         if (musicActive(a)) return; // something is already playing (e.g. the phone over Bluetooth)
+        guard(a);
         // the chosen playlist (e.g. Liked Songs) comes first when set to start with it
         if ("playlist".equals(startWith())) {
             playPlaylist(a, true);
@@ -83,6 +84,53 @@ final class Music {
         U.ui.postDelayed(() -> {
             if (!musicActive(a) && !Store.str(Store.MUSIC_PLAYLIST, "").isEmpty()) playPlaylist(a, true);
         }, 5000);
+    }
+
+    // ---- start-up guard: for the first 45 s, nothing but your own pause button stops the music.
+    // Touching the screen, closing the splash or other apps starting can make the music app pause
+    // (or stop it loading); the guard simply presses play again.
+    private static long guardUntil;
+    private static boolean paused, started;
+
+    private static void guard(Context c) {
+        guardUntil = SystemClock.elapsedRealtime() + 45000;
+        paused = false;
+        started = false;
+        U.ui.postDelayed(new Runnable() {
+            int quiet;
+
+            @Override
+            public void run() {
+                if (paused || SystemClock.elapsedRealtime() > guardUntil) return;
+                if (musicActive(c)) {
+                    started = true;
+                    quiet = 0;
+                } else if (++quiet >= 2) { // stopped (or not started) for 3 s: play again
+                    quiet = 0;
+                    MediaController m = MediaListener.controller;
+                    if (m != null) m.getTransportControls().play();
+                    else resume(c);
+                }
+                U.ui.postDelayed(this, 1500);
+            }
+        }, 9000); // the first few seconds belong to the normal start (app waking up, playlist)
+    }
+
+    /** You pressed pause: the start-up guard stops. */
+    static void userPaused() {
+        paused = true;
+    }
+
+    /** Run r once the music is playing (or after maxMs), so other apps start after it. */
+    static void whenStarted(Context c, Runnable r, long maxMs) {
+        long end = SystemClock.elapsedRealtime() + maxMs;
+        U.ui.post(new Runnable() {
+            @Override
+            public void run() {
+                if (started || musicActive(c) || SystemClock.elapsedRealtime() > end || SystemClock.elapsedRealtime() > guardUntil) r.run();
+                else U.ui.postDelayed(this, 500);
+            }
+        });
     }
 
     /** Press "play" on the chosen app (or on whatever played last), without opening it. */
