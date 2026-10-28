@@ -38,7 +38,7 @@ final class HA {
         return !url().isEmpty() && !Store.str(Store.HA_TOKEN, "").isEmpty();
     }
 
-    private static Map<String, String> headers() {
+    static Map<String, String> headers() {
         Map<String, String> h = new HashMap<>();
         h.put("Authorization", "Bearer " + Store.str(Store.HA_TOKEN, ""));
         h.put("Content-Type", "application/json");

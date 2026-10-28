@@ -58,6 +58,7 @@ public class MainActivity extends Activity {
         NavCard.start();
         SpeedLimit.start();
         SpeedCard.start();
+        CarHA.start();
         build();
         immersive();
         askPermissions();

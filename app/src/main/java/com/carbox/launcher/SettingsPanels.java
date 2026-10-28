@@ -100,6 +100,7 @@ final class SettingsPanels {
                         {R.drawable.ic_pin, GREEN, "Map", MapPanel.google() ? "Google Maps" : "OpenStreetMap", (Runnable) SettingsPanels::map},
                         {R.drawable.ic_car, GREEN, "Driving timer", Rest.on() ? "Break after " + U.dur(Rest.limitMin() * 60000L) : "Off", (Runnable) Rest::setup},
                         {R.drawable.ic_bell, GREEN, "News and traffic", tickerLabel(), (Runnable) SettingsPanels::news},
+                        {R.drawable.ic_pin, GREEN, "Car location", Store.flag(CarHA.ON, false) ? "To Home Assistant" : "Off", (Runnable) CarHA::settings},
                         {R.drawable.ic_bell, PURPLE, "Alerts", Store.flag(Alerts.GLOBAL, true) ? "Expand into tiles" : "Inside their tiles", (Runnable) Alerts::settings}},
                 {{"Music and start-up"},
                         {R.drawable.ic_music, AMBER, "Music", Music.label() + (Store.flag(Store.MUSIC_AUTOPLAY, false) ? " · auto play" : ""), (Runnable) SettingsPanels::music},
