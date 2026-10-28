@@ -678,7 +678,13 @@ final class Widgets {
         GoTo(Context c, int i, JSONObject s) {
             super(c, i, s);
             LinearLayout l = card(c, U.CARD);
-            l.addView(U.text(c, "Go to", 15, U.TEXT, true));
+            // tap the title (or anywhere but Home / Work) for more saved places
+            LinearLayout head = U.row(c);
+            head.addView(U.text(c, "Go to", 15, U.TEXT, true), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+            JSONArray more = cfg.optJSONArray("places");
+            head.addView(U.text(c, (more != null && more.length() > 0 ? "+" + more.length() + " " : "") + "›", 13, U.ACCENT_SOFT, true));
+            l.addView(head);
+            l.setOnClickListener(x -> places(index));
             l.addView(new View(c), U.weight(1, false));
             l.addView(place(R.drawable.ic_home, "Home", "home"), U.lpu(U.MATCH, 52));
             LinearLayout.LayoutParams wl = U.lpu(U.MATCH, 52);
@@ -735,6 +741,99 @@ final class Widgets {
             }
         });
         return e;
+    }
+
+    /** All saved places: Home, Work and any others. Tap to navigate; add or remove places here. */
+    static void places(int index) {
+        Sheets.Page pg = () -> {
+            Context c = Sheets.ctx();
+            JSONObject spec = Tiles.specs().optJSONObject(index);
+            JSONObject cfg = spec.optJSONObject("cfg");
+            if (cfg == null) cfg = new JSONObject();
+            final JSONObject fc = cfg;
+            JSONArray more = fc.optJSONArray("places");
+            if (more == null) more = new JSONArray();
+            final JSONArray list = more;
+            LinearLayout b = U.col(c);
+            List<View> cells = new ArrayList<>();
+            String[][] fixed = {{"home", "Home"}, {"work", "Work"}};
+            for (String[] f : fixed) {
+                String a = fc.optString(f[0], "");
+                cells.add(placeRow(c, "home".equals(f[0]) ? R.drawable.ic_home : R.drawable.ic_work, f[1], a.isEmpty() ? "Tap to set" : a, () -> {
+                    if (a.isEmpty()) gotoSetup(index);
+                    else {
+                        Sheets.close();
+                        Actions.navigateTo(c, a);
+                    }
+                }, null));
+            }
+            for (int i = 0; i < list.length(); i++) {
+                JSONObject o = list.optJSONObject(i);
+                if (o == null) continue;
+                final int k = i;
+                String a = o.optString("addr");
+                cells.add(placeRow(c, R.drawable.ic_pin, o.optString("name"), a, () -> {
+                    Sheets.close();
+                    Actions.navigateTo(c, a);
+                }, () -> { // remove
+                    JSONArray out = new JSONArray();
+                    for (int q = 0; q < list.length(); q++) if (q != k) out.put(list.opt(q));
+                    put(fc, "places", out);
+                    put(spec, "cfg", fc);
+                    Tiles.setSpec(index, spec);
+                    Sheets.refresh();
+                }));
+            }
+            b.addView(AppPanels.grid(c, cells, 2, 8));
+            // add a place
+            b.addView(Sheets.section("Add a place"));
+            final String[] nm = {""}, ad = {""};
+            LinearLayout add = U.row(c);
+            add.addView(field("Name, e.g. Gym", "", false, t -> nm[0] = t), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+            add.addView(U.gap(c, 8, 1));
+            add.addView(field("Address", "", false, t -> ad[0] = t), new LinearLayout.LayoutParams(0, U.WRAP, 2));
+            add.addView(U.gap(c, 8, 1));
+            add.addView(U.button(c, "Add", true, () -> {
+                if (nm[0].trim().isEmpty() || ad[0].trim().isEmpty()) return;
+                JSONObject o = new JSONObject();
+                put(o, "name", nm[0].trim());
+                put(o, "addr", ad[0].trim());
+                list.put(o);
+                put(fc, "places", list);
+                put(spec, "cfg", fc);
+                Tiles.setSpec(index, spec);
+                Sheets.refresh();
+            }));
+            b.addView(add, top(4));
+            b.addView(Sheets.item("Change Home and Work", null, () -> gotoSetup(index)), top(8));
+            return Sheets.panel("Places", b);
+        };
+        if (Sheets.open()) Sheets.push(pg);
+        else Sheets.show(pg);
+    }
+
+    private static View placeRow(Context c, int icon, String name, String addr, Runnable go, Runnable remove) {
+        LinearLayout r = U.row(c);
+        r.setBackground(U.round(U.CARD2, 12));
+        U.pad(r, 12, 8, 8, 8);
+        r.setMinimumHeight(U.u(56));
+        r.addView(U.icon(c, icon, U.ACCENT_SOFT), U.lpu(22, 22));
+        LinearLayout t = U.col(c);
+        t.addView(U.line(c, name, 14, U.TEXT, true));
+        t.addView(U.line(c, addr, 11, U.SUB, false), top(2));
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+        tl.leftMargin = U.u(10);
+        r.addView(t, tl);
+        if (remove != null) {
+            TextView x = U.text(c, "−", 16, U.TEXT, true);
+            x.setGravity(Gravity.CENTER);
+            x.setBackground(U.oval(U.RED));
+            x.setOnClickListener(v -> remove.run());
+            r.addView(x, U.lpu(24, 24));
+        }
+        r.setOnClickListener(v -> go.run());
+        U.press(r);
+        return r;
     }
 
     static void gotoSetup(int index) {
