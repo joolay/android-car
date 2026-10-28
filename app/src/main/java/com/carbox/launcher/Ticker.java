@@ -462,16 +462,10 @@ final class Ticker {
         b.setBackground(U.round(0xFF1A2740, 12));
         U.pad(b, 12, 0, 6, 0);
         b.addView(U.icon(c, R.drawable.ic_drag, U.TEXT2), U.lpu(16, 16));
-        Tiles tl0 = MainActivity.I != null ? MainActivity.I.tiles : null;
-        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.MATCH, 1);
+        TextView t = U.line(c, "Swipe to slide · hold a tile to move it · red − to remove", 13, U.TEXT2, false);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
         tl.leftMargin = U.u(10);
-        tl.rightMargin = U.u(12);
-        if (tl0 != null && tl0.extraColumns() > 0) b.addView(tl0.scrubber(c), tl); // slide bar for more tiles
-        else {
-            TextView t = U.line(c, "Hold and drag to move · red − to remove", 13, U.TEXT2, false);
-            t.setGravity(Gravity.CENTER_VERTICAL);
-            b.addView(t, tl);
-        }
+        b.addView(t, tl);
         TextView d = U.text(c, "Done", 13, U.TEXT, true);
         d.setGravity(Gravity.CENTER);
         d.setBackground(U.round(U.ACCENT, 10));

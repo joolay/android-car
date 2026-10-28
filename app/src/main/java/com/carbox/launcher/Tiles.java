@@ -388,60 +388,6 @@ final class Tiles {
         return editing;
     }
 
-    /** Edit-mode scroll bar: drag (or tap) along it to slide the tiles. */
-    View scrubber(Context c) {
-        View sb = new View(c) {
-            final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-            final android.graphics.RectF r = new android.graphics.RectF();
-            float grab = -1;
-
-            @Override
-            protected void onDraw(android.graphics.Canvas cv) {
-                int cols = view.columns();
-                float h = U.u(8), y = (getHeight() - h) / 2f, w = getWidth();
-                r.set(0, y, w, y + h);
-                p.setColor(0x33FFFFFF);
-                cv.drawRoundRect(r, h / 2, h / 2, p);
-                float part = cols <= COLS ? w : Math.max(U.u(40), w * COLS / cols), max = view.maxScroll();
-                r.left = max == 0 ? 0 : (w - part) * view.getScrollX() / max;
-                r.right = r.left + part;
-                r.top = y - U.u(3);
-                r.bottom = y + h + U.u(3);
-                p.setColor(0xDDFFFFFF);
-                cv.drawRoundRect(r, U.u(7), U.u(7), p);
-            }
-
-            @Override
-            public boolean onTouchEvent(MotionEvent e) {
-                int cols = view.columns(), max = view.maxScroll();
-                if (max == 0) return false;
-                float w = getWidth(), part = Math.max(U.u(40), w * COLS / cols), left = (w - part) * view.getScrollX() / max;
-                switch (e.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        getParent().requestDisallowInterceptTouchEvent(true);
-                        // grab the thumb where touched, or jump it under the finger
-                        grab = e.getX() >= left && e.getX() <= left + part ? e.getX() - left : part / 2;
-                    case MotionEvent.ACTION_MOVE:
-                        float f = Math.max(0, Math.min(1, (e.getX() - grab) / (w - part)));
-                        view.scrollTo(Math.round(f * max), 0);
-                        view.reveal();
-                        return true;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        view.glideTo(view.snap(view.getScrollX()));
-                        return true;
-                }
-                return true;
-            }
-        };
-        view.onScroll = sb::invalidate;
-        return sb;
-    }
-
-    int extraColumns() {
-        return Math.max(0, view.columns() - COLS);
-    }
-
     void setEditing(boolean on) {
         if (editing == on) return;
         editing = on;
@@ -756,14 +702,6 @@ final class Tiles {
             }
             getParent().requestDisallowInterceptTouchEvent(true);
         };
-
-        Runnable onScroll;
-
-        @Override
-        protected void onScrollChanged(int l, int t, int ol, int ot) {
-            super.onScrollChanged(l, t, ol, ot);
-            if (onScroll != null) onScroll.run();
-        }
 
         private final Runnable edgeScroll = new Runnable() {
             @Override
