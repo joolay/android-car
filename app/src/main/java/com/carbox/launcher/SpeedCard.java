@@ -21,7 +21,7 @@ final class SpeedCard {
 
     private static void check() {
         boolean over = SpeedLimit.over();
-        if (over && !wasOver) show();      // just went over: expand
+        if (over && !wasOver && Alerts.expand("speed")) show(); // just went over: expand (the Speed tile lights up either way)
         else if (!over && wasOver) hide(); // back under: close
         wasOver = over;
         if (shown != null) update();

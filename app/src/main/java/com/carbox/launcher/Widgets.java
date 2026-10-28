@@ -1211,6 +1211,14 @@ final class Widgets {
 
         @Override
         void tick() {
+            if (Alerts.salahNow()) { // the salaah alert, inside the tile
+                v.setBackground(U.outline(0xFF0F3D2E, U.TEAL, 3, 16));
+                name.setText("Time for Salaah");
+                time.setText(Alerts.salahName == null ? "" : Alerts.salahName);
+                pill.setText("Now");
+                return;
+            }
+            v.setBackground(U.round(U.CARD, 16));
             double[] n = Prayer.next();
             if (n == null) {
                 name.setText("Prayer");

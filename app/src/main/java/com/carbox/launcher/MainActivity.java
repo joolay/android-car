@@ -403,6 +403,7 @@ public class MainActivity extends Activity {
         PhoneScreen.hide();
         SalahCard.hide();
         SpeedCard.hide();
+        Alerts.hideNotice();
     };
 
     void resetIdle() {

@@ -160,7 +160,8 @@ final class Rest {
         String a = alert();
         boolean beep = !"voice".equals(a), voice = !"beep".equals(a);
         String text = test ? "This is how your break reminder will sound. " + message() : message();
-        U.ui.post(() -> android.widget.Toast.makeText(ctx, "Time for a break", android.widget.Toast.LENGTH_LONG).show());
+        if (Alerts.expand("rest")) U.ui.post(() -> Alerts.showNotice("TIME FOR A BREAK", "Stop and rest", message(), 0xFF4A3410));
+        else U.ui.post(() -> android.widget.Toast.makeText(ctx, "Time for a break", android.widget.Toast.LENGTH_LONG).show());
         duck(true);
         long delay = 0;
         if (beep) {
@@ -318,6 +319,7 @@ final class Rest {
             String a = alert();
             b.addView(Sheets.row("Alert", U.seg(c, "Beep", "beep".equals(a), () -> set(ALERT, "beep")), U.seg(c, "Voice", "voice".equals(a), () -> set(ALERT, "voice")),
                     U.seg(c, "Both", "both".equals(a), () -> set(ALERT, "both"))), Widgets.top(6));
+            b.addView(Sheets.switchRow(0, 0, "Expand the alert into the tile area", "Off: it shows inside the Driving timer tile", Store.flag("expand_rest", true), v -> Store.put("expand_rest", v)), Widgets.top(4));
             int br = breakMin();
             b.addView(Sheets.row("Break counts after", seg(c, BREAK, 10, "10 min", br), seg(c, BREAK, 15, "15 min", br), seg(c, BREAK, 20, "20 min", br)), Widgets.top(6));
             LinearLayout btns = U.row(c);

@@ -601,6 +601,9 @@ final class AppPanels {
                 b.addView(Sheets.item("Rename folder", null, () -> renameFolder(index)));
             } else {
                 if (Widgets.configurable(id)) b.addView(Sheets.item("Widget settings", null, () -> Widgets.configure(index)));
+                String kind = Alerts.kindOf(id);
+                if (kind != null) b.addView(Sheets.switchRow(0, 0, "Expand alerts into the tile area", Store.flag(Alerts.GLOBAL, true) ? "Off: the alert shows inside this tile" : "All expanding is off in Settings → Alerts",
+                        Store.flag("expand_" + kind, true), v -> Store.put("expand_" + kind, v)));
                 b.addView(Sheets.item("Replace with a folder", null, () -> {
                     Tiles.setSpec(index, Tiles.folder("Apps", new JSONArray()));
                     Sheets.close();
