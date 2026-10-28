@@ -436,6 +436,7 @@ public class MainActivity extends Activity {
         SpeedCard.hide();
         Alerts.hideNotice();
         if (drawerOpen && !tiles.editing() && !drawerLocked()) drawer(false); // the map comes back (unless locked open)
+        if (peeking) drawer(false);
     };
 
     void resetIdle() {
@@ -487,7 +488,7 @@ public class MainActivity extends Activity {
         PhoneScreen.hide();
         if (Sheets.open()) Sheets.close();
         if (tiles.editing()) tiles.setEditing(false);
-        if (drawerOpen) drawer(false);
+        if (drawerOpen || peeking) drawer(false);
         Splash.cancel();
     }
 
@@ -545,19 +546,35 @@ public class MainActivity extends Activity {
         } else tilesChip.animate().alpha(0f).translationX(U.u(40)).setDuration(220).withEndAction(() -> tilesChip.setVisibility(View.GONE)).start();
     }
 
+    /** Alert: slide the map only part way, showing just the first column (the alert tile) at the right. */
+    boolean peeking;
+
+    void peek() {
+        View big = map != null ? map.bigView() : null;
+        if (big == null || drawerOpen) return;
+        peeking = true;
+        float w = tileArea.getWidth() + U.u(12), col = tileArea.getWidth() / 4f + U.u(6);
+        android.view.animation.Interpolator ease = new android.view.animation.DecelerateInterpolator(1.8f);
+        if (tiles.view.getTranslationX() == 0) tiles.view.setTranslationX(w);
+        tiles.view.animate().translationX(w - col).setDuration(340).setInterpolator(ease).start();
+        big.animate().translationX(-col).setDuration(340).setInterpolator(ease).start();
+    }
+
     void drawer(boolean open) {
         View big = map != null ? map.bigView() : null;
         if (big == null) { // map not big (yet): nothing to slide
             drawerOpen = false;
             return;
         }
+        boolean fromPeek = peeking;
+        peeking = false;
         drawerOpen = open;
         lockButton(open);
         float w = tileArea.getWidth() + U.u(12);
         android.view.animation.Interpolator ease = new android.view.animation.DecelerateInterpolator(1.8f);
         if (open) {
             if (Sheets.open()) Sheets.close();
-            tiles.view.setTranslationX(w);
+            if (!fromPeek) tiles.view.setTranslationX(w); // from a peek it carries on from where it is
             tiles.view.animate().translationX(0).setDuration(340).setInterpolator(ease).start();
             big.animate().translationX(-w).setDuration(340).setInterpolator(ease).start();
         } else {
@@ -591,7 +608,7 @@ public class MainActivity extends Activity {
             return;
         }
         if (tiles.editing()) tiles.setEditing(false);
-        else if (drawerOpen) drawer(false);
+        else if (drawerOpen || peeking) drawer(false);
         // a launcher never finishes on back
     }
 
