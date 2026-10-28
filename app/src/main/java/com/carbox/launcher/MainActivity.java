@@ -57,6 +57,7 @@ public class MainActivity extends Activity {
         HfpCalls.start(this);
         NavCard.start();
         SpeedLimit.start();
+        SpeedCard.start();
         build();
         immersive();
         askPermissions();
@@ -401,6 +402,7 @@ public class MainActivity extends Activity {
         if (Sheets.minimisable()) Sheets.close();
         PhoneScreen.hide();
         SalahCard.hide();
+        SpeedCard.hide();
     };
 
     void resetIdle() {
