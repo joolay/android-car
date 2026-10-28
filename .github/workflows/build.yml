@@ -65,6 +65,18 @@ jobs:
           echo "VER=$MAJOR.$NEXT" >> "$GITHUB_ENV"
           echo "Building $MAJOR.$NEXT alpha"
 
+      - name: Map libraries (bundled so the offline map works with no internet)
+        run: |
+          L="$DIR/app/src/main/assets/lib"; mkdir -p "$L"
+          get() { curl -fsSL --retry 3 -o "$L/$1" "$2" || echo "could not fetch $1 (the map falls back to the internet copy)"; }
+          get leaflet.js https://unpkg.com/leaflet@1.9.4/dist/leaflet.js
+          get leaflet.css https://unpkg.com/leaflet@1.9.4/dist/leaflet.css
+          get maplibre-gl.js https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js
+          get maplibre-gl.css https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css
+          get pmtiles.js https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js
+          get basemaps.js https://unpkg.com/@protomaps/basemaps@5.0.0/dist/basemaps.js
+          ls -la "$L"
+
       - name: Build APK
         run: |
           cd "$DIR"

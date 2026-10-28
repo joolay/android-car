@@ -725,16 +725,36 @@ final class SettingsPanels {
     private static void mapRows(Context c, LinearLayout b) {
         {
             String prov = Store.str(Store.MAP_PROVIDER, "osm");
-            b.addView(radio(c, "OpenStreetMap", "Free, no account needed. Dark style.", !"google".equals(prov), () -> {
-                Store.put(Store.MAP_PROVIDER, "osm");
-                reloadMap();
-                Sheets.refresh();
+            b.addView(radio(c, "Standard", "OpenStreetMap. Free, no account. Dark style.", "osm".equals(prov), () -> setMap("osm")));
+            b.addView(radio(c, "OpenFreeMap", "Free vector map with sharp labels that stay upright as it turns.", "ofm".equals(prov), () -> setMap("ofm")));
+            if ("ofm".equals(prov)) {
+                String st = Store.str("ofm_style", "dark");
+                b.addView(Sheets.row("Style", U.seg(c, "Dark", "dark".equals(st), () -> { Store.put("ofm_style", "dark"); setMap("ofm"); }),
+                        U.seg(c, "Liberty", "liberty".equals(st), () -> { Store.put("ofm_style", "liberty"); setMap("ofm"); }),
+                        U.seg(c, "Positron", "positron".equals(st), () -> { Store.put("ofm_style", "positron"); setMap("ofm"); })), top(4));
+            }
+            b.addView(radio(c, "Offline map", "A .pmtiles map file on the box. Works with no internet.", "pmtiles".equals(prov), () -> {
+                if (Store.str(OfflineMap.URI, "").isEmpty() && MainActivity.I != null) OfflineMap.pick(MainActivity.I);
+                else setMap("pmtiles");
             }));
-            b.addView(radio(c, "Google Maps", "Needs your own Google Maps API key. Dark style.", "google".equals(prov), () -> {
-                Store.put(Store.MAP_PROVIDER, "google");
-                reloadMap();
-                Sheets.refresh();
-            }));
+            if ("pmtiles".equals(prov) || !Store.str(OfflineMap.URI, "").isEmpty()) {
+                LinearLayout r = U.row(c);
+                String nm = Store.str(OfflineMap.NAME, "");
+                r.addView(U.line(c, nm.isEmpty() ? "No map file chosen" : nm, 13, nm.isEmpty() ? U.AMBER : U.TEXT2, false), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+                r.addView(U.button(c, nm.isEmpty() ? "Choose map file" : "Change file", false, () -> {
+                    if (MainActivity.I != null) OfflineMap.pick(MainActivity.I);
+                }));
+                b.addView(r, top(4));
+                if ("pmtiles".equals(prov)) {
+                    String fl = Store.str("pm_flavor", "dark");
+                    b.addView(Sheets.row("Colours", U.seg(c, "Dark", "dark".equals(fl), () -> { Store.put("pm_flavor", "dark"); setMap("pmtiles"); }),
+                            U.seg(c, "Grey", "grayscale".equals(fl), () -> { Store.put("pm_flavor", "grayscale"); setMap("pmtiles"); }),
+                            U.seg(c, "Light", "light".equals(fl), () -> { Store.put("pm_flavor", "light"); setMap("pmtiles"); })), top(4));
+                }
+                b.addView(U.text(c, "Get a map file for your area from maps.protomaps.com/builds (cut out just your province with the pmtiles tool to keep it small), copy it onto the box, then choose it here. Street names need internet the first time; the map itself works offline.",
+                        12, U.SUB, false), top(6));
+            }
+            b.addView(radio(c, "Google Maps", "Needs your own Google Maps API key. Dark style, live traffic.", "google".equals(prov), () -> setMap("google")));
             if ("google".equals(prov)) {
                 b.addView(Sheets.section("Google Maps API key"));
                 final String[] key = {Store.str(Store.MAP_KEY, "")};
@@ -747,7 +767,7 @@ final class SettingsPanels {
                     Sheets.refresh();
                 }));
                 b.addView(r, U.lp(U.MATCH, U.WRAP));
-                b.addView(U.text(c, Store.str(Store.MAP_KEY, "").isEmpty() ? "No key yet, so the map is using OpenStreetMap." : "Key saved. If Google refuses it, the map goes back to OpenStreetMap and tells you.",
+                b.addView(U.text(c, Store.str(Store.MAP_KEY, "").isEmpty() ? "No key yet, so the map is using Standard." : "Key saved. If Google refuses it, the map goes back to Standard and tells you.",
                         12, Store.str(Store.MAP_KEY, "").isEmpty() ? U.AMBER : U.GREEN, false), top(8));
                 b.addView(U.text(c, "Get a key at console.cloud.google.com: create a project, turn on \"Maps JavaScript API\", then Credentials → Create API key. Restrict the key to the Maps JavaScript API only. Google asks for a card, but light use like this should stay within its free monthly allowance.",
                         12, U.SUB, false), top(10));
@@ -771,6 +791,12 @@ final class SettingsPanels {
             MainActivity.I.map.expand(false);
             MainActivity.I.map.expand(true);
         }
+    }
+
+    private static void setMap(String p) {
+        Store.put(Store.MAP_PROVIDER, p);
+        reloadMap();
+        Sheets.refresh();
     }
 
     private static void reloadMap() {

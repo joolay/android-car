@@ -49,11 +49,18 @@ final class MapPanel {
             web.setVerticalScrollBarEnabled(false);
             web.setHorizontalScrollBarEnabled(false);
             web.setWebViewClient(new WebViewClient() {
+                // the offline map file: answered straight from the file the user picked (byte ranges)
+                @Override
+                public android.webkit.WebResourceResponse shouldInterceptRequest(WebView v, android.webkit.WebResourceRequest r) {
+                    if (!"pmtiles.local".equals(r.getUrl().getHost())) return null;
+                    return OfflineMap.serve(c, r);
+                }
+
                 @Override
                 public void onPageFinished(WebView v, String url) {
                     pageReady = true;
                     String key = Store.str(Store.MAP_KEY, "").replace("'", "");
-                    web.evaluateJavascript("setup('" + (google() ? "google" : "osm") + "','" + key + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setTraffic(" + Store.flag("map_traffic", false) + ")", null);
+                    web.evaluateJavascript("setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setTraffic(" + Store.flag("map_traffic", false) + ")", null);
                     push();
                 }
             });
@@ -165,9 +172,25 @@ final class MapPanel {
         if (web != null && pageReady) web.evaluateJavascript("setHeadingUp(" + headingUp() + ")", null);
     }
 
+    /** Which map: osm (Standard), ofm (OpenFreeMap), pmtiles (offline file) or google. */
+    static String provider() {
+        String p = Store.str(Store.MAP_PROVIDER, "osm");
+        if ("google".equals(p) && Store.str(Store.MAP_KEY, "").isEmpty()) return "osm";
+        if ("pmtiles".equals(p) && Store.str(OfflineMap.URI, "").isEmpty()) return "osm";
+        return p;
+    }
+
+    /** OpenFreeMap style, or the offline map's colours. */
+    static String option() {
+        String p = provider();
+        if ("ofm".equals(p)) return Store.str("ofm_style", "dark");
+        if ("pmtiles".equals(p)) return Store.str("pm_flavor", "dark");
+        return "";
+    }
+
     /** Google Maps only when it's chosen and a key has been entered; otherwise OpenStreetMap. */
     static boolean google() {
-        return "google".equals(Store.str(Store.MAP_PROVIDER, "osm")) && !Store.str(Store.MAP_KEY, "").isEmpty();
+        return "google".equals(provider());
     }
 
     /** Reload after the map setting changes. */

@@ -1,44 +1,59 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="lib/leaflet.css" onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'">
+<link rel="stylesheet" href="lib/maplibre-gl.css" onerror="this.onerror=null;this.href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css'">
 <style>
 html,body{margin:0;height:100%;width:100%;background:#171c24;overflow:hidden}
 #m{position:absolute;left:0;top:0;width:100%;height:100%;background:#171c24;transition:transform .8s ease-out}
-/* OpenStreetMap: dark by inverting the standard tiles (same as version 1) */
+/* Standard (OpenStreetMap): dark by inverting the standard tiles */
 .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
 .leaflet-container{background:#171c24;font-family:sans-serif}
-.leaflet-control-attribution{font-size:7px;background:rgba(11,14,19,.6)!important;color:#778!important}
-.leaflet-control-attribution a{color:#99a!important}
+.leaflet-control-attribution,.maplibregl-ctrl-attrib{font-size:7px;background:rgba(11,14,19,.6)!important;color:#778!important}
+.leaflet-control-attribution a,.maplibregl-ctrl-attrib a{color:#99a!important}
+.maplibregl-ctrl-attrib-button{display:none}
 .me{width:18px;height:18px;margin:-9px 0 0 -9px;position:relative}
+.gl .me{margin:0}
 .me .d{position:absolute;inset:3px;border-radius:50%;background:#3d8bfd;border:2px solid #fff;box-shadow:0 0 0 6px rgba(61,139,253,.25)}
 .me .a{position:absolute;left:4px;top:-9px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid #3d8bfd;display:none}
 .gm-style-cc,.gmnoprint a,.gm-style a[href^="https://maps.google.com/maps"]{opacity:.55}
 </style></head><body><div id="m"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-var mode='osm', map=null, me=null, gmap=null, gme=null, follow=true, pending=null, key='';
-// ---- heading up: the map turns so the way you're driving points up. The map is made big enough
-// (the screen's diagonal) that no corners show while it's turned.
-var headUp=true, rot=0;
+// Map engines: 'osm' (Leaflet + OpenStreetMap tiles), 'ofm' (MapLibre + OpenFreeMap), 'pmtiles'
+// (MapLibre + an offline .pmtiles file served by the app) and 'google' (your own API key).
+// Libraries come bundled in lib/ (so offline maps work without internet), else from unpkg.
+function lib(local, cdn, done){
+  var s=document.createElement('script'); s.src=local;
+  s.onload=done; s.onerror=function(){ var t=document.createElement('script'); t.src=cdn; t.onload=done; t.onerror=done; document.head.appendChild(t); };
+  document.head.appendChild(s);
+}
+var mode='osm', map=null, me=null, gmap=null, gme=null, gl=null, glMe=null, glOn=false, follow=true, pending=null, key='', opt='';
+var headUp=true, rot=0, glBearing=0;
+
+// ---- heading up. Leaflet and Google: the whole map element turns (made as big as the screen's
+// diagonal so no corners show). MapLibre: the map turns itself, so labels stay upright.
 function size(){
   var W=innerWidth,H=innerHeight,el=document.getElementById('m');
-  var D=headUp?Math.ceil(Math.sqrt(W*W+H*H)):0;
-  el.style.width=(headUp?D:W)+'px'; el.style.height=(headUp?D:H)+'px';
-  el.style.left=(headUp?(W-D)/2:0)+'px'; el.style.top=(headUp?(H-D)/2:0)+'px';
+  var big=headUp&&!gl, D=big?Math.ceil(Math.sqrt(W*W+H*H)):0;
+  el.style.width=(big?D:W)+'px'; el.style.height=(big?D:H)+'px';
+  el.style.left=(big?(W-D)/2:0)+'px'; el.style.top=(big?(H-D)/2:0)+'px';
   if(map) map.invalidateSize(false);
+  if(gl) gl.resize();
   if(pending&&follow) centre();
 }
 window.addEventListener('resize',size);
 function setHeadingUp(b){ headUp=!!b; if(!headUp) turn(0,true); size(); }
 // turn to a heading the short way round (no spinning past north)
 function turn(b,reset){
+  if(gl){ glBearing=reset?0:b; gl.easeTo({bearing:glBearing,duration:800}); return; }
   var t=reset?0:-b, d=((t-rot)%360+540)%360-180;
   rot=reset?0:rot+d;
   document.getElementById('m').style.transform='rotate('+rot+'deg)';
 }
 function centre(){
   if(!pending) return;
-  if(gmap) gmap.panTo({lat:pending[0],lng:pending[1]}); else if(map) map.panTo([pending[0],pending[1]],{animate:true});
+  if(gmap) gmap.panTo({lat:pending[0],lng:pending[1]});
+  else if(gl) gl.easeTo({center:[pending[1],pending[0]],bearing:headUp&&follow?glBearing:gl.getBearing(),duration:700});
+  else if(map) map.panTo([pending[0],pending[1]],{animate:true});
 }
 // exploring by finger: north up again until you tap the locate button (or 30 s pass)
 var backT=null;
@@ -48,18 +63,22 @@ function recenter(){ clearTimeout(backT); follow=true; centre(); if(headUp&&pend
 var inter=false;
 function setInteractive(b){
   inter=!!b;
-  if(map){ var h=[map.dragging,map.touchZoom,map.doubleClickZoom,map.scrollWheelZoom,map.boxZoom]; h.forEach(function(x){ if(x){ b?x.enable():x.disable(); } }); }
+  if(map){ [map.dragging,map.touchZoom,map.doubleClickZoom,map.scrollWheelZoom,map.boxZoom].forEach(function(x){ if(x){ b?x.enable():x.disable(); } }); }
+  if(gl){ [gl.dragPan,gl.scrollZoom,gl.doubleClickZoom,gl.boxZoom,gl.keyboard].forEach(function(x){ if(x){ b?x.enable():x.disable(); } });
+          if(gl.touchZoomRotate){ if(b){ gl.touchZoomRotate.enable(); gl.touchZoomRotate.disableRotation(); } else gl.touchZoomRotate.disable(); }
+          gl.dragRotate.disable(); }
   if(gmap) gmap.setOptions({gestureHandling:b?'greedy':'none'});
   if(!b) recenter();
 }
-function zoomBy(d){ if(map) map.setZoom(map.getZoom()+d); if(gmap) gmap.setZoom(gmap.getZoom()+d); }
+function zoomBy(d){ if(map) map.setZoom(map.getZoom()+d); if(gl) gl.easeTo({zoom:gl.getZoom()+d,duration:300}); if(gmap) gmap.setZoom(gmap.getZoom()+d); }
 var traffic=null, trafficOn=false;
 function setTraffic(b){ trafficOn=!!b; if(!gmap) return; if(!traffic) traffic=new google.maps.TrafficLayer(); traffic.setMap(trafficOn?gmap:null); }
 // tell Android whether the map follows you, and a scale bar length (px) with its label
 function state(){
   try{
-    var z=map?map.getZoom():gmap?gmap.getZoom():15, lat=pending?pending[0]:0;
-    var mpp=40075016.686*Math.cos(lat*Math.PI/180)/Math.pow(2,z+8);
+    var lat=pending?pending[0]:0, mpp;
+    if(gl) mpp=40075016.686*Math.cos(lat*Math.PI/180)/Math.pow(2,gl.getZoom()+9);
+    else mpp=40075016.686*Math.cos(lat*Math.PI/180)/Math.pow(2,(map?map.getZoom():gmap?gmap.getZoom():15)+8);
     var nice=[5,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000], m=nice[0];
     for(var i=0;i<nice.length;i++){ if(nice[i]/mpp<=70) m=nice[i]; }
     Android.mapState(follow, Math.round(m/mpp), m>=1000?(m/1000)+' km':m+' m');
@@ -67,15 +86,21 @@ function state(){
 }
 function note(t){ try{ Android.mapNote(t); }catch(e){} }
 
-// Called from Android once the page has loaded
-function setup(m,k){
-  mode=m; key=k||'';
-  if(mode==='google' && key){ loadGoogle(); } else { mode='osm'; initOsm(); }
+// Called from Android once the page has loaded: setup(mode, googleKey, option)
+// option: the OpenFreeMap style, or the offline map's colour flavour
+function setup(m,k,o){
+  mode=m; key=k||''; opt=o||'';
+  if(mode==='google' && key) loadGoogle();
+  else if(mode==='ofm' || mode==='pmtiles') loadGl();
+  else { mode='osm'; loadOsm(); }
 }
+function fallback(msg){ note(msg); if(gl){ try{gl.remove();}catch(e){} } document.getElementById('m').innerHTML=''; document.getElementById('m').className=''; gl=null; gmap=null; map=null; mode='osm'; loadOsm(); }
 
+// ---- Standard: Leaflet + OpenStreetMap
+function loadOsm(){ if(typeof L!=='undefined') initOsm(); else lib('lib/leaflet.js','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',initOsm); }
 function initOsm(){
   if(map) return;
-  if(typeof L==='undefined'){ setTimeout(initOsm,3000); return; }
+  if(typeof L==='undefined'){ setTimeout(loadOsm,5000); return; }
   map=L.map('m',{zoomControl:false,attributionControl:true}).setView([0,0],2);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
   map.attributionControl.setPrefix('');
@@ -88,20 +113,67 @@ function initOsm(){
   if(pending) setPos(pending[0],pending[1],pending[2]);
 }
 
+// ---- OpenFreeMap and offline PMTiles: MapLibre (vector maps)
+function loadGl(){
+  lib('lib/maplibre-gl.js','https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js',function(){
+    if(typeof maplibregl==='undefined'){ fallback('Couldn\'t load the vector map, using Standard'); return; }
+    if(mode==='pmtiles') lib('lib/pmtiles.js','https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js',function(){
+      lib('lib/basemaps.js','https://unpkg.com/@protomaps/basemaps@5.0.0/dist/basemaps.js',initGl); });
+    else initGl();
+  });
+}
+function pmStyle(){
+  var flavor=opt||'dark', layers=[];
+  try{
+    if(window.basemaps&&basemaps.layers&&basemaps.namedFlavor) layers=basemaps.layers('protomaps',basemaps.namedFlavor(flavor),{lang:'en'});
+    else if(window.protomaps_themes_base) layers=protomaps_themes_base.default('protomaps',flavor);
+  }catch(e){}
+  if(!layers||!layers.length) layers=[{id:'bg',type:'background',paint:{'background-color':'#171c24'}},
+    {id:'water',type:'fill',source:'protomaps','source-layer':'water',paint:{'fill-color':'#0f1a2a'}},
+    {id:'roads',type:'line',source:'protomaps','source-layer':'roads',paint:{'line-color':'#4b5566','line-width':1.5}}];
+  return {version:8,
+    glyphs:'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
+    sprite:'https://protomaps.github.io/basemaps-assets/sprites/v4/'+flavor,
+    sources:{protomaps:{type:'vector',url:'pmtiles://https://pmtiles.local/map.pmtiles',attribution:'© OpenStreetMap · Protomaps'}},
+    layers:layers};
+}
+function initGl(){
+  if(gl) return;
+  var style;
+  if(mode==='pmtiles'){
+    if(typeof pmtiles==='undefined'){ fallback('Couldn\'t load the offline map, using Standard'); return; }
+    var proto=new pmtiles.Protocol(); maplibregl.addProtocol('pmtiles',proto.tile);
+    style=pmStyle();
+  } else style='https://tiles.openfreemap.org/styles/'+(opt||'liberty');
+  document.getElementById('m').className='gl';
+  glOn=false;
+  gl=new maplibregl.Map({container:'m',style:style,center:[0,0],zoom:2,attributionControl:{compact:false},pitchWithRotate:false,fadeDuration:0});
+  var el=document.createElement('div'); el.innerHTML='<div class="me"><div class="a" id="arr"></div><div class="d"></div></div>';
+  glMe=new maplibregl.Marker({element:el.firstChild,rotationAlignment:'map'});
+  gl.on('dragstart',explore);
+  gl.on('zoomend',state);
+  var styleOk=false;
+  gl.on('style.load',function(){ styleOk=true; });
+  gl.on('error',function(e){
+    // an OpenFreeMap style that doesn't exist: use Liberty instead
+    if(!styleOk&&mode==='ofm'&&opt!=='liberty'){ styleOk=true; opt='liberty'; gl.setStyle('https://tiles.openfreemap.org/styles/liberty'); }
+  });
+  setInteractive(inter);
+  size();
+  if(pending) setPos(pending[0],pending[1],pending[2]);
+}
+
 // ---- Google Maps (only with your own API key)
 var NIGHT=[{elementType:'geometry',stylers:[{color:'#1d2430'}]},{elementType:'labels.text.stroke',stylers:[{color:'#1d2430'}]},
  {elementType:'labels.text.fill',stylers:[{color:'#8a94a3'}]},{featureType:'poi',stylers:[{visibility:'off'}]},
  {featureType:'road',elementType:'geometry',stylers:[{color:'#38414e'}]},{featureType:'road',elementType:'geometry.stroke',stylers:[{color:'#212a37'}]},
  {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#4b5566'}]},{featureType:'transit',stylers:[{visibility:'off'}]},
  {featureType:'water',elementType:'geometry',stylers:[{color:'#0f1a2a'}]}];
-window.gm_authFailure=function(){
-  note('Google Maps refused the API key, so the map is using OpenStreetMap');
-  document.getElementById('m').innerHTML=''; gmap=null; mode='osm'; map=null; initOsm();
-};
+window.gm_authFailure=function(){ fallback('Google Maps refused the API key, so the map is using Standard'); };
 function loadGoogle(){
   var s=document.createElement('script');
   s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&callback=gInit&loading=async';
-  s.onerror=function(){ note('Couldn\'t reach Google Maps, using OpenStreetMap'); mode='osm'; initOsm(); };
+  s.onerror=function(){ fallback('Couldn\'t reach Google Maps, using Standard'); };
   document.head.appendChild(s);
 }
 function gInit(){
@@ -117,7 +189,7 @@ function gInit(){
 
 function setPos(lat,lon,bearing){
   pending=[lat,lon,bearing];
-  if(headUp&&follow&&bearing>=0) turn(bearing);
+  if(headUp&&follow&&bearing>=0&&!gl) turn(bearing);
   if(gmap){
     var p={lat:lat,lng:lon};
     var ic=bearing>=0?{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:6,rotation:bearing,fillColor:'#3d8bfd',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}
@@ -126,10 +198,19 @@ function setPos(lat,lon,bearing){
     if(follow) gmap.panTo(p);
     return;
   }
+  var a=document.getElementById('arr');
+  if(gl){
+    glMe.setLngLat([lon,lat]);
+    if(!glOn){ glOn=true; glMe.addTo(gl); gl.jumpTo({center:[lon,lat],zoom:15}); }
+    if(a) a.style.display=bearing>=0?'block':'none';
+    glMe.setRotation(bearing>=0?bearing:0);
+    if(headUp&&follow&&bearing>=0) glBearing=bearing;
+    if(follow) gl.easeTo({center:[lon,lat],bearing:headUp?glBearing:gl.getBearing(),duration:900});
+    return;
+  }
   if(!map) return;
   if(!map.hasLayer(me)){ me.setLatLng([lat,lon]).addTo(map); map.setView([lat,lon],15); }
   me.setLatLng([lat,lon]);
-  var a=document.getElementById('arr');
   if(a){ if(bearing>=0){a.style.display='block';a.parentNode.style.transform='rotate('+bearing+'deg)';}
          else {a.style.display='none';a.parentNode.style.transform='';} }
   if(follow) map.panTo([lat,lon],{animate:true});

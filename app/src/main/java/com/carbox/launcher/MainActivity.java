@@ -245,6 +245,11 @@ public class MainActivity extends Activity {
             Store.put("splash_audio", "own");
             Sheets.refresh();
         }
+        if (req == OfflineMap.REQ_PICK && res == RESULT_OK && data != null && data.getData() != null) {
+            OfflineMap.picked(this, data.getData());
+            if (map != null) map.reload();
+            Sheets.refresh();
+        }
         if (req == REQ_WALLPAPER && res == RESULT_OK && data != null && data.getData() != null) {
             Uri u = data.getData();
             try {
