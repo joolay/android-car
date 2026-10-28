@@ -634,8 +634,10 @@ final class AppPanels {
      * of the choices. index >= 0: replace that tile. index < 0: manage the home screen — widgets
      * already on it have a blue border; tap to add one, tap a blue one to take it off.
      */
+    static Sheets.Page galleryRef; // the open widget chooser (it closes on Done or when idle)
+
     static void gallery(int index) {
-        Sheets.Page page = () -> galleryPage(index);
+        Sheets.Page page = galleryRef = () -> galleryPage(index);
         if (Sheets.open()) Sheets.pushFull(page);
         else Sheets.showFull(page);
     }
@@ -873,9 +875,7 @@ final class AppPanels {
             editFolder(at);
             return;
         }
-        if (index >= 0) Sheets.back(); // back to where we came from (the editor or the home screen)
-        else Sheets.refresh();
-        if (Widgets.configurable(id)) Widgets.configure(at);
+        Sheets.refresh(); // stay open: the new choice shows in blue; Done (or leaving it idle) closes
     }
 
     // ------------------------------------------------------------------ auto start

@@ -146,7 +146,10 @@ final class Sheets {
         layer.removeAllViews();
         View scrim = new View(ctx);
         scrim.setBackgroundColor(scrimColor);
-        scrim.setOnClickListener(v -> close());
+        // tapping beside a panel closes it, except full-screen pages (they have Done / ✕)
+        scrim.setOnClickListener(v -> {
+            if (!full || (cardPage != null && top() == cardPage)) close();
+        });
         layer.addView(scrim, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         View page = stack.get(stack.size() - 1).build();
         page.setClickable(true); // swallow taps so they don't close the sheet

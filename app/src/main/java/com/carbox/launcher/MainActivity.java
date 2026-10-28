@@ -399,7 +399,7 @@ public class MainActivity extends Activity {
     // ---- idle: panels and pop-ups in the tile area minimise 15 s after the last touch anywhere.
     // Calls and turn-by-turn stay; full-screen pages (settings, widgets, All apps) stay.
     private final Runnable idle = () -> {
-        if (Sheets.minimisable()) Sheets.close();
+        if (Sheets.minimisable() || (AppPanels.galleryRef != null && Sheets.top() == AppPanels.galleryRef)) Sheets.close();
         PhoneScreen.hide();
         SalahCard.hide();
         SpeedCard.hide();
