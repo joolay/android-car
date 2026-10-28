@@ -41,18 +41,44 @@ public class BackButtonService extends AccessibilityService {
         } catch (Exception ignored) {
         }
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
-        build();
-        // Android's own floating accessibility button (the blue tab on the screen edge): tap it for
-        // the shortcut circle with Back in the middle, so it works even when our round button doesn't show
+        // No drawn button of our own any more: Android's own floating accessibility button (the
+        // tab on the screen edge, which Android lets you drag and docks to the edge) is the back
+        // button. Tap = Back; tap twice quickly = the shortcut circle.
         try {
             getAccessibilityButtonController().registerAccessibilityButtonCallback(new android.accessibilityservice.AccessibilityButtonController.AccessibilityButtonCallback() {
                 @Override
                 public void onClicked(android.accessibilityservice.AccessibilityButtonController controller) {
-                    if (menu != null) closeMenu();
-                    else openMenu(true);
+                    if (menu != null) {
+                        closeMenu();
+                        return;
+                    }
+                    if (tapPending) { // second tap: the shortcuts
+                        tapPending = false;
+                        U.ui.removeCallbacks(singleTap);
+                        openMenu(true);
+                        return;
+                    }
+                    tapPending = true;
+                    U.ui.postDelayed(singleTap, 320);
                 }
             });
         } catch (Exception ignored) {
+        }
+    }
+
+    private boolean tapPending;
+    private final Runnable singleTap = () -> {
+        tapPending = false;
+        performGlobalAction(GLOBAL_ACTION_BACK);
+    };
+
+    /** Is Android's accessibility button available (switched on for this service)? */
+    static boolean buttonShown() {
+        try {
+            return I != null && android.accessibilityservice.AccessibilityButtonController.class != null
+                    && I.getAccessibilityButtonController().isAccessibilityButtonAvailable();
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -129,10 +155,7 @@ public class BackButtonService extends AccessibilityService {
 
     /** Called from Settings when size or on/off changes. */
     static void refresh() {
-        if (I != null) {
-            I.build();
-            I.setVisible(I.visible);
-        }
+        // nothing to redraw: the button is Android's own
     }
 
     private void setVisible(boolean v) {

@@ -1,6 +1,7 @@
 package com.carbox.launcher;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -487,7 +488,7 @@ final class SettingsPanels {
             b.addView(check(c, R.drawable.ic_mic, U.CARD3, "Car keyboard (optional)", "Big keys and voice typing in every app",
                     kb ? "Done" : "Set up", kb, SettingsPanels::keyboard));
             boolean fb = BackButtonService.enabled(c);
-            b.addView(check(c, R.drawable.ic_back, U.CARD3, "Floating back button (optional)", "A back button over other apps; hold it for shortcuts",
+            b.addView(check(c, R.drawable.ic_back, U.CARD3, "Back button (optional)", "Android's floating button goes back over other apps; tap twice for shortcuts",
                     fb ? "Done" : "Set up", fb, SettingsPanels::floatingBack));
             boolean wg = Store.flag("widgets_seen", false);
             b.addView(check(c, R.drawable.ic_apps, U.CARD3, "Choose your widgets", "Pick what goes on your home screen",
@@ -535,43 +536,32 @@ final class SettingsPanels {
         open(floatPage = () -> {
             Context c = c();
             LinearLayout b = U.col(c);
-            b.addView(U.text(c, "A back button over other apps (never on the home screen): a slim tab stuck to the screen edge, or a round floating button. Tap goes back a page; at the app's first page it brings you home. Hold for a menu of shortcuts. Drag it to move it; the tab jumps to the nearer edge.", 13, U.SUB, false));
+            b.addView(U.text(c, "Android's own floating accessibility button works as the back button over other apps. It's a small tab on the screen edge that you can drag; it docks to the edge by itself. Tap it to go back; tap it twice quickly for your shortcuts.", 13, U.SUB, false));
             boolean on = BackButtonService.enabled(c);
             if (!on) b.addView(step(c, 1, "Allow restricted settings", "Tap Turn on below first (Android will block it), then come back here: App info → ⋮ (top right) → Allow restricted settings",
                     "App info", false, () -> Apps.appInfo(c, c.getPackageName())), top(10));
-            b.addView(step(c, on ? 1 : 2, "Turn on \"Car Launcher back button\"", "In Android's Accessibility list. Its \"shortcut\" switch adds a blue tab on the screen edge: tap it for the shortcut circle (Back in the middle).",
+            b.addView(step(c, on ? 1 : 2, "Turn on \"Car Launcher back button\"", "In Android's Accessibility list",
                     on ? "Done" : "Turn on", on, () -> Status.open(c, Settings.ACTION_ACCESSIBILITY_SETTINGS)), on ? top(10) : U.lp(U.MATCH, U.WRAP));
+            boolean shown = BackButtonService.buttonShown();
+            b.addView(step(c, on ? 2 : 3, "Turn on its shortcut as a floating button", "In the same page: \"Car Launcher back button shortcut\" on, then Settings (cog) → Floating button / Tap accessibility button",
+                    shown ? "Done" : "Open", shown, () -> {
+                        Intent i = new Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
+                                .putExtra(Intent.EXTRA_COMPONENT_NAME, new android.content.ComponentName(c, BackButtonService.class).flattenToString());
+                        try {
+                            c.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                        } catch (Exception e) {
+                            Status.open(c, Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                        }
+                    }));
             boolean ov = BackButtonService.overlay(c);
-            b.addView(step(c, on ? 2 : 3, "Allow display over other apps", "So the hold-menu shortcuts can open apps while another app is on screen",
+            b.addView(step(c, on ? 3 : 4, "Allow display over other apps", "So the shortcuts can open apps while another app is on screen",
                     ov ? "Done" : "Allow", ov, () -> overlaySettings(c)));
-            // is it actually running? (switched on in Android isn't the same as started)
-            String st = BackButtonService.I != null ? "Running" : on ? "Switched on but not running: switch it off and on again in Accessibility" : "Off";
-            TextView stv = U.text(c, "Status: " + st, 13, BackButtonService.I != null ? U.GREEN : U.AMBER, true);
-            b.addView(stv, top(8));
-            b.addView(Sheets.item("Put the button back on screen", "Resets its position", () -> {
-                Store.put("fb_x", U.u(14));
-                Store.put("fb_y", U.u(206));
-                Store.put("fb_side", "left");
-                Store.put("fb_on", true);
-                BackButtonService.refresh();
-                Sheets.refresh();
-            }), top(4));
-            b.addView(Sheets.item("Hold menu", QuickActions.chosen().size() + " buttons", SettingsPanels::holdMenu), top(4));
-            b.addView(U.hr(c));
-            boolean tab = BackButtonService.isTab();
-            b.addView(Sheets.row("Style", U.seg(c, "Edge tab", tab, () -> { Store.put("fb_style", "tab"); BackButtonService.refresh(); Sheets.refresh(); }),
-                    U.seg(c, "Round button", !tab, () -> { Store.put("fb_style", "round"); BackButtonService.refresh(); Sheets.refresh(); })), top(8));
-            String sz = Store.str("fb_size", "m");
-            b.addView(Sheets.row("Size", sizeSeg(c, "s", "Small", sz), sizeSeg(c, "m", "Medium", sz), sizeSeg(c, "l", "Large", sz)), top(8));
-            b.addView(Sheets.switchRow(0, 0, "Only when I touch the screen", "Off: always shown over apps. On: appears when you tap or scroll, fades after 4 seconds", BackButtonService.onlyOnTouch(), v -> {
-                Store.put("fb_touch", v);
-                BackButtonService.refresh();
-            }));
-            b.addView(Sheets.switchRow(0, 0, "Show button", null, Store.flag("fb_on", true), v -> {
-                Store.put("fb_on", v);
-                BackButtonService.refresh();
-            }));
-            return Sheets.panel("Floating back button", b, 640, 432);
+            String st = BackButtonService.I != null ? (shown ? "Running · button on screen" : "Running · turn on the shortcut (step above)") : on ? "Switched on but not running: switch it off and on again in Accessibility" : "Off";
+            b.addView(U.text(c, "Status: " + st, 13, BackButtonService.I != null && shown ? U.GREEN : U.AMBER, true), top(8));
+            b.addView(Sheets.item("Shortcuts (tap twice)", QuickActions.chosen().size() + " buttons", SettingsPanels::holdMenu), top(4));
+            b.addView(U.text(c, "With ADB you can switch the floating button on in one go:\nadb shell settings put secure accessibility_button_targets " + c.getPackageName() + "/" + BackButtonService.class.getName()
+                    + "\nadb shell settings put secure accessibility_button_mode 1", 11, U.SUB, false), top(10));
+            return Sheets.panel("Back button", b, 640, 432);
         });
     }
 
