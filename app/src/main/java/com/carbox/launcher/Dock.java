@@ -14,7 +14,14 @@ import java.util.List;
 final class Dock {
     private final Activity a;
     final LinearLayout view;
-    static final int SLOTS = 5; // dialler + at most 5 app icons = 6, then All apps
+    /** Icons in the dock before All apps: 5 to 7 (the dialler counts as one when shown). */
+    static int icons() {
+        return Math.max(5, Math.min(7, Store.num("dock_icons", 6)));
+    }
+
+    static boolean dialler() {
+        return Store.flag("dock_dialer", true);
+    }
 
     Dock(Activity a) {
         this.a = a;
@@ -29,14 +36,32 @@ final class Dock {
         List<Apps.App> pinned = new ArrayList<>();
         for (String k : Apps.pins()) {
             Apps.App ap = Apps.get(k);
-            if (ap != null && !Apps.hidden().contains(k)) pinned.add(ap);
+            if (ap != null && !Apps.hidden().contains(k) && !Apps.dockHidden().contains(k)) pinned.add(ap);
         }
+        final int SLOTS = icons() - (dialler() ? 1 : 0);
         while (pinned.size() > SLOTS) pinned.remove(pinned.size() - 1);
         int left = Math.max(0, SLOTS - pinned.size());
         List<Apps.App> recent = Apps.recents(left);
         // icons share the width evenly, so 6 icons spread out instead of bunching on the left
         spacer();
-        // the dialler is always first
+        // the dialler first (can be switched off in Settings → Dock)
+        if (dialler()) addDialler();
+        for (Apps.App ap : pinned) {
+            add(ap, true);
+            spacer();
+        }
+        if (!pinned.isEmpty() && !recent.isEmpty()) {
+            divider();
+            spacer();
+        }
+        for (Apps.App ap : recent) {
+            add(ap, false);
+            spacer();
+        }
+        allApps();
+    }
+
+    private void addDialler() {
         FrameLayout dial = new FrameLayout(a);
         dial.setBackground(U.oval(U.GREEN));
         dial.addView(U.icon(a, R.drawable.ic_call, U.TEXT), U.flpu(22, 22, Gravity.CENTER));
@@ -50,18 +75,13 @@ final class Dock {
         spacer();
         divider(); // separates the dialler from the apps
         spacer();
-        for (Apps.App ap : pinned) {
-            add(ap, true);
-            spacer();
-        }
-        if (!pinned.isEmpty() && !recent.isEmpty()) {
-            divider();
-            spacer();
-        }
-        for (Apps.App ap : recent) {
-            add(ap, false);
-            spacer();
-        }
+        dial.setOnLongClickListener(v -> { // hold: dock settings (e.g. to remove the dialler)
+            SettingsPanels.dock();
+            return true;
+        });
+    }
+
+    private void allApps() {
         divider();
         FrameLayout all = new FrameLayout(a);
         // All apps: a little mosaic of four coloured squares on a dark tile

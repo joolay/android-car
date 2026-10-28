@@ -116,8 +116,10 @@ final class SettingsPanels {
         Object[][][] groups = {
                 {{"Home screen"},
                         {R.drawable.ic_photo, PURPLE, "Wallpaper", "image".equals(w) ? "Image" : "color".equals(w) ? "Colour" : "Black", (Runnable) SettingsPanels::wallpaper},
-                        {R.drawable.ic_drag, PURPLE, "Right bar icons", railOn + " of " + Rail.IDS.length + " shown", (Runnable) SettingsPanels::railOrder},
-                        {R.drawable.ic_hide, PURPLE, "Hidden apps", Apps.hidden().isEmpty() ? "None" : Apps.hidden().size() + " hidden", (Runnable) SettingsPanels::hiddenApps},
+                        {R.drawable.ic_drag, PURPLE, "Right Dock", railOn + " of " + Rail.IDS.length + " shown", (Runnable) SettingsPanels::railOrder},
+                        {R.drawable.ic_apps, PURPLE, "Dock", Dock.icons() + " icons" + (Dock.dialler() ? " · dialler" : ""), (Runnable) SettingsPanels::dock},
+                        {R.drawable.ic_hide, PURPLE, "Hidden from All apps", Apps.hidden().isEmpty() ? "None" : Apps.hidden().size() + " hidden", (Runnable) () -> hiddenApps(false)},
+                        {R.drawable.ic_hide, PURPLE, "Hidden from Dock", Apps.dockHidden().isEmpty() ? "None" : Apps.dockHidden().size() + " hidden", (Runnable) () -> hiddenApps(true)},
                         {R.drawable.ic_sun, PURPLE, "Splash screen", null, (Runnable) SettingsPanels::splash, Store.SPLASH_ON, false}},
                 {{"Driving"},
                         {R.drawable.ic_navarrow, GREEN, "Navigation app", Actions.navPkg() == null ? "Choose" : Apps.label(Actions.navPkg()), (Runnable) SettingsPanels::navApp},
@@ -789,11 +791,11 @@ final class SettingsPanels {
                 }));
                 b.addView(r);
             }
-            b.addView(U.text(c, "Switch an icon off to remove it from the right bar; the others spread out to fill the space. The clock stays at the top and the mic at the bottom.", 12, U.SUB, false), top(8));
+            b.addView(U.text(c, "Switch an icon off to remove it from the Right Dock; the others spread out to fill the space. The clock stays at the top and the mic at the bottom.", 12, U.SUB, false), top(8));
             int cs = Store.num("card_secs", 15);
             b.addView(Sheets.row("Pop-ups close after", segNum(c, "card_secs", 5, "5 s", cs), segNum(c, "card_secs", 8, "8 s", cs),
                     segNum(c, "card_secs", 15, "15 s", cs), segNum(c, "card_secs", 30, "30 s", cs), segNum(c, "card_secs", 0, "Never", cs)), top(10));
-            return Sheets.panel("Right bar icons", b, 480, 440);
+            return Sheets.panel("Right Dock", b, 480, 440);
         });
     }
 
@@ -803,12 +805,15 @@ final class SettingsPanels {
 
     // ------------------------------------------------------------------ hidden apps
 
-    static void hiddenApps() {
+    /** Apps hidden from All apps (dock=false) or only from the dock (dock=true). */
+    static void hiddenApps(boolean dock) {
         open(() -> {
             Context c = c();
             LinearLayout b = U.col(c);
-            if (Apps.hidden().isEmpty()) b.addView(U.text(c, "No hidden apps. Long-press an app and choose Hide app.", 14, U.SUB, false));
-            for (String k : new ArrayList<>(Apps.hidden())) {
+            java.util.Set<String> set = dock ? Apps.dockHidden() : Apps.hidden();
+            b.addView(U.text(c, dock ? "These never show in the dock (pinned or recent) but stay in All apps." : "These don't show in All apps or the dock.", 13, U.SUB, false));
+            if (set.isEmpty()) b.addView(U.text(c, "None hidden.", 14, U.SUB, false), top(8));
+            for (String k : new ArrayList<>(set)) {
                 Apps.App a = Apps.byKey.get(k);
                 if (a == null) continue;
                 LinearLayout r = U.row(c);
@@ -820,12 +825,46 @@ final class SettingsPanels {
                 tl.leftMargin = U.u(12);
                 r.addView(U.line(c, a.label, 15, U.TEXT, false), tl);
                 r.addView(U.seg(c, "Unhide", false, () -> {
-                    Apps.setHidden(k, false);
+                    if (dock) Apps.setDockHidden(k, false);
+                    else Apps.setHidden(k, false);
+                    if (MainActivity.I != null) MainActivity.I.dock.render();
                     Sheets.refresh();
                 }));
                 b.addView(r);
             }
-            return Sheets.panel("Hidden apps", b, 520, 400);
+            b.addView(U.button(c, "+ Hide an app", false, () -> AppPanels.appPicker(dock ? "Hide from Dock" : "Hide from All apps", ap -> {
+                if (dock) Apps.setDockHidden(ap.key, true);
+                else Apps.setHidden(ap.key, true);
+                if (MainActivity.I != null) MainActivity.I.dock.render();
+                Sheets.back();
+            })), top(10));
+            return Sheets.panel(dock ? "Hidden from Dock" : "Hidden from All apps", b, 520, 420);
+        });
+    }
+
+    /** Dock: the dialler button and how many icons (5–7, not counting All apps). */
+    static void dock() {
+        open(() -> {
+            Context c = c();
+            LinearLayout b = U.col(c);
+            b.addView(Sheets.switchRow(0, 0, "Dialler button", "The green phone button at the start of the dock", Dock.dialler(), v -> {
+                Store.put("dock_dialer", v);
+                if (MainActivity.I != null) MainActivity.I.dock.render();
+            }));
+            int n = Dock.icons();
+            List<View> segs = new ArrayList<>();
+            for (int k = 5; k <= 7; k++) {
+                final int v = k;
+                segs.add(U.seg(c, String.valueOf(k), k == n, () -> {
+                    Store.put("dock_icons", v);
+                    if (MainActivity.I != null) MainActivity.I.dock.render();
+                    Sheets.refresh();
+                }));
+            }
+            b.addView(Sheets.row("Icons", segs.toArray(new View[0])), top(8));
+            b.addView(U.text(c, "Not counting All apps. Pinned apps come first, then the ones you used last.", 12, U.SUB, false), top(4));
+            b.addView(Sheets.item("Hidden from Dock", Apps.dockHidden().size() + " hidden", () -> hiddenApps(true)), top(8));
+            return Sheets.panel("Dock", b, 520, 360);
         });
     }
 

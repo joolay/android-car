@@ -325,9 +325,13 @@ final class AppPanels {
                 else removeAutostart(a.key);
                 done.run();
             }));
-            b.addView(Sheets.switchRow(R.drawable.ic_hide, U.SUB, "Hide app", "Unhide in Settings → Hidden apps", Apps.hidden().contains(a.key), on -> {
+            b.addView(Sheets.switchRow(R.drawable.ic_hide, U.SUB, "Hide from All apps", "Unhide in Settings → Hidden from All apps", Apps.hidden().contains(a.key), on -> {
                 Apps.setHidden(a.key, on);
-                done.run();
+                if (MainActivity.I != null) MainActivity.I.dock.render();
+            }));
+            b.addView(Sheets.switchRow(R.drawable.ic_hide, U.SUB, "Hide from Dock", "Still in All apps", Apps.dockHidden().contains(a.key), on -> {
+                Apps.setDockHidden(a.key, on);
+                if (MainActivity.I != null) MainActivity.I.dock.render();
             }));
             LinearLayout btns = U.row(c);
             btns.addView(U.button(c, "App info", false, () -> {

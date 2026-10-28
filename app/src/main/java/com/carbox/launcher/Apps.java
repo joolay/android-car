@@ -226,6 +226,18 @@ final class Apps {
         return new HashSet<>(Store.list(Store.HIDDEN));
     }
 
+    /** Apps kept out of the dock (pinned or recent) but still in All apps. */
+    static Set<String> dockHidden() {
+        return new HashSet<>(Store.list("dock_hidden"));
+    }
+
+    static void setDockHidden(String key, boolean on) {
+        List<String> h = Store.list("dock_hidden");
+        h.remove(key);
+        if (on) h.add(key);
+        Store.putList("dock_hidden", h);
+    }
+
     static void setHidden(String key, boolean on) {
         List<String> h = Store.list(Store.HIDDEN);
         h.remove(key);
@@ -253,6 +265,7 @@ final class Apps {
     /** Recently used apps, newest first: usage stats when allowed, otherwise our own launch history. */
     static List<App> recents(int max) {
         Set<String> h = hidden();
+        h.addAll(dockHidden()); // the dock also leaves out apps hidden from it
         List<String> pins = pins();
         List<App> out = new ArrayList<>();
         if (hasUsageAccess()) {
