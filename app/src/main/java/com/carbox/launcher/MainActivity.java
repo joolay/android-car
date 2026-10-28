@@ -431,7 +431,7 @@ public class MainActivity extends Activity {
         SalahCard.hide();
         SpeedCard.hide();
         Alerts.hideNotice();
-        if (drawerOpen && !tiles.editing()) drawer(false); // the map comes back
+        if (drawerOpen && !tiles.editing() && !drawerLocked()) drawer(false); // the map comes back (unless locked open)
     };
 
     void resetIdle() {
@@ -499,6 +499,44 @@ public class MainActivity extends Activity {
         drawer(!drawerOpen);
     }
 
+    // a small lock on the open drawer: locked, it stays open (no slide-back after 15 s)
+    private android.widget.ImageView lockBtn;
+
+    static boolean drawerLocked() {
+        return Store.flag("drawer_lock", false);
+    }
+
+    private void lockButton(boolean show) {
+        if (lockBtn == null) {
+            lockBtn = new android.widget.ImageView(this);
+            lockBtn.setContentDescription("Keep the tiles open");
+            U.pad(lockBtn, 6, 6, 6, 6);
+            lockBtn.setOnClickListener(v -> {
+                Store.put("drawer_lock", !drawerLocked());
+                styleLock();
+                resetIdle();
+            });
+            U.press(lockBtn);
+            FrameLayout.LayoutParams ll = U.flpu(28, 28, Gravity.TOP | Gravity.END);
+            ll.setMargins(0, U.u(-4), U.u(-4), 0);
+            tileArea.addView(lockBtn, tileArea.indexOfChild(tiles.view) + 1, ll); // over the tiles, under the map and panels
+        }
+        styleLock();
+        lockBtn.animate().cancel();
+        if (show) {
+            lockBtn.setVisibility(View.VISIBLE);
+            lockBtn.setAlpha(0f);
+            lockBtn.animate().alpha(1f).setStartDelay(250).setDuration(150).start();
+        } else lockBtn.setVisibility(View.GONE);
+    }
+
+    private void styleLock() {
+        boolean on = drawerLocked();
+        lockBtn.setImageResource(R.drawable.ic_lock);
+        lockBtn.setColorFilter(on ? U.BG : U.TEXT2);
+        lockBtn.setBackground(on ? U.oval(U.AMBER) : U.outline(0xE60B0E13, 0x40FFFFFF, 1, 14));
+    }
+
     void drawer(boolean open) {
         View big = map != null ? map.bigView() : null;
         if (big == null) { // map not big (yet): nothing to slide
@@ -506,6 +544,7 @@ public class MainActivity extends Activity {
             return;
         }
         drawerOpen = open;
+        lockButton(open);
         float w = tileArea.getWidth() + U.u(12);
         android.view.animation.Interpolator ease = new android.view.animation.DecelerateInterpolator(1.8f);
         if (open) {
