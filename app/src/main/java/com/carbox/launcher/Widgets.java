@@ -442,7 +442,7 @@ final class Widgets {
         }
 
         private void tapped() {
-            if (Store.lng("park_at", 0) == 0) save();
+            if (Store.lng("park_at", 0) == 0) savePark();
             else Sheets.show(() -> { // already parked: open, park again or clear
                 Context k = Sheets.ctx();
                 LinearLayout b = U.col(k);
@@ -453,7 +453,7 @@ final class Widgets {
                 }), top(8));
                 b.addView(Sheets.item("Park here again", "Replace with where the car is now", () -> {
                     Sheets.close();
-                    save();
+                    savePark();
                 }));
                 b.addView(Sheets.item("Clear", null, () -> {
                     Store.put("park_at", 0L);
@@ -464,7 +464,7 @@ final class Widgets {
             });
         }
 
-        private void save() {
+        private void savePark() {
             if (!Loc.has()) {
                 android.widget.Toast.makeText(c, "Waiting for GPS", android.widget.Toast.LENGTH_SHORT).show();
                 return;

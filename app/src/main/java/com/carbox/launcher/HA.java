@@ -235,9 +235,9 @@ final class HA {
 
         private int seen;
 
-        @Override
         private boolean lit;
 
+        @Override
         void tick() {
             if (lit != HomeApproach.near) { // arriving home: the tile lights up (in-tile alert)
                 lit = HomeApproach.near;
