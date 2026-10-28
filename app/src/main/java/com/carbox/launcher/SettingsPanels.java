@@ -766,7 +766,7 @@ final class SettingsPanels {
             String mm = MapPanel.miniId();
             b.addView(Sheets.row("Tap map: small panel shows", U.seg(c, "Go to", "goto".equals(mm), () -> { Store.put("map_mini", "goto"); remini(); Sheets.refresh(); }),
                     U.seg(c, "Speed", "speed".equals(mm), () -> { Store.put("map_mini", "speed"); remini(); Sheets.refresh(); })), top(8));
-            b.addView(U.text(c, "Tap the map to make it fill the tiles; ✕ on the big map makes it small again.", 12, U.SUB, false), top(6));
+            b.addView(U.text(c, "Tap the map to make it fill the tiles; ✕ on the big map makes it small again. Swipe the small panel to switch between Go to and Speed.", 12, U.SUB, false), top(6));
         }
     }
 

@@ -234,7 +234,7 @@ final class MapPanel {
 
     private void showMini(boolean on) {
         if (on && mini == null) {
-            mini = new FrameLayout(c);
+            mini = new SwipeBox(c, this::swapMini);
             String id = miniId();
             int idx = -1;
             org.json.JSONArray s = Tiles.specs();
@@ -255,6 +255,60 @@ final class MapPanel {
             view.removeView(mini);
             mini = null;
             miniW = null;
+        }
+    }
+
+    /** Swipe the small panel (any direction) to switch between Go to and Speed. */
+    private void swapMini() {
+        Store.put("map_mini", "goto".equals(miniId()) ? "speed" : "goto");
+        showMini(false);
+        showMini(true);
+        if (mini != null) {
+            mini.setAlpha(0f);
+            mini.animate().alpha(1f).setDuration(200).start();
+        }
+    }
+
+    /** Holds the small tile and catches a swipe over it (taps still reach the tile). */
+    private static final class SwipeBox extends FrameLayout {
+        private final Runnable swiped;
+        private final int slop;
+        private float dx0, dy0;
+        private boolean done;
+
+        SwipeBox(Context c, Runnable swiped) {
+            super(c);
+            this.swiped = swiped;
+            slop = android.view.ViewConfiguration.get(c).getScaledTouchSlop() * 3;
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(android.view.MotionEvent e) {
+            return check(e);
+        }
+
+        @Override
+        public boolean onTouchEvent(android.view.MotionEvent e) {
+            check(e);
+            return true;
+        }
+
+        private boolean check(android.view.MotionEvent e) {
+            switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    dx0 = e.getX();
+                    dy0 = e.getY();
+                    done = false;
+                    return false;
+                case android.view.MotionEvent.ACTION_MOVE:
+                    if (!done && Math.hypot(e.getX() - dx0, e.getY() - dy0) > slop) {
+                        done = true;
+                        post(swiped);
+                        return true;
+                    }
+                    return done;
+            }
+            return false;
         }
     }
 
