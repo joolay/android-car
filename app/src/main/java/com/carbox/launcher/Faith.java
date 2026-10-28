@@ -18,6 +18,12 @@ final class Faith {
     static String get() {
         String f = Store.str(KEY, "");
         if (!f.isEmpty()) return f;
+        f = guess();
+        Store.put(KEY, f); // remember, so this isn't worked out again on every call
+        return f;
+    }
+
+    private static String guess() {
         // existing set-ups: carry on as before if Islamic features are in use
         String pid = Store.str(Store.PRAYER_ID, "");
         if (pid.startsWith("islam") || Store.arr(Store.TILES).toString().matches(".*\"(nextprayer|prayertimes|qibla)\".*")) return "Islam";

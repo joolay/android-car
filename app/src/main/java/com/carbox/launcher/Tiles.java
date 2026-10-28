@@ -88,11 +88,22 @@ final class Tiles {
         if (MainActivity.I != null) MainActivity.I.tiles.refresh();
     }
 
+    private static String cleanRaw, cleanOut; // last stored tiles and their tidied form
+
     static JSONArray specs() {
+        String raw = Store.str(Store.TILES, "[]");
+        if (raw.equals(cleanRaw) && cleanOut != null) { // unchanged since last time: skip the tidy-up
+            try {
+                return new JSONArray(cleanOut);
+            } catch (Exception ignored) {
+            }
+        }
         JSONArray s = Store.arr(Store.TILES);
         if (s.length() == 0 && !Store.flag("tiles_empty", false)) s = defaults();
         if (!Store.flag("tiles_cm", false) && s.length() > 0) s = toColumns(s);
         s = clean(s);
+        cleanRaw = Store.str(Store.TILES, "[]");
+        cleanOut = s.toString();
         return s;
     }
 
@@ -390,8 +401,10 @@ final class Tiles {
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
+            android.graphics.Rect vis = new android.graphics.Rect();
             for (Widgets.W w : widgets) {
                 try {
+                    if (w.v != null && !w.v.getGlobalVisibleRect(vis)) continue; // off screen (another column): skip
                     w.tick();
                 } catch (Exception ignored) {
                 }

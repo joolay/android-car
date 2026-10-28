@@ -879,7 +879,7 @@ final class SettingsPanels {
                     "bt".equals(m), () -> {
                         Store.put(Store.CALLS, "bt");
                         if (Actions.btDialler() == null) AppPanels.btPhonePicker(a -> {
-                            Store.put(Store.CALLS_BT_PKG, a.pkg);
+                            Store.put(Store.CALLS_BT_PKG, a.pkg); Actions.btReset();
                             Sheets.back();
                             Sheets.refresh();
                         });
@@ -895,7 +895,7 @@ final class SettingsPanels {
             }));
             if ("bt".equals(m)) {
                 b.addView(Sheets.item("Bluetooth dialler app", bt == null ? "Choose" : Apps.label(bt), () -> AppPanels.btPhonePicker(a -> {
-                    Store.put(Store.CALLS_BT_PKG, a.pkg);
+                    Store.put(Store.CALLS_BT_PKG, a.pkg); Actions.btReset();
                     Sheets.back();
                     Sheets.refresh();
                 })), top(6));

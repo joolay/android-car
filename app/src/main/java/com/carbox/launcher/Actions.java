@@ -142,6 +142,7 @@ final class Actions {
                 Store.put("bt_asked", true);
                 AppPanels.btPhonePicker(chosen -> {
                     Store.put(Store.CALLS_BT_PKG, chosen.pkg);
+                    btReset();
                     Sheets.close();
                     call(a, number);
                 });
@@ -277,7 +278,23 @@ final class Actions {
     }
 
     /** The Bluetooth phone app: the one chosen in Calls, otherwise the box's own BT phone app found by name. */
+    private static String btCache;
+    private static long btCacheAt;
+
+    /** BT Phone's package. Asked on every screen change by the accessibility service, so kept for 30 s. */
     static String btDialler() {
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (btCacheAt > 0 && now - btCacheAt < 30000) return btCache;
+        btCache = findBtDialler();
+        btCacheAt = now;
+        return btCache;
+    }
+
+    static void btReset() {
+        btCacheAt = 0;
+    }
+
+    private static String findBtDialler() {
         String p = Store.str(Store.CALLS_BT_PKG, null);
         if (p != null && Apps.installed(p)) return p;
         Apps.App a = guessBtPhone();

@@ -173,11 +173,19 @@ public class BackButtonService extends AccessibilityService {
         setVisible(true);
     }
 
+    private java.util.Set<String> keyboards;
+    private long keyboardsAt;
+
+    /** Is this a keyboard app? (the list is read at most once a minute) */
     private boolean isKeyboard(String pkg) {
-        android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-        if (imm == null) return false;
-        for (android.view.inputmethod.InputMethodInfo i : imm.getEnabledInputMethodList()) if (i.getPackageName().equals(pkg)) return true;
-        return false;
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (keyboards == null || now - keyboardsAt > 60000) {
+            keyboards = new java.util.HashSet<>();
+            keyboardsAt = now;
+            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null) for (android.view.inputmethod.InputMethodInfo i : imm.getEnabledInputMethodList()) keyboards.add(i.getPackageName());
+        }
+        return keyboards.contains(pkg);
     }
 
     private boolean isOtherLauncher(String pkg) {
