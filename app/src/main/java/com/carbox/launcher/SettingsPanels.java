@@ -414,11 +414,7 @@ final class SettingsPanels {
                 Music.playPlaylist(c, true);
             }));
             b.addView(pr, top(10));
-            b.addView(U.hr(c), top(12));
-            b.addView(Sheets.switchRow(0, 0, "Lyrics over album art", "Synced lyrics when available", Store.flag(Store.LYRICS, true), on -> {
-                Store.put(Store.LYRICS, on);
-                if (MainActivity.I != null) MainActivity.I.nowPlaying.update();
-            }));
+
             return Sheets.panel("Music", b, 640, 432);
         });
     }

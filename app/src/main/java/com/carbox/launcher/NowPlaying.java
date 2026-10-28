@@ -252,7 +252,7 @@ final class NowPlaying {
             if (lyricsBtn != null) lyricsBtn.setVisibility(View.GONE);
             lyricText.clear();
             lyricBox.setVisibility(View.GONE);
-            if (Store.flag(Store.LYRICS, true) && t != null && a != null) fetchLyrics(key, t, a, md.getLong(MediaMetadata.METADATA_KEY_DURATION));
+            if (t != null && a != null) fetchLyrics(key, t, a, md.getLong(MediaMetadata.METADATA_KEY_DURATION));
         }
     }
 
@@ -289,8 +289,8 @@ final class NowPlaying {
 
     private void showLyric() {
         if (lyricsBtn != null) lyricsBtn.setVisibility(lyricTimes.isEmpty() ? View.GONE : View.VISIBLE);
-        // not over the art while the big lyrics view is open
-        if (lyricTimes.isEmpty() || lyricsHidden || LyricsCard.isShown() || !Store.flag(Store.LYRICS, true)) {
+        // no lyrics over the album art any more: the Lyrics button opens them in the tile area
+        if (true) {
             if (lyricBox.getVisibility() == View.VISIBLE) lyricBox.setVisibility(View.GONE);
             return;
         }
