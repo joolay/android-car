@@ -59,13 +59,15 @@ final class OfflineMap {
         String u = Store.str(URI, "");
         if (ch != null && u.equals(open)) return ch;
         close();
-        pfd = c.getContentResolver().openFileDescriptor(Uri.parse(u), "r");
+        pfd = u.startsWith("file://") // a map downloaded by Car Launcher itself
+                ? ParcelFileDescriptor.open(new java.io.File(Uri.parse(u).getPath()), ParcelFileDescriptor.MODE_READ_ONLY)
+                : c.getContentResolver().openFileDescriptor(Uri.parse(u), "r");
         ch = new FileInputStream(pfd.getFileDescriptor()).getChannel();
         open = u;
         return ch;
     }
 
-    private static synchronized void close() {
+    static synchronized void close() {
         try {
             if (ch != null) ch.close();
             if (pfd != null) pfd.close();
