@@ -43,6 +43,8 @@ final class Widgets {
             {"speed", "Speed", "Current speed and today's top speed"},
             {"trip", "Trip", "Distance, time driving and average speed"},
             {"park", "Park here", "Save where you parked (and send it to Home Assistant)"},
+            {"safety", "Safety check", "Pre-drive road safety checklist: tick off seatbelts, mirrors, lights, tyres and more"},
+            {"logbook", "Logbook", "Logs every trip's mileage by itself. Mark trips Business or Personal, export to a file or email"},
             {"rest", "Driving timer", "Time since your last break, with a beep or voice reminder to rest"},
             {"heading", "Heading", "Compass direction and altitude"},
             {"weather", "Weather", "Weather where you are"},
@@ -61,7 +63,7 @@ final class Widgets {
     }
 
     static boolean configurable(String id) {
-        return "goto".equals(id) || "quickdial".equals(id) || "contact".equals(id) || "ha".equals(id) || "rest".equals(id);
+        return "goto".equals(id) || "quickdial".equals(id) || "contact".equals(id) || "ha".equals(id) || "rest".equals(id) || "safety".equals(id) || "logbook".equals(id);
     }
 
     abstract static class W {
@@ -100,6 +102,10 @@ final class Widgets {
                 return new Speed(c, index, spec);
             case "trip":
                 return new Trip(c, index, spec);
+            case "safety":
+                return new Safety.Tile(c, index, spec);
+            case "logbook":
+                return new Logbook.Tile(c, index, spec);
             case "rest":
                 return new RestW(c, index, spec);
             case "park":
@@ -192,6 +198,8 @@ final class Widgets {
         else if ("contact".equals(id)) contactSetup(index);
         else if ("ha".equals(id)) HA.setup(index);
         else if ("rest".equals(id)) Rest.setup();
+        else if ("safety".equals(id)) Safety.list();
+        else if ("logbook".equals(id)) Logbook.settings();
     }
 
     // ------------------------------------------------------------------ shared bits

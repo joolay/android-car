@@ -59,6 +59,7 @@ public class MainActivity extends Activity {
         HfpCalls.start(this);
         NavCard.start();
         SpeedLimit.start();
+        Logbook.start();
         SpeedCard.start();
         CarHA.start();
         HomeApproach.start();
