@@ -79,10 +79,10 @@ final class Music {
         // the music app may still be waking up after boot: try once more, then fall back to the playlist
         U.ui.postDelayed(() -> {
             if (!musicActive(a)) resume(a);
-        }, 3000);
+        }, 1500);
         U.ui.postDelayed(() -> {
             if (!musicActive(a) && !Store.str(Store.MUSIC_PLAYLIST, "").isEmpty()) playPlaylist(a, true);
-        }, 7000);
+        }, 5000);
     }
 
     /** Press "play" on the chosen app (or on whatever played last), without opening it. */
@@ -167,10 +167,10 @@ final class Music {
             if (!Apps.installed(target)) return false;
             mediaButton(c, target); // wakes the app (it may start its last song for a moment)
         }
-        if (tries >= 8) return false;
+        if (tries >= 20) return false; // checks every 0.4 s for up to 8 s
         U.ui.postDelayed(() -> {
-            if (!viaSession(c, target, q, uri, comeBack, tries + 1) && tries + 1 >= 8) playByOpening(c, q, pkg(), comeBack);
-        }, 1000);
+            if (!viaSession(c, target, q, uri, comeBack, tries + 1) && tries + 1 >= 20) playByOpening(c, q, pkg(), comeBack);
+        }, 400);
         return true; // still waiting for the session
     }
 

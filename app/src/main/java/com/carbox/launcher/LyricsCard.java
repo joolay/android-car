@@ -13,8 +13,8 @@ import java.util.List;
 
 /**
  * Synced lyrics filling the 2×4 tile area: the current line large and bright, its neighbours
- * dimmer, scrolling by itself with the song. Stays up until closed (no idle timeout), follows
- * the next song, and you can scroll back with a finger.
+ * dimmer, scrolling by itself with the song. Stays up until closed or the song ends (no idle
+ * timeout), and you can scroll back with a finger.
  */
 final class LyricsCard {
     private static FrameLayout shown;
@@ -85,6 +85,11 @@ final class LyricsCard {
         public void run() {
             if (shown == null) return;
             NowPlaying np = NowPlaying.I;
+            // the song has finished (another one, or none, is up): minimise again
+            if (forKey != null && !"none".equals(forKey) && (np == null || !np.lyricKey().equals(forKey))) {
+                hide();
+                return;
+            }
             if (np == null || np.lyricCount() == 0) { // song without lyrics: say so, keep waiting
                 if (forKey == null || !forKey.equals("none")) {
                     lines.removeAllViews();

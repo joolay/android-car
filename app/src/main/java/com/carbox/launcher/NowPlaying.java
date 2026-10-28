@@ -286,7 +286,8 @@ final class NowPlaying {
 
     private void showLyric() {
         if (lyricsBtn != null) lyricsBtn.setVisibility(lyricTimes.isEmpty() ? View.GONE : View.VISIBLE);
-        if (lyricTimes.isEmpty() || lyricsHidden || !Store.flag(Store.LYRICS, true)) {
+        // not over the art while the big lyrics view is open
+        if (lyricTimes.isEmpty() || lyricsHidden || LyricsCard.isShown() || !Store.flag(Store.LYRICS, true)) {
             if (lyricBox.getVisibility() == View.VISIBLE) lyricBox.setVisibility(View.GONE);
             return;
         }
