@@ -77,9 +77,19 @@ final class MapPanel {
         go.setCompoundDrawablePadding(U.u(6));
         go.setOnClickListener(v -> Actions.openNavigation(c));
         go.setOnLongClickListener(v -> {
-            SettingsPanels.navApp();
+            SettingsPanels.mapNav();
             return true;
         });
+        // hold anywhere on the map for map and navigation settings
+        View.OnLongClickListener hold = v -> {
+            SettingsPanels.mapNav();
+            return true;
+        };
+        mapLayer.setOnLongClickListener(hold);
+        if (web != null) {
+            web.setLongClickable(true);
+            web.setOnLongClickListener(hold);
+        }
         U.press(go);
         FrameLayout.LayoutParams gl = new FrameLayout.LayoutParams(U.MATCH, U.u(36), Gravity.BOTTOM);
         gl.setMargins(U.u(10), 0, U.u(10), U.u(10));

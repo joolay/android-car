@@ -122,14 +122,11 @@ final class SettingsPanels {
                         {R.drawable.ic_hide, PURPLE, "Hidden from Dock", Apps.dockHidden().isEmpty() ? "None" : Apps.dockHidden().size() + " hidden", (Runnable) () -> hiddenApps(true)},
                         {R.drawable.ic_sun, PURPLE, "Splash screen", null, (Runnable) SettingsPanels::splash, Store.SPLASH_ON, false}},
                 {{"Driving"},
-                        {R.drawable.ic_navarrow, GREEN, "Navigation app", Actions.navPkg() == null ? "Choose" : Apps.label(Actions.navPkg()), (Runnable) SettingsPanels::navApp},
-                        {R.drawable.ic_pin, GREEN, "Map", MapPanel.google() ? "Google Maps" : "OpenStreetMap", (Runnable) SettingsPanels::map},
                         {R.drawable.ic_car, GREEN, "Driving timer", U.dur(Rest.limitMin() * 60000L), (Runnable) Rest::setup, Rest.ON, true},
                         {R.drawable.ic_bell, GREEN, "News and traffic", tickerLabel(), (Runnable) SettingsPanels::news},
                         {R.drawable.ic_pin, GREEN, "Car location", "Home Assistant", (Runnable) CarHA::settings, CarHA.ON, false},
                         {R.drawable.ic_bell, PURPLE, "Alerts expand", null, (Runnable) Alerts::settings, Alerts.GLOBAL, false}},
-                {{"Music and start-up"},
-                        {R.drawable.ic_music, AMBER, "Music auto play", Music.label(), (Runnable) SettingsPanels::music, Store.MUSIC_AUTOPLAY, false},
+                {{"Start-up"},
                         {R.drawable.ic_bolt, AMBER, "Auto start", Actions.autostart().length() + " apps", (Runnable) AppPanels::autostart},
                         {R.drawable.ic_wifi, AMBER, "Connections at start", connLabel(), (Runnable) SettingsPanels::connections}},
                 {{"Phone and voice"},
@@ -161,6 +158,8 @@ final class SettingsPanels {
             }
             list.addView(AppPanels.grid(c, cells, 3, 4), top(2)); // three columns of compact rows
         }
+        TextView hint = U.text(c, "More settings: hold the map for map and navigation, hold Now playing for music. Hold a tile for its own settings.", 12, U.SUB, false);
+        list.addView(hint, top(16));
         android.widget.ScrollView sv = new android.widget.ScrollView(c);
         sv.setVerticalScrollBarEnabled(false);
         sv.addView(list);
@@ -325,10 +324,29 @@ final class SettingsPanels {
 
     // ------------------------------------------------------------------ navigation app
 
+    /** Map and navigation settings in one place (hold the map to open it). */
     static void navApp() {
+        mapNav();
+    }
+
+    static void map() {
+        mapNav();
+    }
+
+    static void mapNav() {
         open(() -> {
             Context c = c();
             LinearLayout b = U.col(c);
+            b.addView(Sheets.section("Navigation app"));
+            navRows(c, b);
+            b.addView(Sheets.section("Map"));
+            mapRows(c, b);
+            return Sheets.panel("Map and navigation", b, 660, 440);
+        });
+    }
+
+    private static void navRows(Context c, LinearLayout b) {
+        {
             String cur = Actions.navPkg();
             for (String p : Actions.NAV_APPS) {
                 Apps.App a = Apps.byPkg(p);
@@ -344,8 +362,7 @@ final class SettingsPanels {
                 Sheets.refresh();
             })));
             b.addView(U.text(c, "Turn-by-turn on the map tile works with Google Maps and Waze.", 12, U.SUB, false), top(8));
-            return Sheets.panel("Navigation app", b, 520, 400);
-        });
+        }
     }
 
     // ------------------------------------------------------------------ music
@@ -708,10 +725,8 @@ final class SettingsPanels {
 
     // ------------------------------------------------------------------ map
 
-    static void map() {
-        open(() -> {
-            Context c = c();
-            LinearLayout b = U.col(c);
+    private static void mapRows(Context c, LinearLayout b) {
+        {
             String prov = Store.str(Store.MAP_PROVIDER, "osm");
             b.addView(radio(c, "OpenStreetMap", "Free, no account needed. Dark style.", !"google".equals(prov), () -> {
                 Store.put(Store.MAP_PROVIDER, "osm");
@@ -744,8 +759,7 @@ final class SettingsPanels {
             b.addView(Sheets.row("Turn-by-turn", U.seg(c, "In the tile area", "tiles".equals(nw), () -> { Store.put(NavCard.WHERE, "tiles"); NavCard.update(); reloadMap(); Sheets.refresh(); }),
                     U.seg(c, "In the map panel", "map".equals(nw), () -> { Store.put(NavCard.WHERE, "map"); NavCard.update(); reloadMap(); Sheets.refresh(); }),
         U.seg(c, "Swap: big map", "swap".equals(nw), () -> { Store.put(NavCard.WHERE, "swap"); NavCard.update(); reloadMap(); Sheets.refresh(); })), top(8));
-            return Sheets.panel("Map", b, 620, 420);
-        });
+        }
     }
 
     private static void reloadMap() {

@@ -159,8 +159,8 @@ final class NowPlaying {
             else if (MediaListener.controller != null) Apps.launchPkg(c, MediaListener.controller.getPackageName());
             else openMusicApp();
         });
-        view.setOnLongClickListener(v -> {
-            AppPanels.appPicker("Open music app", a -> Apps.launch(c, a));
+        view.setOnLongClickListener(v -> { // music settings: app, auto play, playlist, lyrics
+            SettingsPanels.music();
             return true;
         });
         MediaListener.listenMedia(this::update);
