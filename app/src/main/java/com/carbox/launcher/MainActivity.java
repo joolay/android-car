@@ -427,7 +427,27 @@ public class MainActivity extends Activity {
     @Override
     public boolean dispatchTouchEvent(android.view.MotionEvent ev) {
         if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN || ev.getActionMasked() == android.view.MotionEvent.ACTION_UP) resetIdle();
+        // editing tiles: a touch outside the grid (and its edit bar) finishes editing, and does nothing else
+        if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && tiles != null && tiles.editing() && !Sheets.open()
+                && !inside(tileArea, ev) && !inside(tickerSlot, ev)) {
+            tiles.setEditing(false);
+            swallow = true;
+            return true;
+        }
+        if (swallow) {
+            if (ev.getActionMasked() == android.view.MotionEvent.ACTION_UP || ev.getActionMasked() == android.view.MotionEvent.ACTION_CANCEL) swallow = false;
+            return true;
+        }
         return super.dispatchTouchEvent(ev);
+    }
+
+    private boolean swallow;
+
+    private static boolean inside(View v, android.view.MotionEvent ev) {
+        if (v == null || !v.isShown()) return false;
+        android.graphics.Rect r = new android.graphics.Rect();
+        v.getGlobalVisibleRect(r);
+        return r.contains((int) ev.getRawX(), (int) ev.getRawY());
     }
 
     boolean isResumed2() {
