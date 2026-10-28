@@ -36,6 +36,7 @@ public class CarIME extends InputMethodService {
     @Override
     public void onCreate() {
         super.onCreate();
+        Store.init(this);
         U.init((Context) this);
     }
 

@@ -30,11 +30,16 @@ public class BackButtonService extends AccessibilityService {
     @Override
     protected void onServiceConnected() {
         I = this;
-        Store.put("fb_connected_at", System.currentTimeMillis()); // shows in Settings that it really started
-        U.init((Context) this);
+        // settings first: when the box starts, this service starts before the launcher has opened
+        // them, and saving anything earlier crashed the service (so the button never appeared)
         Store.init(this);
-        About.catchCrashes(this);
-        Apps.init(this);
+        U.init((Context) this);
+        Store.put("fb_connected_at", System.currentTimeMillis()); // shows in Settings that it really started
+        try {
+            About.catchCrashes(this);
+            Apps.init(this);
+        } catch (Exception ignored) {
+        }
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         build();
         // Android's own floating accessibility button (the blue tab on the screen edge): tap it for

@@ -170,6 +170,7 @@ public class MediaListener extends NotificationListenerService {
     @Override
     public void onListenerConnected() {
         ctx = getApplicationContext();
+        Store.init(this); // may start before the launcher at boot
         U.ui.post(() -> attach(ctx));
         try {
             for (StatusBarNotification sbn : getActiveNotifications()) onNotificationPosted(sbn);
@@ -179,6 +180,7 @@ public class MediaListener extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
+        Store.init(this);
         // calls from BT Phone: show Car Launcher's own call screen and press BT Phone's buttons
         final Notification cn = sbn.getNotification();
         if (CallState.isCallNotification(this, sbn.getPackageName(), cn)) {
