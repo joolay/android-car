@@ -1,21 +1,16 @@
 package com.carbox.launcher;
 
-import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.provider.Settings;
 import android.widget.LinearLayout;
 
 /**
  * Google Maps / Waze pop their own navigation banner (a heads-up notification) over the top of
- * Car Launcher. Two ways to stop it: switch off "Pop on screen" for that app's navigation
- * channel (one tap takes you there), or, with a one-off ADB grant, Car Launcher turns pop-up
- * banners off while it's on screen and back on when you leave it.
+ * Car Launcher. One tap takes you to that app's navigation notification page, where "Pop on
+ * screen" can be switched off; the directions are still read for the map tile.
  */
 final class NavBanner {
-    static final String HIDE = "headsup_off";
-
     private NavBanner() {
     }
 
@@ -24,19 +19,6 @@ final class NavBanner {
         if (channel != null) {
             Store.put("nav_banner_pkg", pkg);
             Store.put("nav_banner_ch", channel);
-        }
-    }
-
-    static boolean canControl(Context c) {
-        return c.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    /** Called when Car Launcher comes to the front (true) or leaves it (false). */
-    static void front(Context c, boolean front) {
-        if (!Store.flag(HIDE, false) || !canControl(c)) return;
-        try {
-            Settings.Global.putInt(c.getContentResolver(), "heads_up_notifications_enabled", front ? 0 : 1);
-        } catch (Exception ignored) {
         }
     }
 
@@ -62,27 +44,12 @@ final class NavBanner {
         b.addView(Sheets.section("Navigation app's own banner"));
         b.addView(U.text(c, "Google Maps and Waze pop a banner over the top of the screen while navigating. The directions already show here, so it can go.", 12, U.SUB, false));
         b.addView(Sheets.item("Turn off its pop-up (\"Pop on screen\")", Apps.label(Store.str("nav_banner_pkg", Actions.navPkg() != null ? Actions.navPkg() : "com.google.android.apps.maps")), () -> openChannel(c)));
-        boolean ok = canControl(c);
-        b.addView(Sheets.switchRow(0, 0, "Hide all pop-up banners while Car Launcher is open",
-                ok ? "Banners come back when you leave Car Launcher" : "Needs a one-off ADB command first (below)",
-                Store.flag(HIDE, false) && ok, on -> {
-                    Store.put(HIDE, on);
-                    if (!on && canControl(c)) {
-                        try {
-                            Settings.Global.putInt(c.getContentResolver(), "heads_up_notifications_enabled", 1);
-                        } catch (Exception ignored) {
-                        }
-                    } else front(c, true);
-                    Sheets.refresh();
-                }));
-        if (!ok) b.addView(U.text(c, "adb shell pm grant " + c.getPackageName() + " android.permission.WRITE_SECURE_SETTINGS", 12, U.ACCENT_SOFT, false), Widgets.top(4));
     }
 
     /** First time a banner shows while Car Launcher is open: offer to switch it off (asked once). */
     static void offer() {
         MainActivity a = MainActivity.I;
         if (a == null || !a.isResumed2() || Store.flag("nav_banner_asked", false) || Sheets.open()) return;
-        if (Store.flag(HIDE, false) && canControl(a)) return;
         Store.put("nav_banner_asked", true);
         Sheets.show(() -> {
             Context c = Sheets.ctx();
