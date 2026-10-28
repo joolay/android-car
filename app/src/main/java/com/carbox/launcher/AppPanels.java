@@ -417,18 +417,57 @@ final class AppPanels {
                     {"aa", R.drawable.ic_navarrow, 0xFF143B2A, U.TEAL, "Android phone, through your bridge app"},
                     {"mirror", R.drawable.ic_cast, 0xFF2A1F38, 0xFFC7A6FF, "Shows your phone's screen as it is"},
                     {"native", R.drawable.ic_car, 0xFF3A2A1A, U.AMBER, "Back to the car's own system"}};
+            // two by two, sized to the tile area so all four fit without scrolling
+            int area = MainActivity.I != null && MainActivity.I.tileArea.getHeight() > 0 ? MainActivity.I.tileArea.getHeight() : U.u(300);
+            int cardH = Math.max(U.u(78), (area - U.u(14 + 28 + 14 + 14) - U.u(10) - U.u(30)) / 2);
+            LinearLayout row = null;
             for (int i = 0; i < lines.length; i++) {
                 final String which = (String) lines[i][0];
                 Apps.App app = Actions.connectApp(which);
-                View row = option(c, (Integer) lines[i][1], (Integer) lines[i][2], (Integer) lines[i][3], Actions.connectTitle(which), (String) lines[i][4],
+                View card = optionCard(c, (Integer) lines[i][1], (Integer) lines[i][2], (Integer) lines[i][3], Actions.connectTitle(which), (String) lines[i][4],
                         app == null ? "Choose app" : app.label,
                         () -> Actions.carConnect(c, which), () -> bridgePicker(Actions.connectTitle(which) + " app", Actions.connectKey(which)));
-                b.addView(row, U.lpu(U.MATCH, 72));
-                ((LinearLayout.LayoutParams) row.getLayoutParams()).topMargin = U.u(i == 0 ? 0 : 10);
+                if (i % 2 == 0) {
+                    row = U.row(c);
+                    LinearLayout.LayoutParams rl = U.lp(U.MATCH, cardH);
+                    if (i > 0) rl.topMargin = U.u(10);
+                    b.addView(row, rl);
+                }
+                LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(0, U.MATCH, 1);
+                if (i % 2 == 1) cl.leftMargin = U.u(10);
+                row.addView(card, cl);
             }
-            b.addView(U.text(c, "Tap a line to open it. Tap the app name on the right to change which app it opens.", 12, U.SUB, false), top(12));
-            return Sheets.panel("Car Connect", b, 640, 430);
+            b.addView(U.line(c, "Tap a card to open it · tap the app name to change it", 12, U.SUB, false), top(8));
+            return Sheets.panel("Car Connect", b);
         });
+    }
+
+    /** A Car Connect choice as a card: icon and title on top, one line of text, the app to change at the bottom. */
+    private static View optionCard(Context c, int icon, int bg, int tint, String title, String sub, String app, Runnable open, Runnable change) {
+        LinearLayout r = U.col(c);
+        r.setBackground(U.round(U.CARD2, 16));
+        U.pad(r, 12, 10, 10, 6);
+        LinearLayout top = U.row(c);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        FrameLayout ic = new FrameLayout(c);
+        ic.setBackground(U.round(bg, 11));
+        ic.addView(U.icon(c, icon, tint), U.flpu(22, 22, Gravity.CENTER));
+        top.addView(ic, U.lpu(40, 40));
+        TextView tt = U.line(c, title, 15, U.TEXT, true);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+        tl.leftMargin = U.u(10);
+        top.addView(tt, tl);
+        r.addView(top);
+        TextView st = U.line(c, sub, 12, U.SUB, false);
+        r.addView(st, top(6));
+        r.addView(new View(c), U.weight(1, false));
+        TextView ch = U.line(c, app + " ›", 12, U.ACCENT_SOFT, true);
+        U.pad(ch, 0, 6, 8, 4);
+        ch.setOnClickListener(v -> change.run());
+        r.addView(ch);
+        r.setOnClickListener(v -> open.run());
+        U.press(r);
+        return r;
     }
 
     private static View option(Context c, int icon, int bg, int tint, String title, String sub, String app, Runnable open, Runnable change) {
