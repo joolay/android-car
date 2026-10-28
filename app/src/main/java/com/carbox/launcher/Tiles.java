@@ -449,19 +449,62 @@ final class Tiles {
             return (getChildCount() + ROWS - 1) / ROWS;
         }
 
+        // ---- endless rotation: with more than 4 columns the tiles loop round (after the last
+        // column comes the first again). Not while editing, where tiles are dragged in order.
+        private int woff; // how far the loop has turned, in pixels
+
+        boolean wrap() {
+            return !editing && columns() > COLS;
+        }
+
+        private int pos() {
+            return wrap() ? woff : getScrollX();
+        }
+
+        private void setPos(int x) {
+            if (wrap()) {
+                if (getScrollX() != 0) scrollTo(0, 0);
+                woff = x;
+                place();
+                reveal();
+                invalidate();
+            } else scrollTo(x, 0);
+        }
+
+        /** Move each tile to its place on the loop (shown just left of the screen or across it). */
+        private void place() {
+            float step = colStep(), w = columns() * step;
+            for (int i = 0; i < getChildCount(); i++) {
+                View v = getChildAt(i);
+                if (!wrap()) {
+                    if (!(dragging && i == dragIndex)) v.setTranslationX(0);
+                    continue;
+                }
+                float base = colOf(i) * step, p = ((base - woff) % w + w) % w;
+                if (p >= w - step) p -= w; // the column just before the first: show it on the left
+                v.setTranslationX(p - base);
+            }
+        }
+
         private int maxScroll() {
             return Math.max(0, Math.round((columns() - COLS) * colStep()));
         }
 
         void clampScroll() {
             if (getWidth() == 0) return;
+            if (wrap()) {
+                setPos(woff);
+                return;
+            }
+            woff = 0;
+            place();
             int x = Math.max(0, Math.min(maxScroll(), getScrollX()));
             if (x != getScrollX()) scrollTo(x, 0);
             reveal();
         }
 
         void scrollToEnd() {
-            post(() -> glideTo(maxScroll()));
+            post(() -> glideTo(wrap() ? Math.round((columns() - COLS) * colStep()) : maxScroll()));
         }
 
         @Override
@@ -496,7 +539,8 @@ final class Tiles {
             for (int i = 0; i < getChildCount(); i++) {
                 View v = getChildAt(i);
                 if (i == dragIndex && dragging) continue;
-                float left = v.getLeft() - sx, right = v.getRight() - sx, cw = v.getWidth();
+                float tx = wrap() ? v.getTranslationX() : 0;
+                float left = v.getLeft() + tx - sx, right = v.getRight() + tx - sx, cw = v.getWidth();
                 float out = 0; // how much of the tile is off screen, 0..1
                 if (left < 0) out = Math.min(1, -left / cw);
                 else if (right > w) out = Math.min(1, (right - w) / cw);
@@ -520,15 +564,20 @@ final class Tiles {
             r.set(x0, y, x0 + w, y + h);
             bar.setColor(0x33FFFFFF);
             cv.drawRoundRect(r, h / 2, h / 2, bar);
-            float part = w * COLS / cols, pos = maxScroll() == 0 ? 0 : getScrollX() / (float) maxScroll();
-            r.left = x0 + (w - part) * Math.max(0, Math.min(1, pos));
+            float loop = cols * colStep();
+            float part = w * COLS / cols, pos = wrap() ? (((woff % loop) + loop) % loop) / loop * w / (w - part) : maxScroll() == 0 ? 0 : getScrollX() / (float) maxScroll();
+            r.left = x0 + (w - part) * (wrap() ? Math.min(pos, 1) : Math.max(0, Math.min(1, pos)));
             r.right = r.left + part;
             bar.setColor(0xCCFFFFFF);
             cv.drawRoundRect(r, h / 2, h / 2, bar);
         }
 
         private int indexAt(float x, float y) {
-            int col = Math.max(0, (int) ((x + getScrollX()) / colStep()));
+            int col;
+            if (wrap()) {
+                float loop = columns() * colStep();
+                col = (int) ((((x + woff) % loop) + loop) % loop / colStep());
+            } else col = Math.max(0, (int) ((x + getScrollX()) / colStep()));
             int row = Math.max(0, Math.min(ROWS - 1, (int) (y / (cellH() + gap()))));
             return Math.min(getChildCount() - 1, indexOf(col, row));
         }
@@ -536,30 +585,31 @@ final class Tiles {
         // ---- sliding
 
         private int snap(float x) {
-            return Math.max(0, Math.min(maxScroll(), Math.round(Math.round(x / colStep()) * colStep())));
+            int v = Math.round(Math.round(x / colStep()) * colStep());
+            return wrap() ? v : Math.max(0, Math.min(maxScroll(), v));
         }
 
         private void glideTo(int x) {
             scroller.forceFinished(true);
-            scroller.startScroll(getScrollX(), 0, x - getScrollX(), 0, 320);
+            scroller.startScroll(pos(), 0, x - pos(), 0, 320);
             postInvalidateOnAnimation();
         }
 
         /** Keep gliding after a flick, then come to rest on a whole column. */
         private void fling(float velocity) {
             scroller.forceFinished(true);
-            scroller.fling(getScrollX(), 0, Math.round(-velocity), 0, 0, maxScroll(), 0, 0);
+            scroller.fling(pos(), 0, Math.round(-velocity), 0, wrap() ? -1000000 : 0, wrap() ? 1000000 : maxScroll(), 0, 0);
             int end = snap(scroller.getFinalX());
             scroller.forceFinished(true);
-            int dist = Math.abs(end - getScrollX());
-            scroller.startScroll(getScrollX(), 0, end - getScrollX(), 0, Math.max(220, Math.min(700, (int) (dist / U.uf(1.2f)))));
+            int dist = Math.abs(end - pos());
+            scroller.startScroll(pos(), 0, end - pos(), 0, Math.max(220, Math.min(700, (int) (dist / U.uf(1.2f)))));
             postInvalidateOnAnimation();
         }
 
         @Override
         public void computeScroll() {
             if (scroller.computeScrollOffset()) {
-                scrollTo(scroller.getCurrX(), 0);
+                setPos(scroller.getCurrX());
                 postInvalidateOnAnimation();
             }
         }
@@ -577,7 +627,7 @@ final class Tiles {
                     dragIndex = indexAt(downX, downY);
                     dragging = false;
                     swiping = false;
-                    scrollStart = getScrollX();
+                    scrollStart = pos();
                     boolean wasMoving = !scroller.isFinished();
                     scroller.forceFinished(true);
                     if (vt != null) vt.recycle();
@@ -601,7 +651,7 @@ final class Tiles {
                         }
                         return false;
                     }
-                    if (maxScroll() > 0 && sideways(dx, dy)) {
+                    if ((wrap() || maxScroll() > 0) && sideways(dx, dy)) {
                         swiping = true;
                         lastX = e.getX();
                         getParent().requestDisallowInterceptTouchEvent(true);
@@ -619,7 +669,7 @@ final class Tiles {
                     edgePending = false;
                     return;
                 }
-                glideTo(snap(getScrollX() + edgeDir * colStep()));
+                glideTo(snap(pos() + edgeDir * colStep()));
                 U.ui.postDelayed(this, 650);
             }
         };
@@ -631,7 +681,7 @@ final class Tiles {
             if (vt != null) vt.addMovement(e);
             if (!editing) {
                 // a slide that started on a gap between tiles never passes through onInterceptTouchEvent
-                if (!swiping && e.getActionMasked() == MotionEvent.ACTION_MOVE && maxScroll() > 0 && sideways(e.getX() - downX, e.getY() - downY)) {
+                if (!swiping && e.getActionMasked() == MotionEvent.ACTION_MOVE && (wrap() || maxScroll() > 0) && sideways(e.getX() - downX, e.getY() - downY)) {
                     swiping = true;
                     lastX = e.getX();
                     MotionEvent cancel = MotionEvent.obtain(e);
@@ -643,10 +693,10 @@ final class Tiles {
                 switch (e.getActionMasked()) {
                     case MotionEvent.ACTION_MOVE:
                         float d = e.getX() - lastX;
-                        int x = getScrollX() - Math.round(d);
-                        // stretchy past either end
-                        if (x < 0 || x > maxScroll()) x = getScrollX() - Math.round(d / 3f);
-                        scrollTo(x, 0);
+                        int x = pos() - Math.round(d);
+                        // stretchy past either end (no ends when the tiles loop round)
+                        if (!wrap() && (x < 0 || x > maxScroll())) x = pos() - Math.round(d / 3f);
+                        setPos(x);
                         lastX = e.getX();
                         invalidate();
                         return true;
