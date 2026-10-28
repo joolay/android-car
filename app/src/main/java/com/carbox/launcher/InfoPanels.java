@@ -685,25 +685,74 @@ final class InfoPanels {
     // ------------------------------------------------------------------ qibla
 
     static void qibla() {
+        live(true);
+    }
+
+    static void heading() {
+        live(false);
+    }
+
+    /** Big live compass (qibla or heading): turns with the car, holds the last direction while parked. */
+    private static void live(boolean qibla) {
         Sheets.show(() -> {
             Context c = Sheets.ctx();
             LinearLayout b = U.row(c);
+            b.setGravity(android.view.Gravity.CENTER_VERTICAL);
             Widgets.Compass comp = new Widgets.Compass(c);
-            comp.arrow = false;
-            comp.markerIcon = c.getDrawable(R.drawable.ic_kaaba);
-            if (Loc.has()) comp.marker = (float) Prayer.qibla();
+            if (qibla) comp.markerIcon = c.getDrawable(R.drawable.ic_kaaba);
             b.addView(comp, U.lpu(230, 230));
             LinearLayout t = U.col(c);
             LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
             tl.leftMargin = U.u(28);
-            if (Loc.has()) {
-                t.addView(U.text(c, Math.round(Prayer.qibla()) + "°", 44, U.TEXT, true));
-                t.addView(U.text(c, "from North (" + Weather.compass((int) Math.round(Prayer.qibla())) + ")", 14, U.SUB, false), top(4));
-                t.addView(U.text(c, String.format(Locale.US, "%,d km to the Kaaba", Math.round(Prayer.kmToKaaba())), 14, U.TEXT2, false), top(18));
-                t.addView(U.text(c, "Most car boxes have no compass, so while parked this shows the direction from North. While driving, the tile turns with your GPS heading.", 12, U.SUB, false), top(18));
-            } else t.addView(U.text(c, "Waiting for a GPS location.", 14, U.SUB, false));
+            TextView big = U.text(c, "", 44, U.TEXT, true), mid = U.text(c, "", 15, U.TEXT2, false),
+                    info = U.text(c, "", 14, U.TEXT2, false), note = U.text(c, "", 12, U.SUB, false);
+            t.addView(big);
+            t.addView(mid, top(4));
+            t.addView(info, top(16));
+            t.addView(note, top(16));
             b.addView(t, tl);
-            return Sheets.panel("Qibla", b, 600, 360);
+            Runnable upd = new Runnable() {
+                @Override
+                public void run() {
+                    if (!comp.isAttachedToWindow() && comp.getWidth() > 0) return; // panel closed
+                    float h = Loc.heading();
+                    boolean known = !Float.isNaN(h), parked = !Loc.moving();
+                    comp.rotation = known ? h : 0;
+                    comp.arrow = known;
+                    if (qibla) {
+                        if (!Loc.has()) {
+                            comp.marker = Float.NaN;
+                            big.setText("--°");
+                            mid.setText("Waiting for GPS");
+                            info.setText("");
+                        } else {
+                            float q = (float) Prayer.qibla();
+                            comp.marker = q;
+                            if (known) {
+                                float rel = ((q - h) % 360 + 540) % 360 - 180;
+                                big.setText(Math.abs(Math.round(rel)) + "°");
+                                mid.setText(Math.abs(rel) < 5 ? "Straight ahead" : rel < 0 ? "To your left" : "To your right");
+                            } else {
+                                big.setText(Math.round(q) + "°");
+                                mid.setText("from North (" + Weather.compass(Math.round(q)) + ")");
+                            }
+                            info.setText(String.format(Locale.US, "%d° from North · %,d km to the Kaaba", Math.round(q), Math.round(Prayer.kmToKaaba())));
+                        }
+                    } else {
+                        big.setText(known ? Math.round(h) + "°" : "--°");
+                        mid.setText(known ? Weather.compass(Math.round(h)) : Loc.fresh() ? "Drive to set the direction" : "No GPS");
+                        boolean m = Widgets.mph();
+                        String sp = Loc.fresh() && Loc.speed >= 0 ? Math.round(Loc.speed * 3.6f / (m ? 1.609f : 1)) + (m ? " mph" : " km/h") : "--";
+                        String al = Double.isNaN(Loc.alt) ? "--" : Math.round(m ? Loc.alt * 3.28084 : Loc.alt) + (m ? " ft" : " m");
+                        info.setText("Speed " + sp + " · Altitude " + al);
+                    }
+                    note.setText(known && parked ? "Parked: showing the direction the car was last driving." : known ? "Turns with your GPS heading." : "");
+                    comp.invalidate();
+                    U.ui.postDelayed(this, 500);
+                }
+            };
+            U.ui.post(upd);
+            return Sheets.panel(qibla ? "Qibla" : "Heading", b, 600, 360);
         });
     }
 }

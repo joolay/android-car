@@ -23,7 +23,19 @@ import java.util.Locale;
 final class Loc {
     static double lat = Double.NaN, lon = Double.NaN, alt = Double.NaN;
     static float speed = -1;          // m/s, -1 = unknown
-    static float bearing = Float.NaN;  // degrees, only while moving
+    static float bearing = Float.NaN;  // degrees; the last direction driven (held while parked)
+    private static float savedBearing = -999;
+
+    /** The last known direction, from this drive or the last one. */
+    static float heading() {
+        if (!Float.isNaN(bearing)) return bearing;
+        int b = Store.num("last_bearing", -1);
+        return b < 0 ? Float.NaN : b;
+    }
+
+    static boolean moving() {
+        return fresh() && speed > 2f;
+    }
     static long gpsFixAt;              // elapsedRealtime of last GPS fix
     static int satsUsed = -1, satsVisible = -1;
     static String town;
@@ -146,7 +158,13 @@ final class Loc {
         if (l.hasAltitude()) alt = l.getAltitude();
         if (gps) {
             speed = l.hasSpeed() ? l.getSpeed() : speed;
-            if (l.hasBearing() && speed > 1.5f) bearing = l.getBearing();
+            if (l.hasBearing() && speed > 1.5f) {
+                bearing = l.getBearing();
+                if (Math.abs(bearing - savedBearing) > 5) { // kept for when the car is parked (and after a restart)
+                    savedBearing = bearing;
+                    Store.put("last_bearing", Math.round(bearing));
+                }
+            }
             long now = SystemClock.elapsedRealtime();
             if (last != null && LocationManager.GPS_PROVIDER.equals(last.getProvider())) {
                 float d = last.distanceTo(l);

@@ -701,21 +701,24 @@ final class Widgets {
             alt = U.line(c, "", 11, U.SUB, false);
             alt.setGravity(Gravity.CENTER);
             l.addView(alt, top(3));
+            l.setOnClickListener(x -> InfoPanels.heading());
+            U.press(l);
             v = l;
             tick();
         }
 
         @Override
         void tick() {
-            if (!Float.isNaN(Loc.bearing) && Loc.fresh()) {
-                compass.rotation = Loc.bearing;
-                dir.setText(Weather.compass(Math.round(Loc.bearing)) + "  " + Math.round(Loc.bearing) + "°");
+            float h = Loc.heading(); // held at the last direction while parked
+            if (!Float.isNaN(h)) {
+                compass.rotation = h;
+                dir.setText(Weather.compass(Math.round(h)) + "  " + Math.round(h) + "°");
             } else {
                 compass.rotation = 0;
-                dir.setText(Loc.fresh() ? "Not moving" : "No GPS");
+                dir.setText(Loc.fresh() ? "Drive to set" : "No GPS");
             }
             compass.invalidate();
-            alt.setText(Double.isNaN(Loc.alt) ? "Altitude --" : "Altitude " + Math.round(mph() ? Loc.alt * 3.28084 : Loc.alt) + (mph() ? " ft" : " m"));
+            alt.setText((!Float.isNaN(h) && !Loc.moving() ? "Parked · " : "") + (Double.isNaN(Loc.alt) ? "Altitude --" : "Altitude " + Math.round(mph() ? Loc.alt * 3.28084 : Loc.alt) + (mph() ? " ft" : " m")));
         }
     }
 
@@ -1405,11 +1408,11 @@ final class Widgets {
             }
             float q = (float) Prayer.qibla();
             compass.marker = q;
-            boolean moving = !Float.isNaN(Loc.bearing) && Loc.fresh() && Loc.speed > 2;
-            if (moving) {
-                compass.rotation = Loc.bearing;
+            float h = Loc.heading(); // last direction driven, held while parked
+            if (!Float.isNaN(h)) {
+                compass.rotation = h;
                 compass.arrow = true;
-                float rel = ((q - Loc.bearing) % 360 + 540) % 360 - 180;
+                float rel = ((q - h) % 360 + 540) % 360 - 180;
                 deg.setText(Math.abs(Math.round(rel)) + "°");
                 sub.setText(Math.abs(rel) < 5 ? "straight ahead" : rel < 0 ? "to your left" : "to your right");
             } else {
