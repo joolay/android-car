@@ -724,7 +724,7 @@ final class SettingsPanels {
 
     private static void mapRows(Context c, LinearLayout b) {
         {
-            String prov = Store.str(Store.MAP_PROVIDER, "osm");
+            String prov = MapPanel.provider();
             b.addView(radio(c, "Standard", "OpenStreetMap. Free, no account. Dark style.", "osm".equals(prov), () -> setMap("osm")));
             b.addView(radio(c, "OpenFreeMap", "Free vector map with sharp labels that stay upright as it turns.", "ofm".equals(prov), () -> setMap("ofm")));
             if ("ofm".equals(prov)) {

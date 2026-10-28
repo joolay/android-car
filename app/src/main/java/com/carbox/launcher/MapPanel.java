@@ -174,7 +174,12 @@ final class MapPanel {
 
     /** Which map: osm (Standard), ofm (OpenFreeMap), pmtiles (offline file) or google. */
     static String provider() {
-        String p = Store.str(Store.MAP_PROVIDER, "osm");
+        // OpenFreeMap is the default; boxes still on the old Standard default move to it once
+        if (!Store.flag("map_ofm_default", false)) {
+            Store.put("map_ofm_default", true);
+            if ("osm".equals(Store.str(Store.MAP_PROVIDER, "osm"))) Store.put(Store.MAP_PROVIDER, "ofm");
+        }
+        String p = Store.str(Store.MAP_PROVIDER, "ofm");
         if ("google".equals(p) && Store.str(Store.MAP_KEY, "").isEmpty()) return "osm";
         if ("pmtiles".equals(p) && Store.str(OfflineMap.URI, "").isEmpty()) return "osm";
         return p;
