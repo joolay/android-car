@@ -52,7 +52,7 @@ final class MapPanel {
                 public void onPageFinished(WebView v, String url) {
                     pageReady = true;
                     String key = Store.str(Store.MAP_KEY, "").replace("'", "");
-                    web.evaluateJavascript("setup('" + (google() ? "google" : "osm") + "','" + key + "')", null);
+                    web.evaluateJavascript("setup('" + (google() ? "google" : "osm") + "','" + key + "');setHeadingUp(" + headingUp() + ")", null);
                     push();
                 }
             });
@@ -143,6 +143,15 @@ final class MapPanel {
 
         Loc.listen(this::push);
         MediaListener.listenNav(this::updateNav);
+    }
+
+    /** The map turns with your direction (heading up) unless set to north up. */
+    static boolean headingUp() {
+        return Store.flag("map_heading_up", true);
+    }
+
+    void applyHeading() {
+        if (web != null && pageReady) web.evaluateJavascript("setHeadingUp(" + headingUp() + ")", null);
     }
 
     /** Google Maps only when it's chosen and a key has been entered; otherwise OpenStreetMap. */

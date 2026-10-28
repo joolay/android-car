@@ -2,7 +2,8 @@
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-html,body,#m{margin:0;height:100%;width:100%;background:#171c24;overflow:hidden}
+html,body{margin:0;height:100%;width:100%;background:#171c24;overflow:hidden}
+#m{position:absolute;left:0;top:0;width:100%;height:100%;background:#171c24;transition:transform .8s ease-out}
 /* OpenStreetMap: dark by inverting the standard tiles (same as version 1) */
 .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
 .leaflet-container{background:#171c24;font-family:sans-serif}
@@ -16,6 +17,31 @@ html,body,#m{margin:0;height:100%;width:100%;background:#171c24;overflow:hidden}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 var mode='osm', map=null, me=null, gmap=null, gme=null, follow=true, pending=null, key='';
+// ---- heading up: the map turns so the way you're driving points up. The map is made big enough
+// (the screen's diagonal) that no corners show while it's turned.
+var headUp=true, rot=0;
+function size(){
+  var W=innerWidth,H=innerHeight,el=document.getElementById('m');
+  var D=headUp?Math.ceil(Math.sqrt(W*W+H*H)):0;
+  el.style.width=(headUp?D:W)+'px'; el.style.height=(headUp?D:H)+'px';
+  el.style.left=(headUp?(W-D)/2:0)+'px'; el.style.top=(headUp?(H-D)/2:0)+'px';
+  if(map) map.invalidateSize(false);
+  if(pending&&follow) centre();
+}
+window.addEventListener('resize',size);
+function setHeadingUp(b){ headUp=!!b; if(!headUp) turn(0,true); size(); }
+// turn to a heading the short way round (no spinning past north)
+function turn(b,reset){
+  var t=reset?0:-b, d=((t-rot)%360+540)%360-180;
+  rot=reset?0:rot+d;
+  document.getElementById('m').style.transform='rotate('+rot+'deg)';
+}
+function centre(){
+  if(!pending) return;
+  if(gmap) gmap.panTo({lat:pending[0],lng:pending[1]}); else if(map) map.panTo([pending[0],pending[1]],{animate:true});
+}
+// exploring by finger: north up again until the map follows you
+function explore(){ follow=false; if(headUp) turn(0,true); setTimeout(function(){follow=true;centre();},20000); }
 function note(t){ try{ Android.mapNote(t); }catch(e){} }
 
 // Called from Android once the page has loaded
@@ -32,7 +58,8 @@ function initOsm(){
   map.attributionControl.setPrefix('');
   var icon=L.divIcon({className:'',html:'<div class="me"><div class="a" id="arr"></div><div class="d"></div></div>',iconSize:[0,0]});
   me=L.marker([0,0],{icon:icon,interactive:false});
-  map.on('dragstart',function(){follow=false;setTimeout(function(){follow=true},20000)});
+  map.on('dragstart',explore);
+  size();
   if(pending) setPos(pending[0],pending[1],pending[2]);
 }
 
@@ -55,12 +82,14 @@ function loadGoogle(){
 function gInit(){
   gmap=new google.maps.Map(document.getElementById('m'),{center:{lat:0,lng:0},zoom:15,disableDefaultUI:true,
     clickableIcons:false,keyboardShortcuts:false,gestureHandling:'greedy',styles:NIGHT,backgroundColor:'#171c24'});
-  gmap.addListener('dragstart',function(){follow=false;setTimeout(function(){follow=true},20000)});
+  gmap.addListener('dragstart',explore);
+  size();
   if(pending) setPos(pending[0],pending[1],pending[2]);
 }
 
 function setPos(lat,lon,bearing){
   pending=[lat,lon,bearing];
+  if(headUp&&follow&&bearing>=0) turn(bearing);
   if(gmap){
     var p={lat:lat,lng:lon};
     var ic=bearing>=0?{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:6,rotation:bearing,fillColor:'#3d8bfd',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}

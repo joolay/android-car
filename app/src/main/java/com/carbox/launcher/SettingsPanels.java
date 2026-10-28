@@ -760,6 +760,9 @@ final class SettingsPanels {
             b.addView(Sheets.row("Turn-by-turn", U.seg(c, "In the tile area", "tiles".equals(nw), () -> { Store.put(NavCard.WHERE, "tiles"); NavCard.update(); reloadMap(); Sheets.refresh(); }),
                     U.seg(c, "In the map panel", "map".equals(nw), () -> { Store.put(NavCard.WHERE, "map"); NavCard.update(); reloadMap(); Sheets.refresh(); }),
         U.seg(c, "Swap: big map", "swap".equals(nw), () -> { Store.put(NavCard.WHERE, "swap"); NavCard.update(); reloadMap(); Sheets.refresh(); })), top(8));
+            boolean hu = MapPanel.headingUp();
+            b.addView(Sheets.row("Map faces", U.seg(c, "Direction of travel", hu, () -> { Store.put("map_heading_up", true); if (MainActivity.I != null) MainActivity.I.map.applyHeading(); Sheets.refresh(); }),
+                    U.seg(c, "North up", !hu, () -> { Store.put("map_heading_up", false); if (MainActivity.I != null) MainActivity.I.map.applyHeading(); Sheets.refresh(); })), top(8));
             String mm = MapPanel.miniId();
             b.addView(Sheets.row("Tap map: small panel shows", U.seg(c, "Go to", "goto".equals(mm), () -> { Store.put("map_mini", "goto"); remini(); Sheets.refresh(); }),
                     U.seg(c, "Speed", "speed".equals(mm), () -> { Store.put("map_mini", "speed"); remini(); Sheets.refresh(); })), top(8));
