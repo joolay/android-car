@@ -24,7 +24,7 @@ final class Alerts {
 
     /** Expand this kind of alert into the tile area? */
     static boolean expand(String kind) {
-        return Store.flag(GLOBAL, true) && Store.flag("expand_" + kind, true);
+        return Store.flag(GLOBAL, false) && Store.flag("expand_" + kind, true);
     }
 
     /** Which alert a widget has, or null. */
@@ -112,11 +112,11 @@ final class Alerts {
             Context c = Sheets.ctx();
             LinearLayout b = U.col(c);
             b.addView(U.text(c, "When a widget has something to tell you, it can fill the 2×4 tile area for a moment, or just light up inside its own tile.", 13, U.SUB, false));
-            b.addView(Sheets.switchRow(0, 0, "Expand alerts into the tile area", "Off: alerts only show inside their tiles", Store.flag(GLOBAL, true), v -> {
+            b.addView(Sheets.switchRow(0, 0, "Expand alerts into the tile area", "Off: alerts only show inside their tiles", Store.flag(GLOBAL, false), v -> {
                 Store.put(GLOBAL, v);
                 Sheets.refresh();
             }), Widgets.top(8));
-            if (Store.flag(GLOBAL, true)) {
+            if (Store.flag(GLOBAL, false)) {
                 b.addView(Sheets.section("Per widget"));
                 for (String[] k : KINDS)
                     b.addView(Sheets.switchRow(0, 0, k[1], k[2], Store.flag("expand_" + k[0], true), v -> Store.put("expand_" + k[0], v)));
