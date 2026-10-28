@@ -285,6 +285,24 @@ final class Ticker {
 
     // ------------------------------------------------------------------ feed detail
 
+    /**
+     * Once per car start: show the traffic feed in the tile area for 15 seconds (it closes after
+     * 15 s without a touch, like other panels). Waits up to a minute for the feed to load.
+     */
+    void trafficAtStart(int tries) {
+        if (!Store.flag("traffic_start", true)) return;
+        if (trafficItems.isEmpty()) {
+            if (tries < 12) U.ui.postDelayed(() -> trafficAtStart(tries + 1), 5000);
+            return;
+        }
+        if (Sheets.open() || CallState.state != CallState.NONE) return; // don't interrupt
+        boolean was = showingNews;
+        showingNews = false;
+        openFeed();
+        showingNews = was;
+        if (MainActivity.I != null) MainActivity.I.resetIdle();
+    }
+
     private void openFeed() {
         final boolean wasNews = showingNews;
         Sheets.show(() -> {

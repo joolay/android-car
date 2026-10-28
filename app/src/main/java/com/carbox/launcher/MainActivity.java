@@ -69,6 +69,12 @@ public class MainActivity extends Activity {
         if (!Splash.maybeShow(this, "start", () -> Actions.afterSplash(this))) Actions.afterSplash(this);
         U.ui.post(() -> handleOpen(getIntent()));
         U.ui.postDelayed(this::afterUpdate, 2500);
+        // traffic for the drive, once per car start (after the splash and auto-start apps settle)
+        long bootAt = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime();
+        if (Math.abs(Store.lng("traffic_boot", 0) - bootAt) > 60000) {
+            Store.put("traffic_boot", bootAt);
+            U.ui.postDelayed(() -> ticker.trafficAtStart(0), 12000);
+        }
         // the launcher can be restarted when it becomes the Home app: carry on with the checklist
         U.ui.postDelayed(() -> {
             if (SettingsPanels.backFromChecklist()) SettingsPanels.reopenChecklist();

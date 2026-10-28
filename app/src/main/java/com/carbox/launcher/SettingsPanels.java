@@ -826,6 +826,7 @@ final class SettingsPanels {
             b.addView(U.button(c, "Reload headlines now", false, () -> {
                 if (MainActivity.I != null) MainActivity.I.ticker.fetch();
             }), top(14));
+            b.addView(Sheets.switchRow(0, 0, "Show traffic when the car starts", "Opens the traffic list in the tile area for 15 seconds", Store.flag("traffic_start", true), v -> Store.put("traffic_start", v)), top(8));
             return Sheets.panel("News and traffic", b, 660, 440);
         });
     }
