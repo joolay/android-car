@@ -36,7 +36,8 @@ final class NowPlaying {
     private final List<String> lyricText = new ArrayList<>();
 
     static NowPlaying I;
-    private TextView lyricsBtn;
+    private View lyricsBtn;
+    private EqView eq;
 
     int lyricCount() {
         return lyricText.size();
@@ -106,16 +107,22 @@ final class NowPlaying {
         view.addView(lyricBox, ll);
 
         // ♪ Lyrics button: only when this song has lyrics; opens them in the tile area
-        lyricsBtn = U.text(c, "♪ Lyrics", 12, U.ACCENT_SOFT, true);
-        lyricsBtn.setGravity(Gravity.CENTER);
-        lyricsBtn.setBackground(U.outline(0xBF0B0E13, U.ACCENT_SOFT, 1.5f, 14));
-        U.pad(lyricsBtn, 10, 4, 10, 4);
+        lyricsBtn = U.icon(c, R.drawable.ic_lyrics, U.ACCENT_SOFT);
+        lyricsBtn.setBackground(U.outline(0xBF0B0E13, U.ACCENT_SOFT, 1.5f, 15));
+        U.pad(lyricsBtn, 7, 7, 7, 7);
+        lyricsBtn.setContentDescription("Lyrics");
         lyricsBtn.setVisibility(View.GONE);
         lyricsBtn.setOnClickListener(v -> LyricsCard.toggle());
         U.press(lyricsBtn);
-        FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.END);
+        FrameLayout.LayoutParams bl = U.flpu(30, 30, Gravity.TOP | Gravity.END);
         bl.setMargins(0, U.u(8), U.u(8), 0);
         view.addView(lyricsBtn, bl);
+        // live equaliser where the album art would be, when the art is hidden (app icon view)
+        eq = new EqView(c, 18, 0x993D8BFD);
+        eq.setVisibility(View.GONE);
+        FrameLayout.LayoutParams el = new FrameLayout.LayoutParams(U.MATCH, U.u(70), Gravity.TOP);
+        el.setMargins(U.u(14), U.u(54), U.u(14), 0);
+        view.addView(eq, view.indexOfChild(lyricsBtn), el);
 
 
         content = U.col(c);
@@ -226,6 +233,7 @@ final class NowPlaying {
         MediaMetadata md = m == null ? null : m.getMetadata();
         if (md == null) {
             art.setImageDrawable(null);
+            if (eq != null) eq.setVisibility(View.GONE);
             content.setVisibility(View.INVISIBLE);
             lyricBox.setVisibility(View.GONE);
             empty.setVisibility(View.VISIBLE);
@@ -243,11 +251,12 @@ final class NowPlaying {
         if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_ART);
         if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
         android.graphics.drawable.Drawable appIcon = Apps.iconOf(m.getPackageName());
+        if (eq != null) eq.setVisibility(showIcon() || bm == null ? View.VISIBLE : View.GONE);
         if (showIcon() && appIcon != null) { // the music app's icon, centred
             art.setImageDrawable(appIcon);
             art.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            int pd = Math.min(view.getWidth(), view.getHeight()) / 4;
-            art.setPadding(pd, pd / 2, pd, pd + pd / 2);
+            // small, top left, with the live equaliser beside and below it
+            art.setPadding(U.u(12), U.u(10), Math.max(0, view.getWidth() - U.u(52)), Math.max(0, view.getHeight() - U.u(50)));
         } else {
             art.setPadding(0, 0, 0, 0);
             if (bm != null) {

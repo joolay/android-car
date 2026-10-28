@@ -76,6 +76,13 @@ public class MainActivity extends Activity {
         U.ui.post(() -> handleOpen(getIntent()));
         U.ui.postDelayed(this::afterUpdate, 2500);
         U.ui.postDelayed(About::offerReport, 4000); // crashed last time? offer the report
+        // start with the big map in the tile area and Go to in the small map panel (setting)
+        if (Store.flag("map_start_big", true)) U.ui.postDelayed(() -> {
+            if (map != null && !map.expanded()) {
+                Store.put("map_mini", "goto");
+                map.expand(true);
+            }
+        }, 1200);
         // traffic for the drive, once per car start (after the splash and auto-start apps settle)
         long bootAt = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime();
         if (Math.abs(Store.lng("traffic_boot", 0) - bootAt) > 60000) {

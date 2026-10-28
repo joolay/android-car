@@ -781,6 +781,8 @@ final class SettingsPanels {
             boolean hu = MapPanel.headingUp();
             b.addView(Sheets.row("Map faces", U.seg(c, "Direction of travel", hu, () -> { Store.put("map_heading_up", true); if (MainActivity.I != null) MainActivity.I.map.applyHeading(); Sheets.refresh(); }),
                     U.seg(c, "North up", !hu, () -> { Store.put("map_heading_up", false); if (MainActivity.I != null) MainActivity.I.map.applyHeading(); Sheets.refresh(); })), top(8));
+            b.addView(Sheets.switchRow(0, 0, "Start with the big map", "When Car Launcher opens, the map fills the tiles with Go to beside it",
+                    Store.flag("map_start_big", true), on -> Store.put("map_start_big", on)), top(8));
             String mm = MapPanel.miniId();
             b.addView(Sheets.row("Tap map: small panel shows", U.seg(c, "Go to", "goto".equals(mm), () -> { Store.put("map_mini", "goto"); remini(); Sheets.refresh(); }),
                     U.seg(c, "Speed", "speed".equals(mm), () -> { Store.put("map_mini", "speed"); remini(); Sheets.refresh(); })), top(8));

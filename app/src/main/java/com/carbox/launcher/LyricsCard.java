@@ -50,6 +50,11 @@ final class LyricsCard {
         FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(U.MATCH, U.WRAP, Gravity.TOP);
         hl.setMargins(U.u(18), U.u(12), U.u(48), 0);
         shown.addView(head, hl);
+        // live equaliser behind the words
+        EqView eq = new EqView(a, 28, 0x2E3D8BFD);
+        FrameLayout.LayoutParams eqL = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, U.u(160), Gravity.BOTTOM);
+        eqL.setMargins(U.u(12), 0, U.u(12), U.u(8));
+        shown.addView(eq, eqL);
         sv = new ScrollView(a);
         sv.setVerticalScrollBarEnabled(false);
         sv.setVerticalFadingEdgeEnabled(true);

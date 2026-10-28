@@ -103,7 +103,11 @@ final class Dock {
         }
         all.addView(mosaic, new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.CENTER));
         all.setContentDescription("All apps");
-        all.setOnClickListener(v -> AppPanels.allApps(false));
+        all.setOnClickListener(v -> AppPanels.gallery(-1)); // tap: the widget drawer
+        all.setOnLongClickListener(v -> { // hold: all apps
+            AppPanels.allApps(false);
+            return true;
+        });
         U.press(all);
         LinearLayout.LayoutParams lp = U.lpu(40, 40);
         lp.leftMargin = U.u(14);
