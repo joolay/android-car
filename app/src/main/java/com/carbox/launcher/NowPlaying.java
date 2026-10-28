@@ -35,8 +35,43 @@ final class NowPlaying {
     private final List<long[]> lyricTimes = new ArrayList<>();
     private final List<String> lyricText = new ArrayList<>();
 
+    static NowPlaying I;
+    private TextView lyricsBtn;
+
+    int lyricCount() {
+        return lyricText.size();
+    }
+
+    String lyricLine(int i) {
+        return lyricText.get(i);
+    }
+
+    String lyricKey() {
+        return trackKey == null ? "" : trackKey;
+    }
+
+    String songTitle() {
+        return title.getText().toString();
+    }
+
+    String songArtist() {
+        return artist.getText().toString();
+    }
+
+    /** Index of the line being sung now (-1 before the first). */
+    int currentLyric() {
+        long p = MediaListener.position() + 300;
+        int idx = -1;
+        for (int i = 0; i < lyricTimes.size(); i++) {
+            if (lyricTimes.get(i)[0] <= p) idx = i;
+            else break;
+        }
+        return idx;
+    }
+
     NowPlaying(Context c) {
         this.c = c;
+        I = this;
         view = new FrameLayout(c);
         view.setBackground(U.round(U.CARD, 16));
         MapPanel.clip(view, 16);
@@ -69,6 +104,18 @@ final class NowPlaying {
         });
         FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams(U.MATCH, U.u(110), Gravity.TOP);
         view.addView(lyricBox, ll);
+
+        // ♪ Lyrics button: only when this song has lyrics; opens them in the tile area
+        lyricsBtn = U.text(c, "♪ Lyrics", 12, U.ACCENT_SOFT, true);
+        lyricsBtn.setGravity(Gravity.CENTER);
+        lyricsBtn.setBackground(U.outline(0xBF0B0E13, U.ACCENT_SOFT, 1.5f, 14));
+        U.pad(lyricsBtn, 10, 4, 10, 4);
+        lyricsBtn.setVisibility(View.GONE);
+        lyricsBtn.setOnClickListener(v -> LyricsCard.toggle());
+        U.press(lyricsBtn);
+        FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.END);
+        bl.setMargins(0, U.u(8), U.u(8), 0);
+        view.addView(lyricsBtn, bl);
 
 
         content = U.col(c);
@@ -199,6 +246,7 @@ final class NowPlaying {
             trackKey = key;
             lyricsHidden = false;
             lyricTimes.clear();
+            if (lyricsBtn != null) lyricsBtn.setVisibility(View.GONE);
             lyricText.clear();
             lyricBox.setVisibility(View.GONE);
             if (Store.flag(Store.LYRICS, true) && t != null && a != null) fetchLyrics(key, t, a, md.getLong(MediaMetadata.METADATA_KEY_DURATION));
@@ -237,6 +285,7 @@ final class NowPlaying {
     private int shownIdx = -2;
 
     private void showLyric() {
+        if (lyricsBtn != null) lyricsBtn.setVisibility(lyricTimes.isEmpty() ? View.GONE : View.VISIBLE);
         if (lyricTimes.isEmpty() || lyricsHidden || !Store.flag(Store.LYRICS, true)) {
             if (lyricBox.getVisibility() == View.VISIBLE) lyricBox.setVisibility(View.GONE);
             return;
