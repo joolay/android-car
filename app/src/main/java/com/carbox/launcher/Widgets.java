@@ -788,10 +788,10 @@ final class Widgets {
             // add a place
             b.addView(Sheets.section("Add a place"));
             final String[] nm = {""}, ad = {""};
+            // stacked, so it fits the tile area's width
+            b.addView(field("Name, e.g. Gym", "", false, t -> nm[0] = t), top(4));
             LinearLayout add = U.row(c);
-            add.addView(field("Name, e.g. Gym", "", false, t -> nm[0] = t), new LinearLayout.LayoutParams(0, U.WRAP, 1));
-            add.addView(U.gap(c, 8, 1));
-            add.addView(field("Address", "", false, t -> ad[0] = t), new LinearLayout.LayoutParams(0, U.WRAP, 2));
+            add.addView(field("Address", "", false, t -> ad[0] = t), new LinearLayout.LayoutParams(0, U.WRAP, 1));
             add.addView(U.gap(c, 8, 1));
             add.addView(U.button(c, "Add", true, () -> {
                 if (nm[0].trim().isEmpty() || ad[0].trim().isEmpty()) return;
@@ -804,12 +804,11 @@ final class Widgets {
                 Tiles.setSpec(index, spec);
                 Sheets.refresh();
             }));
-            b.addView(add, top(4));
+            b.addView(add, top(8));
             b.addView(Sheets.item("Change Home and Work", null, () -> gotoSetup(index)), top(8));
             return Sheets.panel("Places", b);
         };
-        if (Sheets.open()) Sheets.push(pg);
-        else Sheets.show(pg);
+        Sheets.show(pg); // always inside the 2×4 tile area
     }
 
     private static View placeRow(Context c, int icon, String name, String addr, Runnable go, Runnable remove) {
