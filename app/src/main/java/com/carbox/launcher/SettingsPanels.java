@@ -49,6 +49,30 @@ final class SettingsPanels {
         Sheets.showFull(SettingsPanels::mainPage); // full screen; its pages open on top of it
     }
 
+    /** A compact settings row: name, current value, and either a switch (on/off settings) or ›. */
+    private static View textRow(Context c, String title, String value, Runnable open, String key, boolean def) {
+        LinearLayout r = U.row(c);
+        r.setBackground(U.round(U.CARD2, 10));
+        U.pad(r, 10, 0, 8, 0);
+        r.setMinimumHeight(U.u(38));
+        r.addView(U.line(c, title, 13, U.TEXT, false), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+        if (value != null && !value.isEmpty()) {
+            TextView v = U.line(c, value, 11, U.SUB, false);
+            v.setMaxWidth(U.u(130));
+            LinearLayout.LayoutParams vl = U.lp(U.WRAP, U.WRAP);
+            vl.rightMargin = U.u(6);
+            r.addView(v, vl);
+        }
+        if (key != null) r.addView(new U.Toggle(c, Store.flag(key, def), on -> {
+            Store.put(key, on);
+            if (Store.SPLASH_ON.equals(key) || Alerts.GLOBAL.equals(key)) Sheets.refresh();
+        }));
+        else r.addView(U.text(c, "›", 15, U.MUTED, false));
+        r.setOnClickListener(v -> open.run()); // tap the name for the full page
+        U.press(r);
+        return r;
+    }
+
     /** One setting: icon, name and current value, all the same size. */
     private static View tile(Context c, int icon, int color, String title, String value, Runnable click) {
         LinearLayout r = U.row(c);
@@ -94,16 +118,16 @@ final class SettingsPanels {
                         {R.drawable.ic_photo, PURPLE, "Wallpaper", "image".equals(w) ? "Image" : "color".equals(w) ? "Colour" : "Black", (Runnable) SettingsPanels::wallpaper},
                         {R.drawable.ic_drag, PURPLE, "Right bar icons", railOn + " of " + Rail.IDS.length + " shown", (Runnable) SettingsPanels::railOrder},
                         {R.drawable.ic_hide, PURPLE, "Hidden apps", Apps.hidden().isEmpty() ? "None" : Apps.hidden().size() + " hidden", (Runnable) SettingsPanels::hiddenApps},
-                        {R.drawable.ic_sun, PURPLE, "Splash screen", Store.flag(Store.SPLASH_ON, false) ? "On" : "Off", (Runnable) SettingsPanels::splash}},
+                        {R.drawable.ic_sun, PURPLE, "Splash screen", null, (Runnable) SettingsPanels::splash, Store.SPLASH_ON, false}},
                 {{"Driving"},
                         {R.drawable.ic_navarrow, GREEN, "Navigation app", Actions.navPkg() == null ? "Choose" : Apps.label(Actions.navPkg()), (Runnable) SettingsPanels::navApp},
                         {R.drawable.ic_pin, GREEN, "Map", MapPanel.google() ? "Google Maps" : "OpenStreetMap", (Runnable) SettingsPanels::map},
-                        {R.drawable.ic_car, GREEN, "Driving timer", Rest.on() ? "Break after " + U.dur(Rest.limitMin() * 60000L) : "Off", (Runnable) Rest::setup},
+                        {R.drawable.ic_car, GREEN, "Driving timer", U.dur(Rest.limitMin() * 60000L), (Runnable) Rest::setup, Rest.ON, true},
                         {R.drawable.ic_bell, GREEN, "News and traffic", tickerLabel(), (Runnable) SettingsPanels::news},
-                        {R.drawable.ic_pin, GREEN, "Car location", Store.flag(CarHA.ON, false) ? "To Home Assistant" : "Off", (Runnable) CarHA::settings},
-                        {R.drawable.ic_bell, PURPLE, "Alerts", Store.flag(Alerts.GLOBAL, false) ? "Expand into tiles" : "Inside their tiles", (Runnable) Alerts::settings}},
+                        {R.drawable.ic_pin, GREEN, "Car location", "Home Assistant", (Runnable) CarHA::settings, CarHA.ON, false},
+                        {R.drawable.ic_bell, PURPLE, "Alerts expand", null, (Runnable) Alerts::settings, Alerts.GLOBAL, false}},
                 {{"Music and start-up"},
-                        {R.drawable.ic_music, AMBER, "Music", Music.label() + (Store.flag(Store.MUSIC_AUTOPLAY, false) ? " · auto play" : ""), (Runnable) SettingsPanels::music},
+                        {R.drawable.ic_music, AMBER, "Music auto play", Music.label(), (Runnable) SettingsPanels::music, Store.MUSIC_AUTOPLAY, false},
                         {R.drawable.ic_bolt, AMBER, "Auto start", Actions.autostart().length() + " apps", (Runnable) AppPanels::autostart},
                         {R.drawable.ic_wifi, AMBER, "Connections at start", connLabel(), (Runnable) SettingsPanels::connections}},
                 {{"Phone and voice"},
@@ -131,9 +155,9 @@ final class SettingsPanels {
             for (int k = 1; k < g.length; k++) {
                 Object[] it = g[k];
                 if (it == null) continue;
-                cells.add(tile(c, (Integer) it[0], (Integer) it[1], (String) it[2], (String) it[3], (Runnable) it[4]));
+                cells.add(textRow(c, (String) it[2], (String) it[3], (Runnable) it[4], it.length > 5 ? (String) it[5] : null, it.length > 6 && (Boolean) it[6]));
             }
-            list.addView(AppPanels.grid(c, cells, 5, 5), top(4)); // 5 across
+            list.addView(AppPanels.grid(c, cells, 2, 4), top(2)); // two columns of compact rows
         }
         android.widget.ScrollView sv = new android.widget.ScrollView(c);
         sv.setVerticalScrollBarEnabled(false);
