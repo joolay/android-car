@@ -302,7 +302,7 @@ final class MapPanel {
     private boolean following = true;
     private int scaleW;
     private String scaleText = "";
-    private TextView road, limit, spd, scaleLbl;
+    private TextView street, limit, spd, scaleLbl;
     private View recentre, scaleBar;
     private ImageView compass;
 
@@ -334,12 +334,12 @@ final class MapPanel {
     private FrameLayout controls(Context a) {
         FrameLayout o = new FrameLayout(a);
         // street you're on
-        road = U.line(a, "", 12, U.TEXT, false);
-        road.setBackground(U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 10));
-        U.pad(road, 10, 4, 10, 4);
+        street = U.line(a, "", 12, U.TEXT, false);
+        street.setBackground(U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 10));
+        U.pad(street, 10, 4, 10, 4);
         FrameLayout.LayoutParams rl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.START);
         rl.setMargins(U.u(10), U.u(10), U.u(60), 0);
-        o.addView(road, rl);
+        o.addView(street, rl);
         // right-hand column: close, compass, traffic
         LinearLayout col = U.col(a);
         col.addView(round(a, R.drawable.ic_x, true, () -> expand(false)), U.lpu(38, 38));
@@ -432,10 +432,10 @@ final class MapPanel {
     };
 
     private void updateControls() {
-        if (road == null || bigHolder == null) return;
+        if (street == null || bigHolder == null) return;
         String r = SpeedLimit.road != null && !SpeedLimit.road.isEmpty() ? SpeedLimit.road : Loc.town;
-        road.setText(r == null ? "" : r);
-        road.setVisibility(r == null || r.isEmpty() ? View.GONE : View.VISIBLE);
+        street.setText(r == null ? "" : r);
+        street.setVisibility(r == null || r.isEmpty() ? View.GONE : View.VISIBLE);
         boolean mph = Widgets.mph();
         int lim = SpeedLimit.kmh;
         limit.setText(lim > 0 ? String.valueOf(mph ? Math.round(lim / 1.609f) : lim) : "");
