@@ -655,6 +655,21 @@ final class AppPanels {
         titles.addView(U.line(c, manage ? "Home screen widgets" : "Choose a widget", 20, U.TEXT, true));
         titles.addView(U.line(c, manage ? "Your tiles come first: hold and drag to reorder, tap to change · tap a widget below to add it" : "Tap one to put it on this tile · swipe for more", 12, U.SUB, false), top(2));
         head.addView(titles, new LinearLayout.LayoutParams(0, U.WRAP, 1));
+        if (manage) {
+            head.addView(U.button(c, "Add all", false, () -> { // every widget not on the home screen yet
+                JSONArray s = Tiles.specs();
+                java.util.Set<String> have = new java.util.HashSet<>();
+                for (int i = 0; i < s.length(); i++) {
+                    JSONObject o = s.optJSONObject(i);
+                    if (o != null) have.add(o.optString("id"));
+                }
+                for (String[] w : Widgets.CATALOG) if (Faith.widgetAllowed(w[0]) && have.add(w[0])) s.put(Tiles.widget(w[0]));
+                Tiles.save(s);
+                if (MainActivity.I != null) MainActivity.I.tiles.refresh();
+                Sheets.refresh();
+            }));
+            head.addView(U.gap(c, 10, 1));
+        }
         head.addView(U.button(c, "Add folder", false, () -> newFolder(index)));
         head.addView(U.gap(c, 10, 1));
         head.addView(U.button(c, "Done", true, () -> {

@@ -221,6 +221,13 @@ final class Tiles {
         JSONArray cm = new JSONArray();
         for (int c = 0; c < COLS; c++) for (int r = 0; r < ROWS; r++) cm.put(s.opt(r * COLS + c));
         s = cm;
+        // then every other widget (that the faith add-on allows), so a new home screen has them all
+        java.util.Set<String> have = new java.util.HashSet<>();
+        for (int i = 0; i < s.length(); i++) {
+            JSONObject o = s.optJSONObject(i);
+            if (o != null) have.add(o.optString("id"));
+        }
+        for (String[] w : Widgets.CATALOG) if (Faith.widgetAllowed(w[0]) && have.add(w[0])) s.put(widget(w[0]));
         Store.put("tiles_cm", true);
         if (!Apps.all.isEmpty()) save(s); // wait until the app list has loaded before remembering defaults
         return s;
