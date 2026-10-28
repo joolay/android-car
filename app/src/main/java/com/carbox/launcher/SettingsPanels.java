@@ -58,7 +58,7 @@ final class SettingsPanels {
         r.addView(U.line(c, title, 13, U.TEXT, false), new LinearLayout.LayoutParams(0, U.WRAP, 1));
         if (value != null && !value.isEmpty()) {
             TextView v = U.line(c, value, 11, U.SUB, false);
-            v.setMaxWidth(U.u(130));
+            v.setMaxWidth(U.u(80));
             LinearLayout.LayoutParams vl = U.lp(U.WRAP, U.WRAP);
             vl.rightMargin = U.u(6);
             r.addView(v, vl);
@@ -157,7 +157,7 @@ final class SettingsPanels {
                 if (it == null) continue;
                 cells.add(textRow(c, (String) it[2], (String) it[3], (Runnable) it[4], it.length > 5 ? (String) it[5] : null, it.length > 6 && (Boolean) it[6]));
             }
-            list.addView(AppPanels.grid(c, cells, 2, 4), top(2)); // two columns of compact rows
+            list.addView(AppPanels.grid(c, cells, 3, 4), top(2)); // three columns of compact rows
         }
         android.widget.ScrollView sv = new android.widget.ScrollView(c);
         sv.setVerticalScrollBarEnabled(false);
