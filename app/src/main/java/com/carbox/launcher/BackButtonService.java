@@ -56,6 +56,29 @@ public class BackButtonService extends AccessibilityService {
         }
     }
 
+    /** "tab": a slim tab that sticks to the left or right edge (magnetised); "round": the floating circle. */
+    static boolean isTab() {
+        return !"round".equals(Store.str("fb_style", "tab"));
+    }
+
+    private int bw, bh; // button size in pixels
+
+    /** The tab's shape: rounded on the side facing the screen, flat against the edge. */
+    private void styleTab(boolean left) {
+        float r = U.uf(14);
+        android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+        g.setColor(0xD9171C24);
+        g.setStroke(U.u(1), 0x40FFFFFF);
+        g.setCornerRadii(left ? new float[]{0, 0, r, r, r, r, 0, 0} : new float[]{r, r, 0, 0, 0, 0, r, r});
+        button.setBackground(g);
+    }
+
+    private int screenW() {
+        android.graphics.Point scr = new android.graphics.Point();
+        wm.getDefaultDisplay().getRealSize(scr);
+        return scr.x;
+    }
+
     static int sizeDu() {
         String s = Store.str("fb_size", "m");
         return "s".equals(s) ? 48 : "l".equals(s) ? 72 : 60;
@@ -69,15 +92,23 @@ public class BackButtonService extends AccessibilityService {
             }
         }
         int size = U.u(sizeDu());
+        boolean tab = isTab();
+        bw = tab ? Math.round(size * 0.48f) : size;
+        bh = tab ? Math.round(size * 1.15f) : size;
         button = new FrameLayout(this);
-        android.graphics.drawable.GradientDrawable bg = U.oval(0xD1171C24);
-        bg.setStroke(U.u(2), 0x40FFFFFF);
-        button.setBackground(bg);
-        button.setElevation(U.uf(6));
         ImageView iv = U.icon(this, R.drawable.ic_back, U.TEXT);
-        button.addView(iv, new FrameLayout.LayoutParams(size / 2, size / 2, Gravity.CENTER));
+        if (tab) {
+            styleTab(!"right".equals(Store.str("fb_side", "left")));
+            button.addView(iv, new FrameLayout.LayoutParams(Math.round(bw * 0.7f), Math.round(bw * 0.7f), Gravity.CENTER));
+        } else {
+            android.graphics.drawable.GradientDrawable bg = U.oval(0xD1171C24);
+            bg.setStroke(U.u(2), 0x40FFFFFF);
+            button.setBackground(bg);
+            button.setElevation(U.uf(6));
+            button.addView(iv, new FrameLayout.LayoutParams(size / 2, size / 2, Gravity.CENTER));
+        }
         // FLAG_WATCH_OUTSIDE_TOUCH tells us when the screen is touched anywhere (the touch still goes to the app)
-        lp = new WindowManager.LayoutParams(size, size, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+        lp = new WindowManager.LayoutParams(bw, bh, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                 PixelFormat.TRANSLUCENT);
@@ -85,8 +116,8 @@ public class BackButtonService extends AccessibilityService {
         // keep it on screen: a position saved on another screen size could put it out of sight
         android.graphics.Point scr = new android.graphics.Point();
         wm.getDefaultDisplay().getRealSize(scr);
-        lp.x = Math.max(0, Math.min(scr.x - size, Store.num("fb_x", U.u(14))));
-        lp.y = Math.max(0, Math.min(scr.y - size, Store.num("fb_y", U.u(206))));
+        lp.x = tab ? ("right".equals(Store.str("fb_side", "left")) ? scr.x - bw : 0) : Math.max(0, Math.min(scr.x - size, Store.num("fb_x", U.u(14))));
+        lp.y = Math.max(0, Math.min(scr.y - bh, Store.num("fb_y", U.u(206))));
         button.setOnTouchListener(new Touch());
         button.setVisibility(visible ? View.VISIBLE : View.GONE);
         try {
@@ -134,12 +165,11 @@ public class BackButtonService extends AccessibilityService {
         boolean on = visible && Store.flag("fb_on", true);
         button.setVisibility(on ? View.VISIBLE : View.GONE);
         if (!on) return;
-        boolean show = awake || !onlyOnTouch();
-        int size = U.u(sizeDu());
-        int w = show ? size : 1;
-        if (lp.width != w) {
+        boolean show = awake || !onlyOnTouch() || isTab(); // the tab is always there (it's slim)
+        int w = show ? bw : 1, h = show ? bh : 1;
+        if (lp.width != w || lp.height != h) {
             lp.width = w;
-            lp.height = w;
+            lp.height = h;
             try {
                 wm.updateViewLayout(button, lp);
             } catch (Exception ignored) {
@@ -239,10 +269,9 @@ public class BackButtonService extends AccessibilityService {
         android.graphics.Point screen = new android.graphics.Point();
         wm.getDefaultDisplay().getRealSize(screen);
         int item = U.u(64), radius = U.u(118), reach = radius + item / 2 + U.u(26);
-        int size = U.u(sizeDu());
         // centre on the back button, pulled in from the edges so the whole circle fits
-        int cx = Math.max(reach, Math.min(screen.x - reach, tab ? screen.x / 2 : lp.x + size / 2));
-        int cy = Math.max(reach, Math.min(screen.y - reach, tab ? screen.y / 2 : lp.y + size / 2));
+        int cx = Math.max(reach, Math.min(screen.x - reach, tab ? screen.x / 2 : lp.x + bw / 2));
+        int cy = Math.max(reach, Math.min(screen.y - reach, tab ? screen.y / 2 : lp.y + bh / 2));
 
         menu = new FrameLayout(this);
         menu.setBackgroundColor(0x8C000000);
@@ -414,8 +443,9 @@ public class BackButtonService extends AccessibilityService {
                         return true;
                     }
                     if (moved) {
-                        Store.put("fb_x", lp.x);
                         Store.put("fb_y", lp.y);
+                        if (isTab()) snap(); // magnetised: jumps to the nearer edge
+                        else Store.put("fb_x", lp.x);
                     } else if (e.getActionMasked() == MotionEvent.ACTION_UP) {
                         performGlobalAction(GLOBAL_ACTION_BACK);
                     }
@@ -423,6 +453,25 @@ public class BackButtonService extends AccessibilityService {
             }
             return false;
         }
+    }
+
+    /** Let go of the tab: it slides to the nearer side edge and sticks there. */
+    private void snap() {
+        int sw = screenW();
+        boolean left = lp.x + bw / 2 < sw / 2;
+        Store.put("fb_side", left ? "left" : "right");
+        styleTab(left);
+        android.animation.ValueAnimator a = android.animation.ValueAnimator.ofInt(lp.x, left ? 0 : sw - bw);
+        a.setDuration(220);
+        a.setInterpolator(new android.view.animation.OvershootInterpolator(1.4f));
+        a.addUpdateListener(v -> {
+            lp.x = (int) v.getAnimatedValue();
+            try {
+                wm.updateViewLayout(button, lp);
+            } catch (Exception ignored) {
+            }
+        });
+        a.start();
     }
 
     /** "Display over other apps" granted. */

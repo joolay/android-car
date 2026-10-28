@@ -535,7 +535,7 @@ final class SettingsPanels {
         open(floatPage = () -> {
             Context c = c();
             LinearLayout b = U.col(c);
-            b.addView(U.text(c, "A round back button that floats over other apps (never on the home screen). Tap goes back a page; at the app's first page it brings you home. Hold for a menu of shortcuts. Drag it to move it.", 13, U.SUB, false));
+            b.addView(U.text(c, "A back button over other apps (never on the home screen): a slim tab stuck to the screen edge, or a round floating button. Tap goes back a page; at the app's first page it brings you home. Hold for a menu of shortcuts. Drag it to move it; the tab jumps to the nearer edge.", 13, U.SUB, false));
             boolean on = BackButtonService.enabled(c);
             if (!on) b.addView(step(c, 1, "Allow restricted settings", "Tap Turn on below first (Android will block it), then come back here: App info → ⋮ (top right) → Allow restricted settings",
                     "App info", false, () -> Apps.appInfo(c, c.getPackageName())), top(10));
@@ -551,12 +551,16 @@ final class SettingsPanels {
             b.addView(Sheets.item("Put the button back on screen", "Resets its position", () -> {
                 Store.put("fb_x", U.u(14));
                 Store.put("fb_y", U.u(206));
+                Store.put("fb_side", "left");
                 Store.put("fb_on", true);
                 BackButtonService.refresh();
                 Sheets.refresh();
             }), top(4));
             b.addView(Sheets.item("Hold menu", QuickActions.chosen().size() + " buttons", SettingsPanels::holdMenu), top(4));
             b.addView(U.hr(c));
+            boolean tab = BackButtonService.isTab();
+            b.addView(Sheets.row("Style", U.seg(c, "Edge tab", tab, () -> { Store.put("fb_style", "tab"); BackButtonService.refresh(); Sheets.refresh(); }),
+                    U.seg(c, "Round button", !tab, () -> { Store.put("fb_style", "round"); BackButtonService.refresh(); Sheets.refresh(); })), top(8));
             String sz = Store.str("fb_size", "m");
             b.addView(Sheets.row("Size", sizeSeg(c, "s", "Small", sz), sizeSeg(c, "m", "Medium", sz), sizeSeg(c, "l", "Large", sz)), top(8));
             b.addView(Sheets.switchRow(0, 0, "Only when I touch the screen", "Off: always shown over apps. On: appears when you tap or scroll, fades after 4 seconds", BackButtonService.onlyOnTouch(), v -> {
