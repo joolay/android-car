@@ -72,7 +72,7 @@ final class NowPlaying {
     NowPlaying(Context c) {
         this.c = c;
         I = this;
-        view = new FrameLayout(c);
+        view = new SwipeBox(c, this::swapArt); // swipe: album art ⇄ the music app's icon
         view.setBackground(U.round(U.CARD, 16));
         MapPanel.clip(view, 16);
 
@@ -166,6 +166,17 @@ final class NowPlaying {
         MediaListener.listenMedia(this::update);
     }
 
+    static boolean showIcon() {
+        return "icon".equals(Store.str("np_show", "art"));
+    }
+
+    private void swapArt() {
+        Store.put("np_show", showIcon() ? "art" : "icon");
+        art.setAlpha(0f);
+        update();
+        art.animate().alpha(1f).setDuration(220).start();
+    }
+
     private void openMusicApp() {
         if (Music.open(c)) return;
         for (String p : Actions.MUSIC) if (Apps.launchPkg(c, p)) return;
@@ -231,12 +242,22 @@ final class NowPlaying {
         Bitmap bm = md.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
         if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_ART);
         if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
-        if (bm != null) art.setImageBitmap(bm);
-        else {
-            art.setImageResource(R.drawable.ic_music);
-            art.setScaleType(ImageView.ScaleType.CENTER);
+        android.graphics.drawable.Drawable appIcon = Apps.iconOf(m.getPackageName());
+        if (showIcon() && appIcon != null) { // the music app's icon, centred
+            art.setImageDrawable(appIcon);
+            art.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            int pd = Math.min(view.getWidth(), view.getHeight()) / 4;
+            art.setPadding(pd, pd / 2, pd, pd + pd / 2);
+        } else {
+            art.setPadding(0, 0, 0, 0);
+            if (bm != null) {
+                art.setImageBitmap(bm);
+                art.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            } else {
+                art.setImageResource(R.drawable.ic_music);
+                art.setScaleType(ImageView.ScaleType.CENTER);
+            }
         }
-        if (bm != null) art.setScaleType(ImageView.ScaleType.CENTER_CROP);
         String t = md.getString(MediaMetadata.METADATA_KEY_TITLE);
         String a = md.getString(MediaMetadata.METADATA_KEY_ARTIST);
         if (a == null) a = md.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
