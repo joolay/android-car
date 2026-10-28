@@ -112,7 +112,7 @@ final class HomeApproach {
         TextView st = U.line(c, HA.stateLabel(id), 12, U.SUB, false);
         st.setGravity(Gravity.CENTER);
         b.addView(st, Widgets.top(2));
-        if (HA.needsHold(id)) { // never by accident: gates, garages, locks
+        if (HA.needsHold(id) || id.startsWith("alarm_control_panel.")) { // never by accident: gates, garages, locks, alarms
             b.setOnClickListener(v -> android.widget.Toast.makeText(c, "Hold to use " + HA.name(id), android.widget.Toast.LENGTH_SHORT).show());
             b.setOnLongClickListener(v -> {
                 v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
