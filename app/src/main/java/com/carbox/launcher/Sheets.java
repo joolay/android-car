@@ -170,7 +170,7 @@ final class Sheets {
         render();
         // close by themselves after the set time (Settings → Right bar icons); a touch restarts it
         U.ui.removeCallbacks(autoClose);
-        int secs = Store.num("card_secs", 8);
+        int secs = Store.num("card_secs", 15);
         if (secs > 0) U.ui.postDelayed(autoClose, secs * 1000L);
         cardPage = p;
     }
@@ -180,11 +180,17 @@ final class Sheets {
         if (!stack.isEmpty() && stack.get(stack.size() - 1) == cardPage) close();
     };
 
+    /** True when what's open sits in the tile area or is a rail pop-up (these minimise when idle). */
+    static boolean minimisable() {
+        if (!open()) return false;
+        return !full || (cardPage != null && top() == cardPage);
+    }
+
     /** Restart a pop-up's timer (called on touch). */
     static void touched() {
         if (cardPage == null || stack.isEmpty() || stack.get(stack.size() - 1) != cardPage) return;
         U.ui.removeCallbacks(autoClose);
-        int secs = Store.num("card_secs", 8);
+        int secs = Store.num("card_secs", 15);
         if (secs > 0) U.ui.postDelayed(autoClose, secs * 1000L);
     }
 

@@ -57,6 +57,7 @@ final class Salah {
     }
 
     static void fire(String name) {
+        U.ui.post(() -> SalahCard.show(name)); // large notice in the tile area
         if (Store.flag(PAUSE, true)) pauseMedia();
         if (Store.flag(ANNOUNCE, true)) U.ui.postDelayed(() -> {
             if (!Rest.play(ctx, "voice/salah_" + name.toLowerCase(java.util.Locale.ROOT) + ".mp3", null))

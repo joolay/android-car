@@ -757,7 +757,7 @@ final class SettingsPanels {
                 b.addView(r);
             }
             b.addView(U.text(c, "Switch an icon off to remove it from the right bar; the others spread out to fill the space. The clock stays at the top and the mic at the bottom.", 12, U.SUB, false), top(8));
-            int cs = Store.num("card_secs", 8);
+            int cs = Store.num("card_secs", 15);
             b.addView(Sheets.row("Pop-ups close after", segNum(c, "card_secs", 5, "5 s", cs), segNum(c, "card_secs", 8, "8 s", cs),
                     segNum(c, "card_secs", 15, "15 s", cs), segNum(c, "card_secs", 30, "30 s", cs), segNum(c, "card_secs", 0, "Never", cs)), top(10));
             return Sheets.panel("Right bar icons", b, 480, 440);

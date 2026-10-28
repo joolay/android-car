@@ -395,6 +395,25 @@ public class MainActivity extends Activity {
         // keep GPS running in the background so trip/speed stay accurate while another app is open
     }
 
+    // ---- idle: panels and pop-ups in the tile area minimise 15 s after the last touch anywhere.
+    // Calls and turn-by-turn stay; full-screen pages (settings, widgets, All apps) stay.
+    private final Runnable idle = () -> {
+        if (Sheets.minimisable()) Sheets.close();
+        PhoneScreen.hide();
+        SalahCard.hide();
+    };
+
+    void resetIdle() {
+        U.ui.removeCallbacks(idle);
+        U.ui.postDelayed(idle, Store.num("card_secs", 15) > 0 ? Math.max(15, Store.num("card_secs", 15)) * 1000L : 15000);
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(android.view.MotionEvent ev) {
+        if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN || ev.getActionMasked() == android.view.MotionEvent.ACTION_UP) resetIdle();
+        return super.dispatchTouchEvent(ev);
+    }
+
     boolean isResumed2() {
         return resumed;
     }
