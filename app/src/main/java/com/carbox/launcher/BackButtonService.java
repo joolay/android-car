@@ -261,7 +261,7 @@ public class BackButtonService extends AccessibilityService {
             final String id = (String) a[0];
             b.setOnClickListener(v -> {
                 closeMenu();
-                QuickActions.run(this, id);
+                runAction(id);
             });
             FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(item, item, Gravity.TOP | Gravity.START);
             bl.leftMargin = x - item / 2;
@@ -306,9 +306,18 @@ public class BackButtonService extends AccessibilityService {
         }
     }
 
+    private void runAction(String id) {
+        try {
+            QuickActions.run(this, id);
+        } catch (Throwable t) {
+            About.record(this, "back button action " + id, t);
+        }
+    }
+
     /** While still holding: light up the button under the finger. */
     private void highlight(float rx, float ry) {
         hot = null;
+        if (menu == null) return;
         for (int i = 0; i < menuItems.size(); i++) {
             View v = menuItems.get(i);
             int[] p = new int[2];
@@ -341,8 +350,19 @@ public class BackButtonService extends AccessibilityService {
         private final int slop = ViewConfiguration.get(BackButtonService.this).getScaledTouchSlop();
         private final Runnable hold = () -> {
             held = true;
-            button.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-            openMenu();
+            try {
+                button.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                openMenu();
+            } catch (Throwable t) {
+                // never let the menu take the button down: note it for Settings > About and go Home instead
+                About.record(BackButtonService.this, "back button hold menu", t);
+                try {
+                    closeMenu();
+                } catch (Throwable ignored) {
+                }
+                held = false;
+                performGlobalAction(GLOBAL_ACTION_HOME);
+            }
         };
 
         @Override
@@ -389,7 +409,7 @@ public class BackButtonService extends AccessibilityService {
                         if (e.getActionMasked() == MotionEvent.ACTION_UP && hot != null) {
                             String id = hot;
                             closeMenu();
-                            QuickActions.run(BackButtonService.this, id);
+                            runAction(id);
                         }
                         return true;
                     }

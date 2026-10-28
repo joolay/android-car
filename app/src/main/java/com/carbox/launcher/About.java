@@ -28,21 +28,26 @@ final class About {
         final Thread.UncaughtExceptionHandler prev = Thread.getDefaultUncaughtExceptionHandler();
         if (prev != null && prev.getClass().getName().startsWith(About.class.getName())) return;
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
-            try {
-                java.io.StringWriter sw = new java.io.StringWriter();
-                e.printStackTrace(new java.io.PrintWriter(sw));
-                String trace = sw.toString();
-                if (trace.length() > 3000) trace = trace.substring(0, 3000) + "\n…";
-                List<String> l = new ArrayList<>(Store.list(CRASHES));
-                l.add(0, new java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.US).format(new java.util.Date()) + " · " + version(c) + " · " + t.getName() + "\n" + trace);
-                while (l.size() > 5) l.remove(l.size() - 1);
-                Store.putList(CRASHES, l);
-                Store.put("crash_new", true);
-                Store.flush();
-            } catch (Throwable ignored) {
-            }
+            record(c, t.getName(), e);
             if (prev != null) prev.uncaughtException(t, e);
         });
+    }
+
+    /** Save an error to the crash reports (also used for errors caught before they could crash). */
+    static void record(Context c, String where, Throwable e) {
+        try {
+            java.io.StringWriter sw = new java.io.StringWriter();
+            e.printStackTrace(new java.io.PrintWriter(sw));
+            String trace = sw.toString();
+            if (trace.length() > 3000) trace = trace.substring(0, 3000) + "\n…";
+            List<String> l = new ArrayList<>(Store.list(CRASHES));
+            l.add(0, new java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.US).format(new java.util.Date()) + " · " + version(c) + " · " + where + "\n" + trace);
+            while (l.size() > 5) l.remove(l.size() - 1);
+            Store.putList(CRASHES, l);
+            Store.put("crash_new", true);
+            Store.flush();
+        } catch (Throwable ignored) {
+        }
     }
 
     static String version(Context c) {
