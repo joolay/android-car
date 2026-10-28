@@ -53,19 +53,19 @@ final class SettingsPanels {
     private static View tile(Context c, int icon, int color, String title, String value, Runnable click) {
         LinearLayout r = U.row(c);
         r.setBackground(U.round(U.CARD2, 14));
-        U.pad(r, 10, 7, 8, 7);
-        r.setMinimumHeight(U.u(50)); // smaller, still finger-sized
+        U.pad(r, 8, 5, 6, 5);
+        r.setMinimumHeight(U.u(40)); // compact
         FrameLayout ic = new FrameLayout(c);
         ic.setBackground(U.oval(color));
-        ic.addView(U.icon(c, icon, U.TEXT), U.flpu(15, 15, Gravity.CENTER));
-        r.addView(ic, U.lpu(28, 28));
+        ic.addView(U.icon(c, icon, U.TEXT), U.flpu(12, 12, Gravity.CENTER));
+        r.addView(ic, U.lpu(22, 22));
         LinearLayout t = U.col(c);
-        t.addView(U.line(c, title, 13, U.TEXT, true));
-        if (value != null && !value.isEmpty()) t.addView(U.line(c, value, 11, U.SUB, false), top(1));
+        t.addView(U.line(c, title, 12, U.TEXT, true));
+        if (value != null && !value.isEmpty()) t.addView(U.line(c, value, 10, U.SUB, false), top(0));
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-        tl.leftMargin = U.u(8);
+        tl.leftMargin = U.u(6);
         r.addView(t, tl);
-        r.addView(U.text(c, "›", 15, U.MUTED, false));
+        r.addView(U.text(c, "›", 13, U.MUTED, false));
         r.setOnClickListener(v -> click.run());
         U.press(r);
         return r;
@@ -133,7 +133,7 @@ final class SettingsPanels {
                 if (it == null) continue;
                 cells.add(tile(c, (Integer) it[0], (Integer) it[1], (String) it[2], (String) it[3], (Runnable) it[4]));
             }
-            list.addView(AppPanels.grid(c, cells, 4, 6), top(5)); // 4 across
+            list.addView(AppPanels.grid(c, cells, 5, 5), top(4)); // 5 across
         }
         android.widget.ScrollView sv = new android.widget.ScrollView(c);
         sv.setVerticalScrollBarEnabled(false);
