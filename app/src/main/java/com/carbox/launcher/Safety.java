@@ -66,7 +66,7 @@ final class Safety {
                 boolean on = (d & (1L << i)) != 0;
                 LinearLayout row = U.row(c);
                 row.setMinimumHeight(U.u(42));
-                row.addView(tick(c, on), U.lpu(26, 26));
+                row.addView(tick(c, on), U.lpu(24, 24));
                 TextView t = U.line(c, it[i], 15, on ? U.SUB : U.TEXT, false);
                 LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
                 tl.leftMargin = U.u(12);
@@ -121,43 +121,130 @@ final class Safety {
         return g;
     }
 
+    /** Round tick drawn to its own size, so it is the same crisp circle at any size. */
     static View tick(Context c, boolean on) {
-        android.widget.FrameLayout f = new android.widget.FrameLayout(c);
-        f.setBackground(on ? U.oval(U.GREEN) : ring(U.SUB, 2));
-        if (on) f.addView(U.text(c, "✓", 15, U.TEXT, true), U.flpu(U.WRAP, U.WRAP, Gravity.CENTER));
-        return f;
+        return new View(c) {
+            final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            final android.graphics.Path path = new android.graphics.Path();
+
+            @Override
+            protected void onDraw(android.graphics.Canvas cv) {
+                float s = Math.min(getWidth(), getHeight()), cx = getWidth() / 2f, cy = getHeight() / 2f, r = s / 2f - U.u(1.5f);
+                p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+                p.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+                if (on) {
+                    p.setStyle(android.graphics.Paint.Style.FILL);
+                    p.setColor(U.GREEN);
+                    cv.drawCircle(cx, cy, r, p);
+                    p.setStyle(android.graphics.Paint.Style.STROKE);
+                    p.setStrokeWidth(s * 0.11f);
+                    p.setColor(0xFF0B0E13);
+                    path.reset();
+                    path.moveTo(cx - s * 0.2f, cy + s * 0.01f);
+                    path.lineTo(cx - s * 0.05f, cy + s * 0.15f);
+                    path.lineTo(cx + s * 0.21f, cy - s * 0.13f);
+                    cv.drawPath(path, p);
+                } else {
+                    p.setStyle(android.graphics.Paint.Style.STROKE);
+                    p.setStrokeWidth(U.u(2));
+                    p.setColor(U.SUB);
+                    cv.drawCircle(cx, cy, r, p);
+                }
+            }
+        };
+    }
+
+    /**
+     * The tile's picture: a seated person with a seatbelt inside a progress ring. Drawn to fit
+     * whatever room the tile gives it (always square and centred), so it never looks stretched.
+     */
+    static final class Badge extends View {
+        private final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final android.graphics.RectF r = new android.graphics.RectF();
+        private final android.graphics.Path path = new android.graphics.Path();
+        private int done, total;
+
+        Badge(Context c) {
+            super(c);
+        }
+
+        void set(int done, int total) {
+            if (done == this.done && total == this.total) return;
+            this.done = done;
+            this.total = total;
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(android.graphics.Canvas cv) {
+            float s = Math.min(getWidth(), getHeight());
+            if (s <= 0) return;
+            float cx = getWidth() / 2f, cy = getHeight() / 2f, ring = s * 0.065f, rad = s / 2f - ring / 2f - 1;
+            boolean all = total > 0 && done >= total, none = done == 0;
+            int AMBER = 0xFFE8A33D;
+            p.setStyle(android.graphics.Paint.Style.STROKE);
+            p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+            p.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+            // ring: grey track, green for what's checked
+            p.setStrokeWidth(ring);
+            p.setColor(all ? U.GREEN : U.CARD3);
+            cv.drawCircle(cx, cy, rad, p);
+            if (!all && !none) {
+                r.set(cx - rad, cy - rad, cx + rad, cy + rad);
+                p.setColor(U.GREEN);
+                cv.drawArc(r, -90, 360f * done / Math.max(1, total), false, p);
+            }
+            // person: head, shoulders and body
+            float u = s / 92f; // drawn on a 92-unit square, like the mockup
+            int body = all ? U.GREEN : none ? AMBER : U.TEXT;
+            p.setColor(body);
+            p.setStrokeWidth(3.5f * u);
+            cv.drawCircle(cx, cy - 17 * u, 6 * u, p);
+            path.reset();
+            path.moveTo(cx - 14 * u, cy + 22 * u);
+            path.lineTo(cx - 14 * u, cy + 2 * u);
+            path.quadTo(cx - 14 * u, cy - 6 * u, cx - 6 * u, cy - 6 * u);
+            path.lineTo(cx + 6 * u, cy - 6 * u);
+            path.quadTo(cx + 14 * u, cy - 6 * u, cx + 14 * u, cy + 2 * u);
+            path.lineTo(cx + 14 * u, cy + 22 * u);
+            cv.drawPath(path, p);
+            // seatbelt across
+            p.setColor(all || !none ? U.GREEN : U.TEXT);
+            p.setStrokeWidth(4 * u);
+            cv.drawLine(cx + 8 * u, cy - 7 * u, cx - 12 * u, cy + 20 * u, p);
+            if (all) { // tick badge
+                p.setStyle(android.graphics.Paint.Style.FILL);
+                p.setColor(U.GREEN);
+                float bx = cx + rad * 0.62f, by = cy + rad * 0.62f, br = 11 * u;
+                cv.drawCircle(bx, by, br, p);
+                p.setStyle(android.graphics.Paint.Style.STROKE);
+                p.setColor(0xFF0B0E13);
+                p.setStrokeWidth(3 * u);
+                path.reset();
+                path.moveTo(bx - 5 * u, by);
+                path.lineTo(bx - 1 * u, by + 4 * u);
+                path.lineTo(bx + 6 * u, by - 4 * u);
+                cv.drawPath(path, p);
+            }
+        }
     }
 
     static final class Tile extends Widgets.W {
-        private final TextView head, item;
-        private final LinearLayout bar;
-        private final android.widget.FrameLayout box;
+        private final TextView status;
+        private final Badge badge;
 
         Tile(Context c, int i, JSONObject s) {
             super(c, i, s);
             LinearLayout l = Widgets.card(c, U.CARD);
-            head = Widgets.label(c, "SAFETY CHECK");
-            l.addView(head);
-            bar = U.row(c);
-            l.addView(bar, Widgets.top(6));
-            l.addView(new View(c), U.weight(1, false));
-            LinearLayout r = U.row(c);
-            r.setGravity(Gravity.CENTER_VERTICAL);
-            box = new android.widget.FrameLayout(c);
-            box.setOnClickListener(v -> {
-                int n = next();
-                if (n >= 0) toggle(n);
-                tick();
-            });
-            U.press(box);
-            r.addView(box, U.lpu(34, 34));
-            item = U.text(c, "", 15, U.TEXT, true);
-            item.setMaxLines(2);
-            LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-            il.leftMargin = U.u(10);
-            r.addView(item, il);
-            l.addView(r);
-            l.addView(new View(c), U.weight(1, false));
+            l.addView(Widgets.label(c, "SAFETY CHECK"));
+            badge = new Badge(c);
+            LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(U.MATCH, 0, 1);
+            bl.topMargin = U.u(4);
+            bl.bottomMargin = U.u(4);
+            l.addView(badge, bl); // takes the room that's left, drawn square in the middle
+            status = U.line(c, "", 13, U.TEXT, true);
+            status.setGravity(Gravity.CENTER);
+            l.addView(status, U.lp(U.MATCH, U.WRAP));
             l.setOnClickListener(v -> list());
             U.press(l);
             v = l;
@@ -166,26 +253,17 @@ final class Safety {
 
         @Override
         void tick() {
-            String[] it = items();
-            int n = next(), k = count();
-            head.setText(String.format(Locale.US, "SAFETY CHECK · %d/%d", k, it.length));
-            bar.removeAllViews();
-            long d = done();
-            for (int i = 0; i < it.length; i++) {
-                View seg = new View(c);
-                seg.setBackground(U.round((d & (1L << i)) != 0 ? U.GREEN : U.CARD3, 2));
-                LinearLayout.LayoutParams sl = new LinearLayout.LayoutParams(0, U.u(4), 1);
-                if (i > 0) sl.leftMargin = U.u(3);
-                bar.addView(seg, sl);
-            }
-            box.removeAllViews();
-            if (n < 0) {
-                box.setBackground(U.oval(U.GREEN));
-                box.addView(U.text(c, "✓", 18, U.TEXT, true), U.flpu(U.WRAP, U.WRAP, Gravity.CENTER));
-                item.setText("All checked. Drive safely");
+            int n = items().length, k = Math.min(count(), n);
+            badge.set(k, n);
+            if (k >= n) {
+                status.setText("Ready to drive");
+                status.setTextColor(U.GREEN);
+            } else if (k == 0) {
+                status.setText("Tap to check");
+                status.setTextColor(0xFFE8A33D);
             } else {
-                box.setBackground(ring(U.TEXT2, 2));
-                item.setText(it[n]);
+                status.setText(k + " of " + n);
+                status.setTextColor(U.TEXT);
             }
         }
     }
