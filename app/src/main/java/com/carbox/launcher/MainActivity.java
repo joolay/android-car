@@ -49,6 +49,7 @@ public class MainActivity extends Activity {
         w.getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         U.init(this);
         Store.init(this);
+        About.catchCrashes(this);
         Apps.init(this);
         Status.init(this);
         Loc.init(this);
@@ -72,6 +73,7 @@ public class MainActivity extends Activity {
         if (!Splash.maybeShow(this, "start", () -> Actions.afterSplash(this))) Actions.afterSplash(this);
         U.ui.post(() -> handleOpen(getIntent()));
         U.ui.postDelayed(this::afterUpdate, 2500);
+        U.ui.postDelayed(About::offerReport, 4000); // crashed last time? offer the report
         // traffic for the drive, once per car start (after the splash and auto-start apps settle)
         long bootAt = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime();
         if (Math.abs(Store.lng("traffic_boot", 0) - bootAt) > 60000) {

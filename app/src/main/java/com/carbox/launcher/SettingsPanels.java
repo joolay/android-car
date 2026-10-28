@@ -119,7 +119,8 @@ final class SettingsPanels {
                         {R.drawable.ic_check, GREY, "Set-up checklist", null, (Runnable) SettingsPanels::setupChecklist},
                         {R.drawable.ic_bolt, GREY, "Startup optimiser", null, (Runnable) Optimiser::show},
                         {R.drawable.ic_back, GREY, "Floating back button", BackButtonService.enabled(c) ? "On" : "Off", (Runnable) SettingsPanels::floatingBack},
-                        {R.drawable.ic_gear, GREY, "Android settings", null, (Runnable) SettingsPanels::androidSettings}}};
+                        {R.drawable.ic_gear, GREY, "Android settings", null, (Runnable) SettingsPanels::androidSettings},
+                        {R.drawable.ic_shield, GREY, "About", About.version(c), (Runnable) About::show}}};
 
         LinearLayout list = U.col(c);
         for (Object[][] g : groups) {

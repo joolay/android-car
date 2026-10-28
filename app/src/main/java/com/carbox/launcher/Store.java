@@ -42,6 +42,11 @@ final class Store {
         else sp.edit().putString(k, v).apply();
     }
 
+    /** Write to disk now (used when the app is about to crash). */
+    static void flush() {
+        sp.edit().commit();
+    }
+
     static void put(String k, int v) {
         sp.edit().putInt(k, v).apply();
     }

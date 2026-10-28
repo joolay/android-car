@@ -33,6 +33,7 @@ public class BackButtonService extends AccessibilityService {
         Store.put("fb_connected_at", System.currentTimeMillis()); // shows in Settings that it really started
         U.init((Context) this);
         Store.init(this);
+        About.catchCrashes(this);
         Apps.init(this);
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         build();
