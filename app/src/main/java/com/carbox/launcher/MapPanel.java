@@ -255,6 +255,11 @@ final class MapPanel {
         return tapBig;
     }
 
+    /** The big map's holder in the tile area (slid aside when the tile drawer opens). */
+    View bigView() {
+        return bigHolder;
+    }
+
     /** "goto" or "speed": the tile shown in the small panel while the map is big. */
     static String miniId() {
         return Store.str("map_mini", "goto");
@@ -381,7 +386,7 @@ final class MapPanel {
         o.addView(street, rl);
         // right-hand column: close, compass, traffic
         LinearLayout col = U.col(a);
-        col.addView(round(a, R.drawable.ic_x, true, () -> expand(false)), U.lpu(38, 38));
+        if (!MainActivity.mapHome()) col.addView(round(a, R.drawable.ic_x, true, () -> expand(false)), U.lpu(38, 38)); // the map is home: no close
         View cb = round(a, R.drawable.ic_compass, false, () -> { // direction of travel ⇄ north up
             Store.put("map_heading_up", !headingUp());
             applyHeading();
@@ -389,7 +394,7 @@ final class MapPanel {
         });
         compass = (ImageView) ((FrameLayout) cb).getChildAt(0);
         LinearLayout.LayoutParams cbl = U.lpu(38, 38);
-        cbl.topMargin = U.u(8);
+        cbl.topMargin = col.getChildCount() > 0 ? U.u(8) : 0;
         col.addView(cb, cbl);
         if (google()) {
             View tb = round(a, R.drawable.ic_traffic, true, () -> {

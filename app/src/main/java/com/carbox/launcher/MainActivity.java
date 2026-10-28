@@ -77,12 +77,14 @@ public class MainActivity extends Activity {
         U.ui.postDelayed(this::afterUpdate, 2500);
         U.ui.postDelayed(About::offerReport, 4000); // crashed last time? offer the report
         // start with the big map in the tile area and Go to in the small map panel (setting)
-        if (Store.flag("map_start_big", true)) U.ui.postDelayed(() -> {
+        // the home view: the big map in the tile area, Go to in the small map panel, Now playing
+        // below; the tiles are a drawer that slides in from the Right Dock (All apps button)
+        if (mapHome()) U.ui.postDelayed(() -> {
             if (map != null && !map.expanded()) {
                 Store.put("map_mini", "goto");
                 map.expand(true);
             }
-        }, 1200);
+        }, 600);
         // traffic for the drive, once per car start (after the splash and auto-start apps settle)
         long bootAt = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime();
         if (Math.abs(Store.lng("traffic_boot", 0) - bootAt) > 60000) {
@@ -429,6 +431,7 @@ public class MainActivity extends Activity {
         SalahCard.hide();
         SpeedCard.hide();
         Alerts.hideNotice();
+        if (drawerOpen && !tiles.editing()) drawer(false); // the map comes back
     };
 
     void resetIdle() {
@@ -480,7 +483,41 @@ public class MainActivity extends Activity {
         PhoneScreen.hide();
         if (Sheets.open()) Sheets.close();
         if (tiles.editing()) tiles.setEditing(false);
+        if (drawerOpen) drawer(false);
         Splash.cancel();
+    }
+
+    // ---- tile drawer (when the map is the home view)
+    boolean drawerOpen;
+
+    static boolean mapHome() {
+        return Store.flag("map_start_big", true);
+    }
+
+    /** All apps button: slide the tiles in from the Right Dock, the map slides away behind the left panels. */
+    void toggleDrawer() {
+        drawer(!drawerOpen);
+    }
+
+    void drawer(boolean open) {
+        View big = map != null ? map.bigView() : null;
+        if (big == null) { // map not big (yet): nothing to slide
+            drawerOpen = false;
+            return;
+        }
+        drawerOpen = open;
+        float w = tileArea.getWidth() + U.u(12);
+        android.view.animation.Interpolator ease = new android.view.animation.DecelerateInterpolator(1.8f);
+        if (open) {
+            if (Sheets.open()) Sheets.close();
+            tiles.view.setTranslationX(w);
+            tiles.view.animate().translationX(0).setDuration(340).setInterpolator(ease).start();
+            big.animate().translationX(-w).setDuration(340).setInterpolator(ease).start();
+        } else {
+            if (tiles.editing()) tiles.setEditing(false);
+            tiles.view.animate().translationX(w).setDuration(300).setInterpolator(ease).start();
+            big.animate().translationX(0).setDuration(300).setInterpolator(ease).start();
+        }
     }
 
     /** "Open the phone" from the hold menu, or a dial request from another app (tel: number). */
@@ -507,6 +544,7 @@ public class MainActivity extends Activity {
             return;
         }
         if (tiles.editing()) tiles.setEditing(false);
+        else if (drawerOpen) drawer(false);
         // a launcher never finishes on back
     }
 

@@ -103,7 +103,10 @@ final class Dock {
         }
         all.addView(mosaic, new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.CENTER));
         all.setContentDescription("All apps");
-        all.setOnClickListener(v -> AppPanels.gallery(-1)); // tap: the widget drawer
+        all.setOnClickListener(v -> { // tap: the tiles slide in (map home view), else the widget chooser
+            if (MainActivity.I != null && MainActivity.mapHome() && MainActivity.I.map.expanded()) MainActivity.I.toggleDrawer();
+            else AppPanels.gallery(-1);
+        });
         all.setOnLongClickListener(v -> { // hold: all apps
             AppPanels.allApps(false);
             return true;
