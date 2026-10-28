@@ -388,6 +388,60 @@ final class Tiles {
         return editing;
     }
 
+    /** Edit-mode scroll bar: drag (or tap) along it to slide the tiles. */
+    View scrubber(Context c) {
+        View sb = new View(c) {
+            final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            final android.graphics.RectF r = new android.graphics.RectF();
+            float grab = -1;
+
+            @Override
+            protected void onDraw(android.graphics.Canvas cv) {
+                int cols = view.columns();
+                float h = U.u(8), y = (getHeight() - h) / 2f, w = getWidth();
+                r.set(0, y, w, y + h);
+                p.setColor(0x33FFFFFF);
+                cv.drawRoundRect(r, h / 2, h / 2, p);
+                float part = cols <= COLS ? w : Math.max(U.u(40), w * COLS / cols), max = view.maxScroll();
+                r.left = max == 0 ? 0 : (w - part) * view.getScrollX() / max;
+                r.right = r.left + part;
+                r.top = y - U.u(3);
+                r.bottom = y + h + U.u(3);
+                p.setColor(0xDDFFFFFF);
+                cv.drawRoundRect(r, U.u(7), U.u(7), p);
+            }
+
+            @Override
+            public boolean onTouchEvent(MotionEvent e) {
+                int cols = view.columns(), max = view.maxScroll();
+                if (max == 0) return false;
+                float w = getWidth(), part = Math.max(U.u(40), w * COLS / cols), left = (w - part) * view.getScrollX() / max;
+                switch (e.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        getParent().requestDisallowInterceptTouchEvent(true);
+                        // grab the thumb where touched, or jump it under the finger
+                        grab = e.getX() >= left && e.getX() <= left + part ? e.getX() - left : part / 2;
+                    case MotionEvent.ACTION_MOVE:
+                        float f = Math.max(0, Math.min(1, (e.getX() - grab) / (w - part)));
+                        view.scrollTo(Math.round(f * max), 0);
+                        view.reveal();
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        view.glideTo(view.snap(view.getScrollX()));
+                        return true;
+                }
+                return true;
+            }
+        };
+        view.onScroll = sb::invalidate;
+        return sb;
+    }
+
+    int extraColumns() {
+        return Math.max(0, view.columns() - COLS);
+    }
+
     void setEditing(boolean on) {
         if (editing == on) return;
         editing = on;
@@ -424,7 +478,8 @@ final class Tiles {
      * Lays tiles out 2 rows high, column by column, 4 columns to a screen width. Slides sideways with
      * the finger and keeps gliding after a flick, then settles on a whole column. Columns sliding in
      * at either edge grow and fade in as they're revealed. A small bar between the rows shows where
-     * you are. In edit mode tiles can be dragged, and holding one at the edge scrolls.
+     * you are. In edit mode a quick swipe still slides; hold a tile to pick it up and drag it
+     * (holding it at the edge scrolls).
      */
     final class Grid extends ViewGroup {
         private int dragIndex = -1;
@@ -663,23 +718,14 @@ final class Tiles {
                     if (vt != null) vt.recycle();
                     vt = android.view.VelocityTracker.obtain();
                     vt.addMovement(e);
-                    return wasMoving && !editing; // a touch while gliding just stops it
+                    if (editing && dragIndex < count()) postDelayed(lift, 260); // hold a tile, then drag it
+                    return wasMoving; // a touch while gliding just stops it
                 case MotionEvent.ACTION_MOVE:
                     if (vt != null) vt.addMovement(e);
                     float dx = e.getX() - downX, dy = e.getY() - downY;
                     if (editing) {
-                        if (!dragging && Math.hypot(dx, dy) > slop && dragIndex < count()) {
-                            dragging = true;
-                            View v = getChildAt(dragIndex);
-                            if (v != null) {
-                                // raise it above the others without changing child order (layout is by index)
-                                v.setTranslationZ(U.uf(12));
-                                v.setAlpha(1f);
-                                v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(100).start();
-                            }
-                            return true;
-                        }
-                        return false;
+                        if (dragging) return true;
+                        if (Math.hypot(dx, dy) > slop) removeCallbacks(lift); // moved before the hold: it's a slide
                     }
                     if ((wrap() || maxScroll() > 0) && sideways(dx, dy)) {
                         swiping = true;
@@ -688,8 +734,35 @@ final class Tiles {
                         return true; // the tile under the finger gets a cancel, so no tap or long-press fires
                     }
                     return false;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    removeCallbacks(lift);
+                    return false;
             }
             return false;
+        }
+
+        /** Held still long enough: pick the tile up. */
+        private final Runnable lift = () -> {
+            if (!editing || swiping || dragIndex < 0 || dragIndex >= count()) return;
+            dragging = true;
+            View v = getChildAt(dragIndex);
+            if (v != null) {
+                // raise it above the others without changing child order (layout is by index)
+                v.setTranslationZ(U.uf(12));
+                v.setAlpha(1f);
+                v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(100).start();
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+            }
+            getParent().requestDisallowInterceptTouchEvent(true);
+        };
+
+        Runnable onScroll;
+
+        @Override
+        protected void onScrollChanged(int l, int t, int ol, int ot) {
+            super.onScrollChanged(l, t, ol, ot);
+            if (onScroll != null) onScroll.run();
         }
 
         private final Runnable edgeScroll = new Runnable() {
@@ -709,8 +782,10 @@ final class Tiles {
         @Override
         public boolean onTouchEvent(MotionEvent e) {
             if (vt != null) vt.addMovement(e);
-            if (!editing) {
+            if (e.getActionMasked() == MotionEvent.ACTION_UP || e.getActionMasked() == MotionEvent.ACTION_CANCEL) removeCallbacks(lift);
+            if (!dragging) {
                 // a slide that started on a gap between tiles never passes through onInterceptTouchEvent
+                if (!swiping && e.getActionMasked() == MotionEvent.ACTION_MOVE && Math.hypot(e.getX() - downX, e.getY() - downY) > slop) removeCallbacks(lift);
                 if (!swiping && e.getActionMasked() == MotionEvent.ACTION_MOVE && (wrap() || maxScroll() > 0) && sideways(e.getX() - downX, e.getY() - downY)) {
                     swiping = true;
                     lastX = e.getX();
@@ -743,7 +818,7 @@ final class Tiles {
                 }
                 return true;
             }
-            if (!editing || !dragging) return super.onTouchEvent(e);
+            if (!editing) return super.onTouchEvent(e);
             View v = getChildAt(dragIndex);
             switch (e.getActionMasked()) {
                 case MotionEvent.ACTION_MOVE:
