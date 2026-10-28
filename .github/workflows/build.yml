@@ -48,6 +48,12 @@ jobs:
           echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           echo "sdk.dir=$SDK" > "$DIR/local.properties"
 
+      # One-off clean-up: the 1.0 alpha was numbered too early (builds continue at 0.10, 0.11, ...)
+      - name: Remove early 1.0 release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete v1.0-alpha --cleanup-tag -y -R "$GITHUB_REPOSITORY" || true
+
       # Next build number: v<major>.<n>-alpha, one more than the last published build of this major
       # version (failed builds publish nothing, so numbers never skip). version-major.txt holds the major.
       - name: Work out version
