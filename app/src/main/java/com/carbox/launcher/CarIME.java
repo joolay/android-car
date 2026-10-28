@@ -160,7 +160,7 @@ public class CarIME extends InputMethodService {
         last.addView(Keyboard.key(c, ",", () -> type(",")), Keyboard.weightLp(1));
         last.addView(Keyboard.key(c, "space", () -> type(" ")), Keyboard.weightLp(5));
         last.addView(Keyboard.key(c, ".", () -> type(".")), Keyboard.weightLp(1));
-        View enter = Keyboard.special(c, enterLabel, 0, this::enter, false);
+        View enter = Keyboard.special(c, enterLabel, "↵".equals(enterLabel) ? R.drawable.ic_enter : 0, this::enter, false);
         enter.findViewWithTag("face").setBackground(U.round(U.ACCENT, 11));
         last.addView(enter, Keyboard.weightLp(2));
         kb.addView(last, U.lpu(U.MATCH, Keyboard.KEY_H));
