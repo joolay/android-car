@@ -341,6 +341,7 @@ final class SettingsPanels {
             navRows(c, b);
             b.addView(Sheets.section("Map"));
             mapRows(c, b);
+            NavBanner.rows(c, b);
             return Sheets.panel("Map and navigation", b, 660, 440);
         });
     }

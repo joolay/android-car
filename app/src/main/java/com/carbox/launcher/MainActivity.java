@@ -381,6 +381,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         resumed = true;
+        NavBanner.front(this, true); // no pop-up banners over the launcher (if switched on)
         immersive();
         applyNight();
         Loc.start();
@@ -409,6 +410,7 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         resumed = false;
+        NavBanner.front(this, false);
         ticker.stop();
         tiles.stop();
         nowPlaying.stop();

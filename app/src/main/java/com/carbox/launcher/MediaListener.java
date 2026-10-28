@@ -210,12 +210,14 @@ public class MediaListener extends NotificationListenerService {
         v.icon = bitmap(n);
         final Nav fv = v;
         final String pkg = sbn.getPackageName();
+        NavBanner.seen(pkg, n.getChannelId());
         U.ui.post(() -> {
             boolean started = nav == null;
             nav = fv;
             navPkg = pkg;
             for (Runnable r : new ArrayList<>(navListeners)) r.run();
             if (started && MainActivity.I != null) Splash.maybeShow(MainActivity.I, "nav");
+            if (started) U.ui.postDelayed(NavBanner::offer, 2500);
         });
     }
 

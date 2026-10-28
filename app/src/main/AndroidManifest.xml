@@ -26,6 +26,7 @@
     <!-- "Display over other apps": lets the floating back button's shortcuts open apps from the background -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
 
     <!-- Android 11+ package visibility: lets the launcher see every app with a launcher icon -->
     <queries>
