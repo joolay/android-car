@@ -236,7 +236,13 @@ final class HA {
         private int seen;
 
         @Override
+        private boolean lit;
+
         void tick() {
+            if (lit != HomeApproach.near) { // arriving home: the tile lights up (in-tile alert)
+                lit = HomeApproach.near;
+                v.setBackground(lit ? U.outline(0xFF13284A, U.ACCENT, 3, 16) : U.round(U.CARD, 16));
+            }
             if (configured()) maybeRefresh();
             if (seen != version) {
                 seen = version;

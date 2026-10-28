@@ -15,7 +15,7 @@ import android.widget.TextView;
 final class Alerts {
     static final String GLOBAL = "expand_all";
     static final String[][] KINDS = {{"salah", "Salaah time", "Next prayer and Prayer times tiles"}, {"speed", "Over the speed limit", "Speed tile"},
-            {"rest", "Time for a break", "Driving timer tile"}};
+            {"rest", "Time for a break", "Driving timer tile"}, {"home", "Arriving home", "Home Assistant tile"}};
     static long salahAt; // when the last salaah alert fired (tiles show it for 10 minutes)
     static String salahName;
 
@@ -32,6 +32,7 @@ final class Alerts {
         if ("nextprayer".equals(widgetId) || "prayertimes".equals(widgetId)) return "salah";
         if ("speed".equals(widgetId)) return "speed";
         if ("rest".equals(widgetId)) return "rest";
+        if ("ha".equals(widgetId)) return "home";
         return null;
     }
 

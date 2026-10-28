@@ -89,6 +89,7 @@ final class CarHA {
             r.addView(U.gap(c, 12, 1));
             r.addView(U.text(c, Store.str("carha_last", HA.configured() ? "Nothing sent yet" : "Add the address and token first"), 12, U.SUB, false));
             b.addView(r, Widgets.top(10));
+            HomeApproach.addSettings(c, b);
             b.addView(U.text(c, "The address must work away from home (Nabu Casa, a Cloudflare tunnel or a port forward), since the car uses mobile data.", 12, U.MUTED, false), Widgets.top(10));
             return Sheets.panel("Car location", b, 640, 440);
         };

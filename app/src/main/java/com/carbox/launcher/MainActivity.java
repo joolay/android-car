@@ -59,6 +59,8 @@ public class MainActivity extends Activity {
         SpeedLimit.start();
         SpeedCard.start();
         CarHA.start();
+        HomeApproach.start();
+        U.ui.postDelayed(HomeApproach::fromGoTo, 8000);
         build();
         immersive();
         askPermissions();
