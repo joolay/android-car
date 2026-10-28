@@ -114,12 +114,14 @@ public class CarIME extends InputMethodService {
         vl.setMargins(U.u(4), 0, U.u(8), 0);
         strip.addView(voice, vl);
         TextView paste = U.button(c, "Paste", false, this::paste);
+        fit(paste);
         strip.addView(paste, U.lp(U.WRAP, U.u(38)));
         TextView name = U.line(c, "CAR KEYBOARD", 11, U.MUTED, false);
         name.setGravity(Gravity.CENTER);
         name.setLetterSpacing(0.05f);
         strip.addView(name, new LinearLayout.LayoutParams(0, U.WRAP, 1));
         TextView hide = U.button(c, "⌄  Hide", false, () -> requestHideSelf(0));
+        fit(hide);
         LinearLayout.LayoutParams hl = U.lp(U.WRAP, U.u(38));
         hl.rightMargin = U.u(4);
         strip.addView(hide, hl);
@@ -292,5 +294,13 @@ public class CarIME extends InputMethodService {
     static boolean isDefault(Context c) {
         String cur = android.provider.Settings.Secure.getString(c.getContentResolver(), android.provider.Settings.Secure.DEFAULT_INPUT_METHOD);
         return cur != null && cur.startsWith(c.getPackageName() + "/");
+    }
+
+    /** The usual buttons are 44 tall with roomy padding; in the 38-high strip that crops the label. */
+    private static void fit(TextView b) {
+        b.setMinHeight(0);
+        b.setMinimumHeight(0);
+        U.pad(b, 16, 0, 16, 0);
+        b.setBackground(U.round(U.CARD2, 10));
     }
 }
