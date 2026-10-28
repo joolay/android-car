@@ -161,7 +161,10 @@ final class Rest {
         boolean beep = !"voice".equals(a), voice = !"beep".equals(a);
         String text = test ? "This is how your break reminder will sound. " + message() : message();
         if (Alerts.expand("rest")) U.ui.post(() -> Alerts.showNotice("TIME FOR A BREAK", "Stop and rest", message(), 0xFF4A3410));
-        else U.ui.post(() -> android.widget.Toast.makeText(ctx, "Time for a break", android.widget.Toast.LENGTH_LONG).show());
+        else {
+            U.ui.post(() -> android.widget.Toast.makeText(ctx, "Time for a break", android.widget.Toast.LENGTH_LONG).show());
+            Alerts.front("rest");
+        }
         duck(true);
         long delay = 0;
         if (beep) {

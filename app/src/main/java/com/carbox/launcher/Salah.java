@@ -59,7 +59,8 @@ final class Salah {
     static void fire(String name) {
         Alerts.salahAt = System.currentTimeMillis();
         Alerts.salahName = name;
-        if (Alerts.expand("salah")) U.ui.post(() -> SalahCard.show(name)); // large notice in the tile area (else shown in the prayer tiles)
+        if (Alerts.expand("salah")) U.ui.post(() -> SalahCard.show(name)); // large notice in the tile area
+        else Alerts.front("salah"); // shown in the prayer tile, moved to the first spot
         if (Store.flag(PAUSE, true)) pauseMedia();
         if (Store.flag(ANNOUNCE, true)) U.ui.postDelayed(() -> {
             if (!Rest.play(ctx, "voice/salah_" + name.toLowerCase(java.util.Locale.ROOT) + ".mp3", null))

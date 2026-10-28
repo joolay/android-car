@@ -36,6 +36,36 @@ final class Alerts {
         return null;
     }
 
+    /**
+     * For an alert that doesn't expand: move its tile to the first spot and slide there, so the
+     * newest alert is always first (the tile that was first moves to second, and so on).
+     */
+    static void front(String kind) {
+        if (!Store.flag("alert_front", true)) return;
+        U.ui.post(() -> {
+            org.json.JSONArray s = Tiles.specs();
+            int at = -1;
+            for (int i = 0; i < s.length(); i++) {
+                org.json.JSONObject o = s.optJSONObject(i);
+                if (o != null && kind.equals(kindOf(o.optString("id")))) {
+                    at = i;
+                    break;
+                }
+            }
+            if (at < 0) return;
+            if (at > 0) {
+                org.json.JSONArray out = new org.json.JSONArray();
+                out.put(s.opt(at));
+                for (int i = 0; i < s.length(); i++) if (i != at) out.put(s.opt(i));
+                Tiles.save(out);
+            }
+            MainActivity a = MainActivity.I;
+            if (a == null) return;
+            if (at > 0) a.tiles.refresh();
+            a.tiles.view.toStart();
+        });
+    }
+
     static boolean salahNow() {
         return salahAt > 0 && System.currentTimeMillis() - salahAt < 10 * 60000L;
     }
@@ -91,6 +121,9 @@ final class Alerts {
                 for (String[] k : KINDS)
                     b.addView(Sheets.switchRow(0, 0, k[1], k[2], Store.flag("expand_" + k[0], true), v -> Store.put("expand_" + k[0], v)));
             }
+            b.addView(Sheets.section("Alerts that stay in their tile"));
+            b.addView(Sheets.switchRow(0, 0, "Move the tile to the first spot", "Slides there; the newest alert is always first and the others move along",
+                    Store.flag("alert_front", true), v -> Store.put("alert_front", v)));
             return Sheets.panel("Alerts", b, 600, 420);
         };
         if (Sheets.open()) Sheets.push(p);

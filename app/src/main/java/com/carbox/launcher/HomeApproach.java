@@ -46,6 +46,7 @@ final class HomeApproach {
             inside = true;
             near = true;
             if (Alerts.expand("home")) show();
+            else Alerts.front("home");
             U.ui.postDelayed(() -> {
                 near = false;
                 hide();

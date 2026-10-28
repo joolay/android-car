@@ -516,6 +516,16 @@ final class Tiles {
             reveal();
         }
 
+        /** Glide back so the first tile is on the left (the short way round when looping). */
+        void toStart() {
+            post(() -> {
+                if (wrap()) {
+                    int loop = Math.round(columns() * colStep()), m = ((woff % loop) + loop) % loop;
+                    glideTo(m <= loop / 2 ? woff - m : woff + (loop - m));
+                } else glideTo(0);
+            });
+        }
+
         void scrollToEnd() {
             post(() -> glideTo(wrap() ? Math.round((columns() - COLS) * colStep()) : maxScroll()));
         }
