@@ -742,7 +742,8 @@ final class SettingsPanels {
             }
             String nw = Store.str(NavCard.WHERE, "tiles");
             b.addView(Sheets.row("Turn-by-turn", U.seg(c, "In the tile area", "tiles".equals(nw), () -> { Store.put(NavCard.WHERE, "tiles"); NavCard.update(); reloadMap(); Sheets.refresh(); }),
-                    U.seg(c, "In the map panel", "map".equals(nw), () -> { Store.put(NavCard.WHERE, "map"); NavCard.update(); reloadMap(); Sheets.refresh(); })), top(8));
+                    U.seg(c, "In the map panel", "map".equals(nw), () -> { Store.put(NavCard.WHERE, "map"); NavCard.update(); reloadMap(); Sheets.refresh(); }),
+        U.seg(c, "Swap: big map", "swap".equals(nw), () -> { Store.put(NavCard.WHERE, "swap"); NavCard.update(); reloadMap(); Sheets.refresh(); })), top(8));
             return Sheets.panel("Map", b, 620, 420);
         });
     }

@@ -170,15 +170,38 @@ final class MapPanel {
         web.evaluateJavascript(String.format(Locale.US, "setPos(%.6f,%.6f,%.0f)", Loc.lat, Loc.lon, b), null);
     }
 
+    private FrameLayout bigHolder;
+
+    /** Move the live map into the 2×4 tile area (and back). The same map moves, so nothing reloads. */
+    private void bigMap(boolean on) {
+        MainActivity a = MainActivity.I;
+        if (a == null) return;
+        if (on && bigHolder == null) {
+            bigHolder = new FrameLayout(a);
+            MapPanel.clip(bigHolder, 16);
+            view.removeView(mapLayer);
+            bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            mapLayer.setVisibility(View.VISIBLE);
+            int at = a.tileArea.indexOfChild(a.sheetHost); // under panels and alerts
+            a.tileArea.addView(bigHolder, Math.max(0, at), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        } else if (!on && bigHolder != null) {
+            bigHolder.removeView(mapLayer);
+            ((android.view.ViewGroup) bigHolder.getParent()).removeView(bigHolder);
+            bigHolder = null;
+            view.addView(mapLayer, 0, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        }
+    }
+
     private void updateNav() {
         MediaListener.Nav n = MediaListener.nav;
+        bigMap(n != null && NavCard.swap()); // swap: map into the tile area, directions stay here
         if (n == null || NavCard.inTiles()) { // instructions shown in the tile area instead: keep the map
             navCard.setVisibility(View.GONE);
             mapLayer.setVisibility(View.VISIBLE);
             return;
         }
         navCard.setVisibility(View.VISIBLE);
-        mapLayer.setVisibility(View.INVISIBLE);
+        if (bigHolder == null) mapLayer.setVisibility(View.INVISIBLE);
         Bitmap bm = n.icon;
         if (bm != null) turnIcon.setImageBitmap(bm);
         else turnIcon.setImageResource(R.drawable.ic_turn);

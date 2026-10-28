@@ -21,6 +21,11 @@ final class NavCard {
     private NavCard() {
     }
 
+    /** "swap": while navigating, the map fills the tile area and the directions stay in the map panel. */
+    static boolean swap() {
+        return "swap".equals(Store.str(WHERE, "tiles"));
+    }
+
     static boolean inTiles() {
         return "tiles".equals(Store.str(WHERE, "tiles"));
     }
