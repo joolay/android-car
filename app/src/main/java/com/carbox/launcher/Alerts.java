@@ -63,6 +63,12 @@ final class Alerts {
             if (a == null) return;
             if (at > 0) a.tiles.refresh();
             a.tiles.view.toStart();
+            // map is the home view: slide the tiles in to show the alert; back to the map after the
+            // usual 15 s without a touch (unless the tiles are locked open)
+            if (MainActivity.mapHome() && a.map.expanded() && !a.drawerOpen) {
+                a.drawer(true);
+                a.resetIdle();
+            }
         });
     }
 
