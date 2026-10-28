@@ -180,8 +180,8 @@ final class MapPanel {
             if ("osm".equals(Store.str(Store.MAP_PROVIDER, "osm"))) Store.put(Store.MAP_PROVIDER, "ofm");
         }
         String p = Store.str(Store.MAP_PROVIDER, "ofm");
-        if ("google".equals(p) && Store.str(Store.MAP_KEY, "").isEmpty()) return "osm";
-        if ("pmtiles".equals(p) && Store.str(OfflineMap.URI, "").isEmpty()) return "osm";
+        if ("google".equals(p) && Store.str(Store.MAP_KEY, "").isEmpty()) return "ofm";
+        if ("pmtiles".equals(p) && Store.str(OfflineMap.URI, "").isEmpty()) return "ofm";
         return p;
     }
 
