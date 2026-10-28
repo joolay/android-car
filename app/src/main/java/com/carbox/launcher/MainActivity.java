@@ -18,6 +18,7 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -128,9 +129,12 @@ public class MainActivity extends Activity {
         tickerSlot = new FrameLayout(this);
         ticker = new Ticker(this);
         tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        LinearLayout tickerRow = U.row(this); // ticker, then "Tiles" + lock while the drawer is open
+        tickerRow.addView(tickerSlot, new LinearLayout.LayoutParams(0, U.MATCH, 1));
+        buildChip(tickerRow);
         LinearLayout.LayoutParams tl = U.lpu(U.MATCH, 30);
         tl.topMargin = U.u(8);
-        middle.addView(tickerSlot, tl);
+        middle.addView(tickerRow, tl);
         dock = new Dock(this);
         LinearLayout.LayoutParams dl = U.lpu(U.MATCH, 56);
         dl.topMargin = U.u(8);
@@ -499,42 +503,46 @@ public class MainActivity extends Activity {
         drawer(!drawerOpen);
     }
 
-    // a small lock on the open drawer: locked, it stays open (no slide-back after 15 s)
-    private android.widget.ImageView lockBtn;
+    // "Tiles" + a lock at the right of the ticker while the drawer is open: locked, the tiles stay
+    // open (no slide-back after 15 s); the ticker shrinks to make room
+    private LinearLayout tilesChip;
+    private LockView lock;
 
     static boolean drawerLocked() {
         return Store.flag("drawer_lock", false);
     }
 
-    private void lockButton(boolean show) {
-        if (lockBtn == null) {
-            lockBtn = new android.widget.ImageView(this);
-            lockBtn.setContentDescription("Keep the tiles open");
-            U.pad(lockBtn, 6, 6, 6, 6);
-            lockBtn.setOnClickListener(v -> {
-                Store.put("drawer_lock", !drawerLocked());
-                styleLock();
-                resetIdle();
-            });
-            U.press(lockBtn);
-            FrameLayout.LayoutParams ll = U.flpu(28, 28, Gravity.TOP | Gravity.END);
-            ll.setMargins(0, U.u(-4), U.u(-4), 0);
-            tileArea.addView(lockBtn, tileArea.indexOfChild(tiles.view) + 1, ll); // over the tiles, under the map and panels
-        }
-        styleLock();
-        lockBtn.animate().cancel();
-        if (show) {
-            lockBtn.setVisibility(View.VISIBLE);
-            lockBtn.setAlpha(0f);
-            lockBtn.animate().alpha(1f).setStartDelay(250).setDuration(150).start();
-        } else lockBtn.setVisibility(View.GONE);
+    private void buildChip(LinearLayout row) {
+        tilesChip = U.row(this);
+        tilesChip.setGravity(Gravity.CENTER_VERTICAL);
+        TextView w = U.line(this, "Tiles", 13, U.TEXT2, true);
+        tilesChip.addView(w);
+        lock = new LockView(this);
+        lock.set(drawerLocked(), false);
+        lock.setOnClickListener(v -> {
+            Store.put("drawer_lock", !drawerLocked());
+            lock.set(drawerLocked(), true);
+            resetIdle();
+        });
+        LinearLayout.LayoutParams ll = U.lpu(30, 30);
+        ll.leftMargin = U.u(8);
+        tilesChip.addView(lock, ll);
+        tilesChip.setVisibility(View.GONE);
+        LinearLayout.LayoutParams cl = U.lp(U.WRAP, U.MATCH);
+        cl.leftMargin = U.u(8);
+        row.addView(tilesChip, cl);
     }
 
-    private void styleLock() {
-        boolean on = drawerLocked();
-        lockBtn.setImageResource(R.drawable.ic_lock);
-        lockBtn.setColorFilter(on ? U.BG : U.TEXT2);
-        lockBtn.setBackground(on ? U.oval(U.AMBER) : U.outline(0xE60B0E13, 0x40FFFFFF, 1, 14));
+    private void lockButton(boolean show) {
+        if (tilesChip == null) return;
+        tilesChip.animate().cancel();
+        if (show) {
+            lock.set(drawerLocked(), false);
+            tilesChip.setVisibility(View.VISIBLE);
+            tilesChip.setAlpha(0f);
+            tilesChip.setTranslationX(U.u(40));
+            tilesChip.animate().alpha(1f).translationX(0).setDuration(300).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+        } else tilesChip.animate().alpha(0f).translationX(U.u(40)).setDuration(220).withEndAction(() -> tilesChip.setVisibility(View.GONE)).start();
     }
 
     void drawer(boolean open) {
