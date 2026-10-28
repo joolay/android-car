@@ -86,9 +86,22 @@ final class MapPanel {
             return true;
         };
         mapLayer.setOnLongClickListener(hold);
+        mapLayer.setOnClickListener(v -> expand(true));
         if (web != null) {
             web.setLongClickable(true);
             web.setOnLongClickListener(hold);
+            // a tap on the small map makes it big (once big, taps belong to the map)
+            android.view.GestureDetector tap = new android.view.GestureDetector(c, new android.view.GestureDetector.SimpleOnGestureListener() {
+                @Override
+                public boolean onSingleTapConfirmed(android.view.MotionEvent e) {
+                    if (bigHolder == null) expand(true);
+                    return false;
+                }
+            });
+            web.setOnTouchListener((v, e) -> {
+                tap.onTouchEvent(e);
+                return false;
+            });
         }
         U.press(go);
         FrameLayout.LayoutParams gl = new FrameLayout.LayoutParams(U.MATCH, U.u(36), Gravity.BOTTOM);
@@ -180,7 +193,63 @@ final class MapPanel {
         web.evaluateJavascript(String.format(Locale.US, "setPos(%.6f,%.6f,%.0f)", Loc.lat, Loc.lon, b), null);
     }
 
-    private FrameLayout bigHolder;
+    private FrameLayout bigHolder, mini;
+    private View closeBig;
+    private boolean tapBig;
+    private Widgets.W miniW;
+
+    /** Tap on the map: it fills the 2×4 grid and the small panel shows the Go to or Speed tile. */
+    void expand(boolean on) {
+        tapBig = on;
+        updateNav();
+    }
+
+    boolean expanded() {
+        return tapBig;
+    }
+
+    /** "goto" or "speed": the tile shown in the small panel while the map is big. */
+    static String miniId() {
+        return Store.str("map_mini", "goto");
+    }
+
+    private void showMini(boolean on) {
+        if (on && mini == null) {
+            mini = new FrameLayout(c);
+            String id = miniId();
+            int idx = -1;
+            org.json.JSONArray s = Tiles.specs();
+            for (int i = 0; i < s.length(); i++) {
+                org.json.JSONObject o = s.optJSONObject(i);
+                if (o != null && id.equals(o.optString("id"))) idx = i; // same tile (its places / settings)
+            }
+            org.json.JSONObject spec = idx >= 0 ? s.optJSONObject(idx) : Tiles.widget(id);
+            try {
+                miniW = Widgets.make(c, idx, spec);
+                if (miniW != null && miniW.v != null) mini.addView(miniW.v, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            } catch (Exception ignored) {
+            }
+            view.addView(mini, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            U.ui.post(miniTick);
+        } else if (!on && mini != null) {
+            U.ui.removeCallbacks(miniTick);
+            view.removeView(mini);
+            mini = null;
+            miniW = null;
+        }
+    }
+
+    private final Runnable miniTick = new Runnable() {
+        @Override
+        public void run() {
+            if (miniW == null) return;
+            try {
+                miniW.tick();
+            } catch (Exception ignored) {
+            }
+            U.ui.postDelayed(this, 1000);
+        }
+    };
 
     /** Move the live map into the 2×4 tile area (and back). The same map moves, so nothing reloads. */
     private void bigMap(boolean on) {
@@ -192,6 +261,14 @@ final class MapPanel {
             view.removeView(mapLayer);
             bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
             mapLayer.setVisibility(View.VISIBLE);
+            // close button back to the small map
+            closeBig = U.icon(a, R.drawable.ic_x, U.TEXT);
+            closeBig.setBackground(U.oval(0xCC0B0E13));
+            U.pad(closeBig, 8, 8, 8, 8);
+            closeBig.setOnClickListener(v -> expand(false));
+            FrameLayout.LayoutParams cl = U.flpu(36, 36, android.view.Gravity.TOP | android.view.Gravity.END);
+            cl.setMargins(0, U.u(10), U.u(10), 0);
+            bigHolder.addView(closeBig, cl);
             int at = a.tileArea.indexOfChild(a.sheetHost); // under panels and alerts
             a.tileArea.addView(bigHolder, Math.max(0, at), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         } else if (!on && bigHolder != null) {
@@ -204,12 +281,16 @@ final class MapPanel {
 
     private void updateNav() {
         MediaListener.Nav n = MediaListener.nav;
-        bigMap(n != null && NavCard.swap()); // swap: map into the tile area, directions stay here
+        boolean navSwap = n != null && NavCard.swap();
+        bigMap(tapBig || navSwap); // swap: map into the tile area, directions stay here
+        if (closeBig != null) closeBig.setVisibility(tapBig && !navSwap ? View.VISIBLE : View.GONE);
         if (n == null || NavCard.inTiles()) { // instructions shown in the tile area instead: keep the map
             navCard.setVisibility(View.GONE);
             mapLayer.setVisibility(View.VISIBLE);
+            showMini(bigHolder != null); // map is big: the small panel shows Go to / Speed
             return;
         }
+        showMini(false);
         navCard.setVisibility(View.VISIBLE);
         if (bigHolder == null) mapLayer.setVisibility(View.INVISIBLE);
         Bitmap bm = n.icon;

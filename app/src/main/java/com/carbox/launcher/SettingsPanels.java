@@ -759,6 +759,17 @@ final class SettingsPanels {
             b.addView(Sheets.row("Turn-by-turn", U.seg(c, "In the tile area", "tiles".equals(nw), () -> { Store.put(NavCard.WHERE, "tiles"); NavCard.update(); reloadMap(); Sheets.refresh(); }),
                     U.seg(c, "In the map panel", "map".equals(nw), () -> { Store.put(NavCard.WHERE, "map"); NavCard.update(); reloadMap(); Sheets.refresh(); }),
         U.seg(c, "Swap: big map", "swap".equals(nw), () -> { Store.put(NavCard.WHERE, "swap"); NavCard.update(); reloadMap(); Sheets.refresh(); })), top(8));
+            String mm = MapPanel.miniId();
+            b.addView(Sheets.row("Tap map: small panel shows", U.seg(c, "Go to", "goto".equals(mm), () -> { Store.put("map_mini", "goto"); remini(); Sheets.refresh(); }),
+                    U.seg(c, "Speed", "speed".equals(mm), () -> { Store.put("map_mini", "speed"); remini(); Sheets.refresh(); })), top(8));
+            b.addView(U.text(c, "Tap the map to make it fill the tiles; ✕ on the big map makes it small again.", 12, U.SUB, false), top(6));
+        }
+    }
+
+    private static void remini() {
+        if (MainActivity.I != null && MainActivity.I.map.expanded()) {
+            MainActivity.I.map.expand(false);
+            MainActivity.I.map.expand(true);
         }
     }
 
