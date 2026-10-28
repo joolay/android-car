@@ -42,6 +42,7 @@ final class Widgets {
             {"carconnect", "Car Connect", "CarPlay, Android Auto, mirror or native car"},
             {"speed", "Speed", "Current speed and today's top speed"},
             {"trip", "Trip", "Distance, time driving and average speed"},
+            {"park", "Park here", "Save where you parked (and send it to Home Assistant)"},
             {"rest", "Driving timer", "Time since your last break, with a beep or voice reminder to rest"},
             {"heading", "Heading", "Compass direction and altitude"},
             {"weather", "Weather", "Weather where you are"},
@@ -101,6 +102,8 @@ final class Widgets {
                 return new Trip(c, index, spec);
             case "rest":
                 return new RestW(c, index, spec);
+            case "park":
+                return new Park(c, index, spec);
             case "heading":
                 return new Heading(c, index, spec);
             case "weather":
@@ -409,6 +412,85 @@ final class Widgets {
             drive.setText(U.dur(Loc.tripMovingMs) + " driving");
             double hrs = Loc.tripMovingMs / 3600000.0;
             avg.setText(hrs > 0.01 ? "Avg " + Math.round(d / hrs) + (m ? " mph" : " km/h") : "Avg --");
+        }
+    }
+
+    // ------------------------------------------------------------------ Park here
+
+    static final class Park extends W {
+        private final TextView title, sub;
+        private final LinearLayout box;
+
+        Park(Context c, int i, JSONObject s) {
+            super(c, i, s);
+            box = card(c, U.CARD);
+            box.addView(label(c, "PARKING"));
+            box.addView(new View(c), U.weight(1, false));
+            FrameLayout ic = new FrameLayout(c);
+            ic.setBackground(U.oval(U.ACCENT));
+            ic.addView(U.text(c, "P", 26, U.TEXT, true), U.flpu(26, 34, Gravity.CENTER));
+            box.addView(ic, U.lpu(52, 52));
+            title = U.line(c, "", 17, U.TEXT, true);
+            box.addView(title, top(10));
+            sub = U.line(c, "", 12, U.SUB, false);
+            box.addView(sub, top(2));
+            box.addView(new View(c), U.weight(1, false));
+            box.setOnClickListener(x -> tapped());
+            U.press(box);
+            v = box;
+            tick();
+        }
+
+        private void tapped() {
+            if (Store.lng("park_at", 0) == 0) save();
+            else Sheets.show(() -> { // already parked: open, park again or clear
+                Context k = Sheets.ctx();
+                LinearLayout b = U.col(k);
+                b.addView(U.text(k, sub.getText() + "", 14, U.TEXT2, false));
+                b.addView(Sheets.item("Show in Maps", null, () -> {
+                    Sheets.close();
+                    Actions.navigateTo(k, Store.str("park_lat", "") + "," + Store.str("park_lon", ""));
+                }), top(8));
+                b.addView(Sheets.item("Park here again", "Replace with where the car is now", () -> {
+                    Sheets.close();
+                    save();
+                }));
+                b.addView(Sheets.item("Clear", null, () -> {
+                    Store.put("park_at", 0L);
+                    Sheets.close();
+                    tick();
+                }));
+                return Sheets.panel("Parked", b, 460, 320);
+            });
+        }
+
+        private void save() {
+            if (!Loc.has()) {
+                android.widget.Toast.makeText(c, "Waiting for GPS", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Store.put("park_lat", String.valueOf(Loc.lat));
+            Store.put("park_lon", String.valueOf(Loc.lon));
+            Store.put("park_town", Loc.town == null ? "" : Loc.town);
+            Store.put("park_at", System.currentTimeMillis());
+            if (HA.configured()) CarHA.send(true); // also tells Home Assistant (if set up)
+            android.widget.Toast.makeText(c, "Parking spot saved", android.widget.Toast.LENGTH_SHORT).show();
+            tick();
+        }
+
+        @Override
+        void tick() {
+            long at = Store.lng("park_at", 0);
+            if (at == 0) {
+                title.setText("Park here");
+                sub.setText("Tap to save this spot");
+                box.setBackground(U.round(U.CARD, 16));
+            } else {
+                title.setText("Parked " + new java.text.SimpleDateFormat(Store.flag(Store.H24, true) ? "HH:mm" : "h:mm a", Locale.getDefault()).format(new java.util.Date(at)));
+                String town = Store.str("park_town", "");
+                sub.setText((town.isEmpty() ? "" : town + " · ") + Ticker.ago(at));
+                box.setBackground(U.outline(U.CARD, U.ACCENT, 2, 16));
+            }
         }
     }
 

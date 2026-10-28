@@ -684,7 +684,7 @@ final class AppPanels {
         for (String[] w : Widgets.CATALOG) if (Faith.widgetAllowed(w[0])) choices.add(w);
 
         // group by category, each with a heading; chips at the top jump to a category
-        String[][] cats = {{"Driving", "speed,trip,rest,heading,goto"}, {"Phone", "phone,quickdial,contact"},
+        String[][] cats = {{"Driving", "speed,trip,rest,park,heading,goto"}, {"Phone", "phone,quickdial,contact"},
                 {"Car & home", "carconnect,ha"}, {"Weather", "weather"}, {"Faith", "nextprayer,prayertimes,qibla"}};
         LinearLayout blocks = U.row(c);
         blocks.setGravity(Gravity.TOP);
