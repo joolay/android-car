@@ -286,12 +286,12 @@ final class Tiles {
             ml.setMargins(0, U.u(6), U.u(6), 0);
             f.addView(minus, ml);
             // Edit: choose a different widget (or change the folder)
-            TextView edit = U.text(a, "Edit", 13, U.TEXT, true);
-            edit.setGravity(Gravity.CENTER);
-            edit.setBackground(U.round(U.ACCENT, 14));
-            U.pad(edit, 14, 6, 14, 6);
+            FrameLayout edit = new FrameLayout(a); // pencil: change this tile
+            edit.setBackground(U.oval(U.ACCENT));
+            edit.addView(U.icon(a, R.drawable.ic_edit, U.TEXT), U.flpu(18, 18, Gravity.CENTER));
             edit.setOnClickListener(v -> editTile(index, spec));
-            FrameLayout.LayoutParams el = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            edit.setContentDescription("Edit");
+            FrameLayout.LayoutParams el = U.flpu(38, 38, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
             el.bottomMargin = U.u(10);
             f.addView(edit, el);
         } else {

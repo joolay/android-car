@@ -449,6 +449,12 @@ final class SettingsPanels {
             boolean fb = BackButtonService.enabled(c);
             b.addView(check(c, R.drawable.ic_back, U.CARD3, "Floating back button (optional)", "A back button over other apps; hold it for shortcuts",
                     fb ? "Done" : "Set up", fb, SettingsPanels::floatingBack));
+            boolean wg = Store.flag("widgets_seen", false);
+            b.addView(check(c, R.drawable.ic_apps, U.CARD3, "Choose your widgets", "Pick what goes on your home screen",
+                    wg ? "Done" : "Choose", wg, () -> {
+                        Store.put("widgets_seen", true);
+                        AppPanels.gallery(-1);
+                    }));
             boolean fa = Store.flag("faith_seen", false);
             b.addView(check(c, R.drawable.ic_moon, U.CARD3, "Faith add-ons", "Prayer times, qibla, travel prayers: " + Faith.label(),
                     fa ? "Done" : "Choose", fa, Faith::picker));
