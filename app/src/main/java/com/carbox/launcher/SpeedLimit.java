@@ -12,6 +12,7 @@ import org.json.JSONObject;
  * driving, at most every 15 s or 150 m. 0 = unknown (then the Speed tile just shows your speed).
  */
 final class SpeedLimit {
+    static String road;              // name (or number) of that road, when known
     static int kmh;                  // current limit in km/h, 0 = unknown
     private static Location lastAsked;
     private static long lastAt;
@@ -43,8 +44,11 @@ final class SpeedLimit {
                 JSONArray els = new JSONObject(body).optJSONArray("elements");
                 int best = 0;
                 if (els != null) for (int i = 0; i < els.length(); i++) {
-                    int v = parse(els.getJSONObject(i).optJSONObject("tags").optString("maxspeed"));
+                    JSONObject tg = els.getJSONObject(i).optJSONObject("tags");
+                    int v = parse(tg.optString("maxspeed"));
                     if (v > 0) {
+                        String nm = tg.optString("name", tg.optString("ref", ""));
+                        if (!nm.isEmpty()) road = nm;
                         best = v; // nearest road first
                         break;
                     }
