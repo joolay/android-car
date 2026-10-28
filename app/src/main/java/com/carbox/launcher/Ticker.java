@@ -444,7 +444,7 @@ final class Ticker {
         b.setBackground(U.round(0xFF1A2740, 12));
         U.pad(b, 12, 0, 6, 0);
         b.addView(U.icon(c, R.drawable.ic_drag, U.TEXT2), U.lpu(16, 16));
-        TextView t = U.line(c, "Drag to reorder; tap ⋯ to change or remove. + adds a tile.", 13, U.TEXT2, false);
+        TextView t = U.line(c, "Drag to move · Edit to change · red − to remove", 13, U.TEXT2, false);
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
         tl.leftMargin = U.u(10);
         b.addView(t, tl);
@@ -453,6 +453,13 @@ final class Ticker {
         d.setBackground(U.round(U.ACCENT, 10));
         U.pad(d, 14, 4, 14, 4);
         d.setOnClickListener(v -> done.run());
+        TextView w = U.text(c, "+ Widgets", 13, U.TEXT, true);
+        w.setGravity(Gravity.CENTER);
+        w.setBackground(U.round(0xFF2E3747, 10));
+        U.pad(w, 12, 4, 12, 4);
+        w.setOnClickListener(v -> AppPanels.gallery(-1));
+        b.addView(w);
+        b.addView(U.gap(c, 8, 1));
         b.addView(d);
         return b;
     }

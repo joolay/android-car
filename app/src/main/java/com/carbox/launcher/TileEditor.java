@@ -74,10 +74,7 @@ final class TileEditor {
         if (!folder && !empty) { // widgets: show the real thing, shrunk to fit
             FrameLayout f = new FrameLayout(c);
             f.addView(Widgets.preview(c, spec), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-            TextView num = U.text(c, String.valueOf(index + 1), 11, U.TEXT, true);
-            num.setGravity(Gravity.CENTER);
-            num.setBackground(U.oval(0xCC0B0E13));
-            f.addView(num, U.flpu(22, 22, Gravity.TOP | Gravity.END));
+            f.addView(minusDot(c), U.flpu(24, 24, Gravity.TOP | Gravity.END));
             return f;
         }
         LinearLayout l = U.col(c);
@@ -99,13 +96,18 @@ final class TileEditor {
             sub = "Folder · " + n + (n == 1 ? " app" : " apps");
         } else sub = empty ? "Tap to choose" : "Widget";
         l.addView(U.line(c, sub, 11, U.SUB, false), Widgets.top(2));
-        TextView num = U.text(c, String.valueOf(index + 1), 11, U.MUTED, true);
         FrameLayout f = new FrameLayout(c);
         f.addView(l, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        FrameLayout.LayoutParams nl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.END);
-        nl.setMargins(0, U.u(10), U.u(12), 0);
-        f.addView(num, nl);
+        f.addView(minusDot(c), U.flpu(24, 24, Gravity.TOP | Gravity.END));
         return f;
+    }
+
+    /** Red dot with − in a card's corner: tap it to take that tile off the home screen. */
+    private static View minusDot(Context c) {
+        TextView m = U.text(c, "−", 16, U.TEXT, true);
+        m.setGravity(Gravity.CENTER);
+        m.setBackground(U.oval(U.RED));
+        return m;
     }
 
     private static View addCard(Context c) {
@@ -297,7 +299,15 @@ final class TileEditor {
                             // no empty tiles any more: pick widgets straight away (blue = already on the home screen)
                             int e0 = Tiles.emptyIndex();
                             AppPanels.gallery(e0 >= 0 ? e0 : -1);
-                        } else AppPanels.tileMenu(dragIndex);
+                        } else {
+                            // a tap on the red − in the top-right corner removes the tile
+                            View v = getChildAt(dragIndex);
+                            if (v != null && downX > v.getRight() - U.u(34) && downY < v.getTop() + U.u(34)) {
+                                Tiles.removeTile(dragIndex);
+                                fill();
+                                requestLayout();
+                            } else AppPanels.tileMenu(dragIndex);
+                        }
                     }
                     return true;
             }

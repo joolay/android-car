@@ -257,22 +257,38 @@ final class Tiles {
             ring.setBackground(U.outline(0, U.ACCENT, 2, 16));
             f.addView(ring, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
             View block = new View(a); // swallow taps on the content while editing
-            block.setOnClickListener(v -> AppPanels.tileMenu(index));
+            block.setOnClickListener(v -> editTile(index, spec));
             f.addView(block, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-            TextView more = U.text(a, "⋯", 16, U.TEXT, true);
-            more.setGravity(Gravity.CENTER);
-            more.setBackground(U.oval(U.ACCENT));
-            more.setOnClickListener(v -> AppPanels.tileMenu(index));
-            FrameLayout.LayoutParams ml = U.flpu(26, 26, Gravity.TOP | Gravity.END);
+            // red − : take the tile off the home screen
+            TextView minus = U.text(a, "−", 18, U.TEXT, true);
+            minus.setGravity(Gravity.CENTER);
+            minus.setBackground(U.oval(U.RED));
+            minus.setOnClickListener(v -> Tiles.removeTile(index));
+            FrameLayout.LayoutParams ml = U.flpu(28, 28, Gravity.TOP | Gravity.END);
             ml.setMargins(0, U.u(6), U.u(6), 0);
-            f.addView(more, ml);
+            f.addView(minus, ml);
+            // Edit: choose a different widget (or change the folder)
+            TextView edit = U.text(a, "Edit", 13, U.TEXT, true);
+            edit.setGravity(Gravity.CENTER);
+            edit.setBackground(U.round(U.ACCENT, 14));
+            U.pad(edit, 14, 6, 14, 6);
+            edit.setOnClickListener(v -> editTile(index, spec));
+            FrameLayout.LayoutParams el = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            el.bottomMargin = U.u(10);
+            f.addView(edit, el);
         } else {
             f.setOnLongClickListener(v -> {
-                TileEditor.open(); // full-screen tile editor
+                setEditing(true); // tiles wiggle-free edit mode: drag, − to remove, Edit to change
                 return true;
             });
         }
         return f;
+    }
+
+    /** Edit on a tile: widgets open the widget chooser for that tile; folders open their options. */
+    private static void editTile(int index, JSONObject spec) {
+        if ("f".equals(spec.optString("t"))) AppPanels.tileMenu(index);
+        else AppPanels.gallery(index);
     }
 
     private View addTileView() {
@@ -282,10 +298,10 @@ final class Tiles {
         TextView plus = U.text(a, "+", 30, U.ACCENT_SOFT, true);
         plus.setGravity(Gravity.CENTER);
         l.addView(plus);
-        TextView t = U.text(a, "Add tile", 13, U.ACCENT_SOFT, false);
+        TextView t = U.text(a, "Add widgets", 13, U.ACCENT_SOFT, false);
         t.setGravity(Gravity.CENTER);
         l.addView(t);
-        l.setOnClickListener(v -> addTile());
+        l.setOnClickListener(v -> AppPanels.gallery(-1)); // pick widgets to add
         U.press(l);
         return l;
     }
@@ -320,7 +336,7 @@ final class Tiles {
                     cell.addView(iv, U.flpu(38, 38, Gravity.CENTER));
                     cell.setOnClickListener(v -> Apps.launch(a, ap));
                     cell.setOnLongClickListener(v -> {
-                        TileEditor.open(); // full-screen tile editor
+                        setEditing(true); // tiles wiggle-free edit mode: drag, − to remove, Edit to change
                         return true;
                     });
                 }
@@ -408,7 +424,7 @@ final class Tiles {
             setClipChildren(false);
             setWillNotDraw(false);
             setOnLongClickListener(v -> { // long-press an empty spot (or an empty grid) to edit
-                TileEditor.open(); // full-screen tile editor
+                setEditing(true); // tiles wiggle-free edit mode: drag, − to remove, Edit to change
                 return true;
             });
         }
