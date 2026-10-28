@@ -29,7 +29,7 @@ public class MainActivity extends Activity {
     static final int REQ_WALLPAPER = 41;
 
     private FrameLayout root, overlay;
-    FrameLayout tileArea, sheetHost, gridPencil;
+    FrameLayout tileArea, sheetHost;
     private LinearLayout middle;
     private FrameLayout tickerSlot;
     MapPanel map;
@@ -113,14 +113,6 @@ public class MainActivity extends Activity {
         // the tile area also hosts panels (All apps, settings, phone...) so they stay inside the 2×4 grid
         tileArea = new FrameLayout(this);
         tileArea.addView(tiles.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        // tiny pencil where the middle four tiles meet: tap to edit the tiles
-        gridPencil = new FrameLayout(this);
-        gridPencil.setBackground(U.outline(U.CARD2, 0xFF3A4352, 1, 14));
-        gridPencil.addView(U.icon(this, R.drawable.ic_edit, U.TEXT2), U.flpu(14, 14, Gravity.CENTER));
-        gridPencil.setContentDescription("Edit tiles");
-        gridPencil.setOnClickListener(v -> tiles.setEditing(true));
-        U.press(gridPencil);
-        tileArea.addView(gridPencil, U.flpu(28, 28, Gravity.CENTER));
         sheetHost = new FrameLayout(this);
         tileArea.addView(sheetHost, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         middle.addView(tileArea, U.weight(1, false));
@@ -152,7 +144,6 @@ public class MainActivity extends Activity {
 
     /** Swap the ticker for the edit bar while tiles are being rearranged. */
     void editMode(boolean on) {
-        if (gridPencil != null) gridPencil.setVisibility(on ? View.GONE : View.VISIBLE);
         tickerSlot.removeAllViews();
         if (on) tickerSlot.addView(Ticker.editBar(this, () -> tiles.setEditing(false)), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         else tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
