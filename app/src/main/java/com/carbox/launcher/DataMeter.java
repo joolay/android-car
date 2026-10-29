@@ -54,12 +54,64 @@ final class DataMeter extends View {
         lastAt = now;
     }
 
-    static long totalDown() {
-        return Math.max(0, TrafficStats.getTotalRxBytes());
+    // ---- this month's totals, kept across restarts; they start again on the 1st of each month
+    private static long monthDown = -1, monthUp, seenRx = -1, seenTx = -1;
+    private static long savedAt;
+
+    private static String month() {
+        return new java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(new java.util.Date());
     }
 
+    /** Add what's been used since we last looked (the box's own counters start at 0 each start). */
+    private static void count() {
+        long rx = TrafficStats.getTotalRxBytes(), tx = TrafficStats.getTotalTxBytes();
+        if (rx < 0 || tx < 0) return;
+        long boot = System.currentTimeMillis() - SystemClock.elapsedRealtime();
+        if (monthDown < 0) { // first look since the launcher started
+            monthDown = Store.lng("data_m_down", 0);
+            monthUp = Store.lng("data_m_up", 0);
+            boolean sameBoot = Math.abs(Store.lng("data_boot", 0) - boot) < 60000;
+            seenRx = sameBoot ? Store.lng("data_seen_rx", 0) : 0; // after a restart the counters began again at 0
+            seenTx = sameBoot ? Store.lng("data_seen_tx", 0) : 0;
+        }
+        if (!month().equals(Store.str("data_month", ""))) { // a new month: start again
+            Store.put("data_month", month());
+            monthDown = 0;
+            monthUp = 0;
+        }
+        if (rx < seenRx || tx < seenTx) { // counters went back (restart while we weren't looking)
+            seenRx = 0;
+            seenTx = 0;
+        }
+        monthDown += rx - seenRx;
+        monthUp += tx - seenTx;
+        seenRx = rx;
+        seenTx = tx;
+        long now = SystemClock.elapsedRealtime();
+        if (savedAt == 0 || now - savedAt > 30000) { // saved every 30 s
+            save(boot);
+            savedAt = now;
+        }
+    }
+
+    private static void save(long boot) {
+        Store.put("data_m_down", monthDown);
+        Store.put("data_m_up", monthUp);
+        Store.put("data_seen_rx", seenRx);
+        Store.put("data_seen_tx", seenTx);
+        Store.put("data_boot", boot);
+    }
+
+    /** Downloaded this month. */
+    static long totalDown() {
+        count();
+        return Math.max(0, monthDown);
+    }
+
+    /** Uploaded this month. */
     static long totalUp() {
-        return Math.max(0, TrafficStats.getTotalTxBytes());
+        count();
+        return Math.max(0, monthUp);
     }
 
     /** 1.2M, 340K, 0 (bytes per second, short for the rail). */
