@@ -248,6 +248,9 @@ final class DataMeter extends View {
             @Override
             public void run() {
                 sample();
+                // Wi-Fi and hotspot bars only while that connection is up (mobile always)
+                boolean on = kind == LTE || (kind == WIFI ? Status.wifiConnected : Status.hotspotOn);
+                setVisibility(on ? VISIBLE : GONE);
                 invalidate();
                 if (running) postDelayed(this, 1000);
             }

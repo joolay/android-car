@@ -357,32 +357,27 @@ final class PhoneScreen {
     private static Runnable matchLookup;
 
     private static void keypad(Context c, LinearLayout body) {
-        LinearLayout row = U.row(c);
+        LinearLayout col = U.col(c);
 
-        // left: the number, a contact match, then backspace and call
-        LinearLayout left = U.col(c);
-        left.setGravity(Gravity.CENTER);
+        // top: close, the number (and a contact match), backspace
+        LinearLayout top = U.row(c);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        top.addView(square(c, R.drawable.ic_x, PhoneScreen::hide), U.lpu(36, 36));
+        LinearLayout num = U.col(c);
+        num.setGravity(Gravity.CENTER);
         display = U.text(c, "", 26, U.TEXT, true);
         display.setGravity(Gravity.CENTER);
-        display.setMaxLines(2); // the hint wraps instead of being cut off
-        display.setHint("Enter a\nnumber");
+        display.setMaxLines(1);
+        display.setHint("Enter a number");
         display.setHintTextColor(U.MUTED);
         display.setEllipsize(android.text.TextUtils.TruncateAt.START);
-        left.addView(display, U.lp(U.MATCH, U.WRAP));
-        match = U.line(c, "", 14, U.ACCENT_SOFT, false);
+        num.addView(display, U.lp(U.MATCH, U.WRAP));
+        match = U.line(c, "", 12, U.ACCENT_SOFT, false);
         match.setGravity(Gravity.CENTER);
-        left.addView(match, Widgets.top(6));
-
-        LinearLayout actions = U.row(c);
-        actions.setGravity(Gravity.CENTER);
-        FrameLayout call = new FrameLayout(c);
-        call.setBackground(U.oval(U.GREEN));
-        call.addView(U.icon(c, R.drawable.ic_call, U.TEXT), U.flpu(34, 34, Gravity.CENTER));
-        call.setOnClickListener(v -> {
-            if (number.length() > 0) dial(number.toString());
-        });
-        U.press(call);
-        actions.addView(call, U.lpu(64, 64));
+        num.addView(match, U.lp(U.MATCH, U.WRAP));
+        LinearLayout.LayoutParams nl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+        nl.setMargins(U.u(10), 0, U.u(10), 0);
+        top.addView(num, nl);
         FrameLayout del = new FrameLayout(c);
         del.setBackground(U.oval(U.CARD2));
         del.addView(U.icon(c, R.drawable.ic_backspace, U.TEXT2), U.flpu(26, 26, Gravity.CENTER));
@@ -395,15 +390,12 @@ final class PhoneScreen {
             updateNumber(c);
             return true;
         });
-        LinearLayout.LayoutParams dl = U.lpu(48, 48);
-        dl.leftMargin = U.u(14);
-        actions.addView(del, dl);
-        left.addView(actions, Widgets.top(18));
-        row.addView(left, new LinearLayout.LayoutParams(0, U.MATCH, 1));
+        top.addView(del, U.lpu(48, 48));
+        col.addView(top, U.lp(U.MATCH, U.WRAP));
 
-        // right: a standard 3 × 4 keypad, digits centred with their letters underneath
+        // below: a big 3 × 4 keypad filling the space, with the call button beside it
+        LinearLayout lower = U.row(c);
         LinearLayout pad = U.col(c);
-        pad.setGravity(Gravity.CENTER_VERTICAL);
         String[][] keys = {{"1", " "}, {"2", "ABC"}, {"3", "DEF"}, {"4", "GHI"}, {"5", "JKL"}, {"6", "MNO"}, {"7", "PQRS"}, {"8", "TUV"}, {"9", "WXYZ"}, {"*", " "}, {"0", "+"}, {"#", " "}};
         for (int r = 0; r < 4; r++) {
             LinearLayout kr = U.row(c);
@@ -412,7 +404,7 @@ final class PhoneScreen {
                 LinearLayout b = U.col(c);
                 b.setGravity(Gravity.CENTER);
                 b.setBackground(U.round(U.CARD2, 18));
-                TextView d = U.text(c, key[0], 22, U.TEXT, false);
+                TextView d = U.text(c, key[0], 26, U.TEXT, false);
                 d.setGravity(Gravity.CENTER);
                 b.addView(d, new LinearLayout.LayoutParams(U.WRAP, U.WRAP));
                 TextView l = U.text(c, key[1], 10, U.SUB, true);
@@ -429,18 +421,27 @@ final class PhoneScreen {
                     return true;
                 });
                 U.press(b);
-                LinearLayout.LayoutParams kl = new LinearLayout.LayoutParams(0, U.u(56), 1);
+                LinearLayout.LayoutParams kl = new LinearLayout.LayoutParams(0, U.MATCH, 1);
                 kl.setMargins(U.u(3), U.u(3), U.u(3), U.u(3));
                 kr.addView(b, kl);
             }
-            pad.addView(kr);
+            pad.addView(kr, new LinearLayout.LayoutParams(U.MATCH, 0, 1)); // the rows share the height
         }
-        row.addView(pad, new LinearLayout.LayoutParams(0, U.MATCH, 1.25f));
-        FrameLayout wrap = new FrameLayout(c);
-        wrap.addView(row, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        View close = square(c, R.drawable.ic_x, PhoneScreen::hide);
-        wrap.addView(close, U.flpu(36, 36, Gravity.TOP | Gravity.START));
-        body.addView(wrap, new LinearLayout.LayoutParams(U.MATCH, U.MATCH));
+        lower.addView(pad, new LinearLayout.LayoutParams(0, U.MATCH, 1));
+        FrameLayout call = new FrameLayout(c);
+        call.setBackground(U.oval(U.GREEN));
+        call.addView(U.icon(c, R.drawable.ic_call, U.TEXT), U.flpu(36, 36, Gravity.CENTER));
+        call.setOnClickListener(v -> {
+            if (number.length() > 0) dial(number.toString());
+        });
+        U.press(call);
+        FrameLayout callBox = new FrameLayout(c);
+        callBox.addView(call, U.flpu(72, 72, Gravity.CENTER));
+        lower.addView(callBox, U.lpu(96, U.MATCH));
+        LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(U.MATCH, 0, 1);
+        ll.topMargin = U.u(6);
+        col.addView(lower, ll);
+        body.addView(col, new LinearLayout.LayoutParams(U.MATCH, U.MATCH));
         updateNumber(c);
     }
 
@@ -448,9 +449,8 @@ final class PhoneScreen {
         if (display == null) return;
         display.setText(number.length() == 0 ? "" : number.toString());
         int len = number.length(); // shrink long numbers so they fit on one line
-        display.setSingleLine(len > 0);
-        if (len == 0) display.setMaxLines(2);
-        display.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, U.uf(len == 0 ? 18 : len <= 8 ? 26 : len <= 11 ? 22 : 18));
+        display.setSingleLine(true);
+        display.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, U.uf(len == 0 ? 18 : len <= 10 ? 26 : len <= 14 ? 22 : 18));
         match.setText("");
         U.ui.removeCallbacks(matchLookup);
         if (number.length() >= 4 && c.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
