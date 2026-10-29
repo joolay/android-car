@@ -236,12 +236,14 @@ final class DataMeter extends View {
         private final RectF r = new RectF();
         private float shown;
         private boolean running;
+        private long activeAt = -10000;
 
         SpeedBar(Context c, int kind) {
             super(c);
             this.kind = kind;
             track.setColor(U.LINE);
             fill.setColor(kind == LTE ? U.ACCENT : kind == WIFI ? U.TEAL : U.AMBER);
+            if (kind == LTE) setVisibility(GONE); // until there's mobile data moving
         }
 
         private final Runnable tick = new Runnable() {
@@ -249,7 +251,10 @@ final class DataMeter extends View {
             public void run() {
                 sample();
                 // Wi-Fi and hotspot bars only while that connection is up (mobile always)
-                boolean on = kind == LTE || (kind == WIFI ? Status.wifiConnected : Status.hotspotOn);
+                // the signal's bar only while mobile data is moving (and 3 s after, so it doesn't flicker)
+                long now = SystemClock.elapsedRealtime();
+                if (speed[kind][0] + speed[kind][1] > 2000) activeAt = now;
+                boolean on = kind == LTE ? now - activeAt < 3000 : kind == WIFI ? Status.wifiConnected : Status.hotspotOn;
                 setVisibility(on ? VISIBLE : GONE);
                 invalidate();
                 if (running) postDelayed(this, 1000);
