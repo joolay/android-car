@@ -132,6 +132,14 @@ final class Music {
             @Override
             public void run() {
                 if (paused || SystemClock.elapsedRealtime() > guardUntil) return;
+                // something else is playing now (a video in YouTube, say): leave it alone
+                MediaController other = MediaListener.controller;
+                String mine = pkg();
+                if (other != null && mine != null && !mine.equals(other.getPackageName()) && MediaListener.playing()) {
+                    log("Guard: " + Apps.label(other.getPackageName()) + " is playing now, stopped");
+                    paused = true;
+                    return;
+                }
                 if (musicActive(c)) {
                     started = true;
                     quiet = 0;
@@ -150,6 +158,15 @@ final class Music {
     /** You pressed pause: the start-up guard stops. */
     static void userPaused() {
         paused = true;
+    }
+
+    /** You opened an app: if it isn't the music app, the start-up guard stops (it was pressing play over YouTube). */
+    static void appOpened(String pkgName) {
+        if (paused || SystemClock.elapsedRealtime() > guardUntil) return;
+        String mine = pkg();
+        if (mine != null && mine.equals(pkgName)) return;
+        paused = true;
+        log("Guard: you opened " + Apps.label(pkgName) + ", stopped");
     }
 
     /** Run r once the music is playing (or after maxMs), so other apps start after it. */

@@ -79,10 +79,20 @@ final class Trace {
         event(c, "=== Troubleshooting mode switched off");
         Store.put(ON, false);
         running = false;
-        if (logcat != null) logcat.destroy();
+        final Process lc = logcat;
         logcat = null;
         Store.put(PENDING, true);
-        send(c);
+        final Context app = c.getApplicationContext();
+        Net.bg(() -> { // the last few seconds were still in the log's buffer: take them straight from Android first
+            try {
+                File f = new File(dir(app), "android-last.log");
+                Process d = Runtime.getRuntime().exec(new String[]{"logcat", "-d", "-v", "threadtime", "--pid=" + android.os.Process.myPid(), "-f", f.getAbsolutePath()});
+                d.waitFor();
+            } catch (Exception ignored) {
+            }
+            if (lc != null) lc.destroy();
+            U.ui.post(() -> send(app));
+        });
     }
 
     /** Size of what's been logged so far. */
