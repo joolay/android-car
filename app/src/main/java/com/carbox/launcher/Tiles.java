@@ -24,6 +24,8 @@ import java.util.List;
  * reorder (drag to the edge to scroll); tap a tile's ⋯ for Replace with widget etc.
  */
 final class Tiles {
+    /** Space between tiles: 8, or 12 when the ticker is hidden (the same gap between tiles and above the dock). */
+    static float gapDu = 8;
     static final int COLS = 4, ROWS = 2, COUNT = COLS * ROWS; // on screen at once
 
     /** How many tiles there are: any number, set by adding and removing tiles. */
@@ -469,7 +471,7 @@ final class Tiles {
         }
 
         private float gap() {
-            return U.u(8);
+            return U.u(gapDu);
         }
 
         private float cellW() {

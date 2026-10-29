@@ -243,8 +243,11 @@ public class MainActivity extends Activity {
      * size with the extra height as padding above and below the grid.
      */
     private void tilePad(boolean tickerShown) {
-        int p = tickerShown ? 0 : U.u(19); // what the ticker freed
-        tilesClip.setPadding(0, p, 0, p);
+        // ticker hidden: wider, even gaps (12 between tiles, and 12 down to the dock), the tops lined up
+        // with the map and the Rail Bar, and the tiles taller with what's left
+        Tiles.gapDu = tickerShown ? 8 : 12;
+        tilesClip.setPadding(0, 0, 0, tickerShown ? 0 : U.u(4));
+        if (tiles != null) tiles.view.requestLayout();
     }
 
     // ---- a tile-area page's title bar sits in the ticker's place while it's open
