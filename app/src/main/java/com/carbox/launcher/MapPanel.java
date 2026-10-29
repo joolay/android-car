@@ -411,11 +411,11 @@ final class MapPanel {
 
     private View round(Context a, int icon, boolean tint, Runnable r) {
         FrameLayout f = new FrameLayout(a);
-        f.setBackground(U.outline(BTN_BG, BTN_EDGE, 1, 21));
+        f.setBackground(U.outline(BTN_BG, BTN_EDGE, 1, 24));
         f.setElevation(U.uf(4));
         ImageView iv = tint ? U.icon(a, icon, U.TEXT) : new ImageView(a);
         if (!tint) iv.setImageResource(icon);
-        f.addView(iv, U.flpu(22, 22, Gravity.CENTER));
+        f.addView(iv, U.flpu(25, 25, Gravity.CENTER));
         f.setOnClickListener(v -> r.run());
         U.press(f);
         return f;
@@ -433,14 +433,14 @@ final class MapPanel {
         o.addView(street, rl);
         // right-hand column: close, compass, traffic
         LinearLayout col = U.col(a);
-        if (!MainActivity.mapHome()) col.addView(round(a, R.drawable.ic_x, true, () -> expand(false)), U.lpu(42, 42)); // the map is home: no close
+        if (!MainActivity.mapHome()) col.addView(round(a, R.drawable.ic_x, true, () -> expand(false)), U.lpu(48, 48)); // the map is home: no close
         View cb = round(a, R.drawable.ic_compass, false, () -> { // direction of travel ⇄ north up
             Store.put("map_heading_up", !headingUp());
             applyHeading();
             updateControls();
         });
         compass = (ImageView) ((FrameLayout) cb).getChildAt(0);
-        LinearLayout.LayoutParams cbl = U.lpu(42, 42);
+        LinearLayout.LayoutParams cbl = U.lpu(48, 48);
         cbl.topMargin = col.getChildCount() > 0 ? U.u(8) : 0;
         col.addView(cb, cbl);
         // day / night colours: tap goes Auto → Light → Dark (moon = dark, sun = light, blue = auto)
@@ -452,7 +452,7 @@ final class MapPanel {
             reload();
         });
         dayIcon = (ImageView) ((FrameLayout) db).getChildAt(0);
-        LinearLayout.LayoutParams dbl = U.lpu(42, 42);
+        LinearLayout.LayoutParams dbl = U.lpu(48, 48);
         dbl.topMargin = U.u(8);
         col.addView(db, dbl);
         styleDay();
@@ -464,7 +464,7 @@ final class MapPanel {
                 updateControls();
             });
             tb.setTag("traffic");
-            LinearLayout.LayoutParams tl = U.lpu(42, 42);
+            LinearLayout.LayoutParams tl = U.lpu(48, 48);
             tl.topMargin = U.u(8);
             col.addView(tb, tl);
         }
@@ -473,27 +473,27 @@ final class MapPanel {
         o.addView(col, cl);
         // zoom
         LinearLayout zoom = U.col(a);
-        zoom.setBackground(U.outline(BTN_BG, BTN_EDGE, 1, 21));
+        zoom.setBackground(U.outline(BTN_BG, BTN_EDGE, 1, 24));
         zoom.setElevation(U.uf(4));
         View zin = U.icon(a, R.drawable.ic_plus, U.TEXT), zout = U.icon(a, R.drawable.ic_minus, U.TEXT);
-        U.pad(zin, 10, 10, 10, 10);
-        U.pad(zout, 10, 10, 10, 10);
+        U.pad(zin, 11, 11, 11, 11);
+        U.pad(zout, 11, 11, 11, 11);
         zin.setOnClickListener(v -> js("zoomBy(1)"));
         zout.setOnClickListener(v -> js("zoomBy(-1)"));
-        zoom.addView(zin, U.lpu(42, 42));
+        zoom.addView(zin, U.lpu(48, 48));
         View sep = new View(a);
         sep.setBackgroundColor(0x33FFFFFF);
-        LinearLayout.LayoutParams sl = U.lpu(20, 1);
+        LinearLayout.LayoutParams sl = U.lpu(24, 1);
         sl.gravity = Gravity.CENTER_HORIZONTAL;
         zoom.addView(sep, sl);
-        zoom.addView(zout, U.lpu(42, 42));
+        zoom.addView(zout, U.lpu(48, 48));
         FrameLayout.LayoutParams zl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.BOTTOM | Gravity.END);
         zl.setMargins(0, 0, U.u(10), U.u(58));
         o.addView(zoom, zl);
         // back to my location (only once you've moved the map)
         recentre = round(a, R.drawable.ic_myloc, true, () -> js("recenter()"));
         recentre.setBackground(U.oval(U.ACCENT));
-        FrameLayout.LayoutParams ml = U.flpu(42, 42, Gravity.BOTTOM | Gravity.END);
+        FrameLayout.LayoutParams ml = U.flpu(48, 48, Gravity.BOTTOM | Gravity.END);
         ml.setMargins(0, 0, U.u(10), U.u(12));
         o.addView(recentre, ml);
         // bottom left: limit sign, speed, scale
