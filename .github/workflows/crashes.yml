@@ -1,0 +1,44 @@
+name: Collect crash reports
+
+# Car Launcher sends crash reports to a private ntfy.sh topic (kept there ~12 h). This copies them
+# into the "crashes" branch (crashes.jsonl, one report per line) so they can be read any time.
+on:
+  schedule:
+    - cron: "41 */4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crashes
+
+jobs:
+  collect:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Get the crashes branch (or start it)
+        run: |
+          git init -q work && cd work
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          if git fetch -q --depth 1 origin crashes; then git checkout -q -b crashes FETCH_HEAD; else git checkout -q --orphan crashes; fi
+          touch crashes.jsonl
+      - name: Fetch new reports
+        run: |
+          cd work
+          curl -fsS "https://ntfy.sh/carlauncher-crash-4d6dd33614e4914e/json?poll=1&since=all" -o new.jsonl || true
+          touch new.jsonl
+          # keep only messages, skip ones already saved (by id)
+          jq -c 'select(.event=="message") | {id, time, title, message}' new.jsonl > msgs.jsonl || true
+          while IFS= read -r line; do
+            id=$(echo "$line" | jq -r .id)
+            grep -q "\"id\":\"$id\"" crashes.jsonl || echo "$line" >> crashes.jsonl
+          done < msgs.jsonl
+          rm -f new.jsonl msgs.jsonl
+      - name: Save
+        run: |
+          cd work
+          git config user.name "crash-collector"
+          git config user.email "actions@users.noreply.github.com"
+          git add crashes.jsonl
+          git diff --cached --quiet || { git commit -qm "Crash reports $(date -u +%F\ %H:%M)"; git push -q origin crashes; }

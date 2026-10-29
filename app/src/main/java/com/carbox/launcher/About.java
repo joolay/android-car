@@ -41,13 +41,45 @@ final class About {
             String trace = sw.toString();
             if (trace.length() > 3000) trace = trace.substring(0, 3000) + "\n…";
             List<String> l = new ArrayList<>(Store.list(CRASHES));
-            l.add(0, new java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.US).format(new java.util.Date()) + " · " + version(c) + " · " + where + "\n" + trace);
+            String report = new java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.US).format(new java.util.Date()) + " · " + version(c) + " · " + where + "\n" + trace;
+            l.add(0, report);
             while (l.size() > 5) l.remove(l.size() - 1);
             Store.putList(CRASHES, l);
+            // queued to go online (sent at once if it can be, else next time Car Launcher opens)
+            List<String> q = new ArrayList<>(Store.list(UNSENT));
+            q.add(report);
+            while (q.size() > 10) q.remove(0);
+            Store.putList(UNSENT, q);
             Store.put("crash_new", true);
             Store.flush();
         } catch (Throwable ignored) {
         }
+    }
+
+    // ---- crash reports online: sent to a private ntfy.sh topic (free, no account); a GitHub Actions job
+    // (crashes.yml) copies them into the repo's "crashes" branch, where they can be read later
+    static final String TOPIC = "carlauncher-crash-4d6dd33614e4914e";
+    private static final String UNSENT = "crash_unsent";
+    static final String SEND = "crash_send";
+
+    /** Send any crash reports still waiting (on start, and right after a crash). */
+    static void sendPending(Context c) {
+        if (!Store.flag(SEND, true)) return;
+        List<String> q = Store.list(UNSENT);
+        if (q.isEmpty()) return;
+        String report = q.get(0);
+        java.util.Map<String, String> h = new java.util.HashMap<>();
+        h.put("Title", "Car Launcher crash " + version(c));
+        h.put("Tags", "warning");
+        String body = "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL + " · Android " + android.os.Build.VERSION.RELEASE + "\n" + report;
+        if (body.length() > 3900) body = body.substring(0, 3900) + "\n…";
+        Net.post("https://ntfy.sh/" + TOPIC, h, body, (res, code) -> {
+            if (res == null || code < 200 || code >= 300) return; // try again next time
+            List<String> left = new ArrayList<>(Store.list(UNSENT));
+            left.remove(report);
+            Store.putList(UNSENT, left);
+            if (!left.isEmpty()) sendPending(c); // the next one
+        });
     }
 
     static String version(Context c) {
@@ -60,6 +92,7 @@ final class About {
 
     /** After a crash: offer the report once, next time Car Launcher opens. */
     static void offerReport() {
+        if (MainActivity.I != null) sendPending(MainActivity.I); // anything from last time goes online now
         if (!Store.flag("crash_new", false) || Sheets.open()) return;
         Store.put("crash_new", false);
         Sheets.show(() -> {
@@ -93,6 +126,8 @@ final class About {
             b.addView(Sheets.section("Help"));
             int n = Store.list(CRASHES).size();
             b.addView(Sheets.item("Crash reports", n == 0 ? "None" : n + " saved", About::crashes));
+            b.addView(Sheets.switchRow(0, 0, "Send crash reports online", "So they can be looked at from anywhere (only the error, version and box model)",
+                    Store.flag(SEND, true), on -> Store.put(SEND, on)));
             b.addView(Sheets.item("Last BT Phone notifications", null, SettingsPanels::callLog));
             return Sheets.panel("About", b, 640, 440);
         };
