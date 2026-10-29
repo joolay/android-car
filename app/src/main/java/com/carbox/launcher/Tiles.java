@@ -32,6 +32,19 @@ final class Tiles {
     }
 
     /** Column by column: tiles 0 and 1 are the first column, 2 and 3 the next, and so on. */
+    /**
+     * How many grid cells a tile covers: {wide, tall}. 1x1 normally; a tile can be 2x1, 1x2 or 2x2,
+     * set by the widget itself (Widgets.size) or by "w"/"h" in its saved spec.
+     */
+    static int[] span(JSONObject spec) {
+        int[] d = spec == null ? new int[]{1, 1} : Widgets.size(spec.optString("id"));
+        int w = spec == null ? 0 : spec.optInt("w", 0), h = spec == null ? 0 : spec.optInt("h", 0);
+        return new int[]{Math.max(1, Math.min(2, w > 0 ? w : d[0])), Math.max(1, Math.min(ROWS, h > 0 ? h : d[1]))};
+    }
+
+    /** Sizes of the tiles on screen, in the same order as the grid's children. */
+    private final List<int[]> spans = new ArrayList<>();
+
     static int colOf(int i) {
         return i / ROWS;
     }
@@ -248,13 +261,18 @@ final class Tiles {
     void refresh() {
         view.removeAllViews();
         widgets.clear();
+        spans.clear();
         JSONArray s = specs();
         for (int i = 0, n = s.length(); i < n; i++) {
             JSONObject spec = s.optJSONObject(i);
             if (spec == null) spec = widget("none");
+            spans.add(span(spec));
             view.addView(tile(i, spec));
         }
-        if (editing) view.addView(addTileView()); // "+" slot after the last tile
+        if (editing) {
+            spans.add(new int[]{1, 1});
+            view.addView(addTileView()); // "+" slot after the last tile
+        }
         if (running) for (Widgets.W w : widgets) w.tick();
         view.clampScroll();
     }
@@ -466,8 +484,45 @@ final class Tiles {
             return cellW() + gap();
         }
 
+        // ---- where each tile sits. Tiles fill column by column, top to bottom; a bigger tile takes the
+        // first place it fits (a 1x1 that comes later can fill a gap left before it).
+        private int[] pc = new int[0], pr = new int[0];
+        private int packed;
+
+        private void pack() {
+            int n = getChildCount();
+            pc = new int[n];
+            pr = new int[n];
+            List<boolean[]> occ = new ArrayList<>();
+            for (int i = 0; i < n; i++) {
+                int[] sp = i < spans.size() ? spans.get(i) : new int[]{1, 1};
+                int w = sp[0], h = sp[1];
+                search:
+                for (int c = 0; ; c++) {
+                    for (int r = 0; r + h <= ROWS; r++) {
+                        boolean free = true;
+                        for (int dc = 0; dc < w && free; dc++)
+                            for (int dr = 0; dr < h && free; dr++)
+                                if (c + dc < occ.size() && occ.get(c + dc)[r + dr]) free = false;
+                        if (!free) continue;
+                        while (occ.size() < c + w) occ.add(new boolean[ROWS]);
+                        for (int dc = 0; dc < w; dc++) for (int dr = 0; dr < h; dr++) occ.get(c + dc)[r + dr] = true;
+                        pc[i] = c;
+                        pr[i] = r;
+                        break search;
+                    }
+                }
+            }
+            packed = occ.size();
+        }
+
+        private int[] spanOf(int i) {
+            return i < spans.size() ? spans.get(i) : new int[]{1, 1};
+        }
+
         private int columns() {
-            return (getChildCount() + ROWS - 1) / ROWS;
+            if (pc.length != getChildCount()) pack();
+            return Math.max(1, packed);
         }
 
         // ---- endless rotation: with more than 4 columns the tiles loop round (after the last
@@ -501,7 +556,7 @@ final class Tiles {
                     if (!(dragging && i == dragIndex)) v.setTranslationX(0);
                     continue;
                 }
-                float base = colOf(i) * step, p = ((base - woff) % w + w) % w;
+                float base = pc[i] * step, p = ((base - woff) % w + w) % w;
                 if (p >= w - step) p -= w; // the column just before the first: show it on the left
                 v.setTranslationX(p - base);
             }
@@ -542,17 +597,23 @@ final class Tiles {
         protected void onMeasure(int ws, int hs) {
             int w = MeasureSpec.getSize(ws), h = MeasureSpec.getSize(hs);
             setMeasuredDimension(w, h);
-            int cw = Math.round((w - gap() * (COLS - 1)) / COLS), ch = Math.round((h - gap() * (ROWS - 1)) / ROWS);
-            for (int i = 0; i < getChildCount(); i++)
-                getChildAt(i).measure(MeasureSpec.makeMeasureSpec(cw, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(ch, MeasureSpec.EXACTLY));
+            float cw = (w - gap() * (COLS - 1)) / COLS, ch = (h - gap() * (ROWS - 1)) / ROWS;
+            pack();
+            for (int i = 0; i < getChildCount(); i++) {
+                int[] sp = spanOf(i);
+                getChildAt(i).measure(MeasureSpec.makeMeasureSpec(Math.round(cw * sp[0] + gap() * (sp[0] - 1)), MeasureSpec.EXACTLY),
+                        MeasureSpec.makeMeasureSpec(Math.round(ch * sp[1] + gap() * (sp[1] - 1)), MeasureSpec.EXACTLY));
+            }
         }
 
         @Override
         protected void onLayout(boolean changed, int l, int t, int rr, int b) {
             float cw = cellW(), ch = cellH();
+            if (pc.length != getChildCount()) pack();
             for (int i = 0; i < getChildCount(); i++) {
-                int x = Math.round(colOf(i) * (cw + gap())), y = Math.round(rowOf(i) * (ch + gap()));
-                getChildAt(i).layout(x, y, x + Math.round(cw), y + Math.round(ch));
+                int[] sp = spanOf(i);
+                int x = Math.round(pc[i] * (cw + gap())), y = Math.round(pr[i] * (ch + gap()));
+                getChildAt(i).layout(x, y, x + Math.round(cw * sp[0] + gap() * (sp[0] - 1)), y + Math.round(ch * sp[1] + gap() * (sp[1] - 1)));
             }
             clampScroll();
         }
@@ -610,7 +671,14 @@ final class Tiles {
                 col = (int) ((((x + woff) % loop) + loop) % loop / colStep());
             } else col = Math.max(0, (int) ((x + getScrollX()) / colStep()));
             int row = Math.max(0, Math.min(ROWS - 1, (int) (y / (cellH() + gap()))));
-            return Math.min(getChildCount() - 1, indexOf(col, row));
+            if (pc.length != getChildCount()) pack();
+            int best = getChildCount() - 1;
+            for (int i = 0; i < getChildCount(); i++) { // the tile covering that cell (big tiles cover several)
+                int[] sp = spanOf(i);
+                if (col >= pc[i] && col < pc[i] + sp[0] && row >= pr[i] && row < pr[i] + sp[1]) return i;
+                if (pc[i] <= col) best = i; // a gap: the last tile before it
+            }
+            return Math.max(0, best);
         }
 
         // ---- sliding

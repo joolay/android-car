@@ -62,6 +62,17 @@ final class Widgets {
         return "none".equals(id) ? "Empty" : id;
     }
 
+    /**
+     * Grid cells a widget covers: {wide, tall}. Every widget is 1x1 for now; bigger ones (2x1 wide,
+     * 1x2 tall, 2x2) just return their size here and the grid makes room for them.
+     */
+    static int[] size(String id) {
+        switch (id == null ? "" : id) {
+            default:
+                return new int[]{1, 1};
+        }
+    }
+
     static boolean configurable(String id) {
         return "goto".equals(id) || "quickdial".equals(id) || "contact".equals(id) || "ha".equals(id) || "rest".equals(id) || "safety".equals(id) || "logbook".equals(id);
     }
