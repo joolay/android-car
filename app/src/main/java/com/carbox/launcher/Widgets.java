@@ -52,13 +52,14 @@ final class Widgets {
             {"phone", "Phone", "Contacts, favourites, recent calls and keypad"},
             {"quickdial", "Quick dial", "Four favourite contacts"},
             {"contact", "Contact", "One contact with their photo"},
+            {"whatsapp", "WhatsApp", "WhatsApp Web: your chats, linked from your phone"},
             {"nextprayer", "Next prayer", "The next prayer and a countdown"},
             {"prayertimes", "Prayer times", "Today's five prayer times"},
             {"qibla", "Qibla", "Direction of the Kaaba from here"},
             {"ha", "Home Assistant", "Your own smart home toggles"}};
 
     /** Categories for the tile and Left Widget choosers (Music is a Left Widget only). */
-    static final String[][] CATS = {{"Driving", "speed,trip,rest,park,safety,logbook,heading,goto"}, {"Phone", "phone,quickdial,contact"},
+    static final String[][] CATS = {{"Driving", "speed,trip,rest,park,safety,logbook,heading,goto"}, {"Phone", "phone,quickdial,contact,whatsapp"},
             {"Car & home", "carconnect,ha"}, {"Weather", "weather"}, {"Faith", "nextprayer,prayertimes,qibla"}};
 
     static String name(String id) {
@@ -153,6 +154,8 @@ final class Widgets {
                 return new Qibla(c, index, spec);
             case "ha":
                 return new HA.Widget(c, index, spec);
+            case "whatsapp":
+                return new WhatsW(c, index, spec);
             default:
                 return new Empty(c, index, spec);
         }
@@ -826,6 +829,50 @@ final class Widgets {
             desc.setText(Weather.describe(Weather.code));
             Weather.Day d = Weather.today();
             if (d != null) hilo.setText("H " + Weather.t(d.hi) + "  L " + Weather.t(d.lo));
+        }
+    }
+
+    // ------------------------------------------------------------------ WhatsApp Web
+
+    static final class WhatsW extends W {
+        private final TextView sub, badge;
+
+        WhatsW(Context c, int i, JSONObject s) {
+            super(c, i, s);
+            LinearLayout l = card(c, U.CARD);
+            LinearLayout head = U.row(c);
+            head.addView(label(c, "WHATSAPP"), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+            badge = U.line(c, "", ts(12), U.TEXT, true); // unread chats
+            badge.setGravity(Gravity.CENTER);
+            badge.setBackground(U.round(U.GREEN, 11));
+            U.pad(badge, 7, 2, 7, 2);
+            badge.setVisibility(View.GONE);
+            head.addView(badge);
+            l.addView(head);
+            l.addView(new View(c), U.weight(1, false));
+            android.widget.FrameLayout ic = new android.widget.FrameLayout(c);
+            ic.setBackground(U.oval(0xFF1F7A46));
+            ic.addView(U.icon(c, R.drawable.ic_chat, U.TEXT), U.flpu(tl ? 34 : 26, tl ? 34 : 26, Gravity.CENTER));
+            LinearLayout.LayoutParams il = U.lpu(tl ? 64 : 50, tl ? 64 : 50);
+            il.gravity = Gravity.CENTER_HORIZONTAL;
+            l.addView(ic, il);
+            l.addView(new View(c), U.weight(1, false));
+            sub = U.line(c, "Tap to open", ts(12), U.SUB, false);
+            sub.setGravity(Gravity.CENTER);
+            l.addView(sub, U.lp(U.MATCH, U.WRAP));
+            l.setOnClickListener(x -> WhatsWeb.open());
+            U.press(l);
+            v = l;
+            if (index >= 0) WhatsWeb.web(c); // loads in the background, so chats are ready when it opens
+            tick();
+        }
+
+        @Override
+        void tick() {
+            int n = WhatsWeb.unread();
+            badge.setText(String.valueOf(n));
+            badge.setVisibility(n > 0 ? View.VISIBLE : View.GONE);
+            sub.setText(n > 0 ? n + " unread chat" + (n == 1 ? "" : "s") : "Tap to open");
         }
     }
 
