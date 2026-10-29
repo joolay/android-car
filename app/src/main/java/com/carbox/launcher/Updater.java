@@ -142,7 +142,7 @@ final class Updater {
                 status = tag + " downloaded · tap Install";
                 Trace.event(app, "Update " + tag + " downloaded");
                 final String t = tag;
-                U.ui.post(() -> ask(app, apk, t));
+                U.ui.post(() -> ask(app, apk, t, byHand));
             } catch (Exception e) {
                 status = "Couldn't check: no connection?";
                 say(app, status, byHand);
@@ -165,10 +165,11 @@ final class Updater {
     }
 
     /** Asks on the home screen: Install now or Later (never while driving, on a call or over another page). */
-    private static void ask(Context c, File apk, String tag) {
+    private static void ask(Context c, File apk, String tag, boolean byHand) {
         MainActivity a = MainActivity.I;
+        if (byHand && Sheets.open()) Sheets.close(); // asked for from Settings: show it straight away
         if (a == null || MainActivity.frontAt == 0 || Loc.moving() || Sheets.open() || CallState.state != CallState.NONE) {
-            U.ui.postDelayed(() -> ask(c, apk, tag), 30000);
+            U.ui.postDelayed(() -> ask(c, apk, tag, false), 30000);
             return;
         }
         Sheets.show(() -> {

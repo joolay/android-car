@@ -117,6 +117,7 @@ final class TopLeft {
 
     /** Choose the Top Left Widget's widgets (several, swiped through) or the Bottom Left one (one). */
     static void chooser(boolean bottom) {
+        keepX = 0;
         Sheets.showFull(() -> {
             Context c = Sheets.ctx();
             LinearLayout card = U.col(c);
@@ -183,6 +184,9 @@ final class TopLeft {
             card.addView(chips, top(10));
             hs.setHorizontalScrollBarEnabled(false);
             hs.setFillViewport(true);
+            shown = hs; // picking a widget redraws the page: stay where it was
+            final int x0 = keepX;
+            hs.post(() -> hs.scrollTo(x0, 0));
             hs.addView(blocks, new android.widget.FrameLayout.LayoutParams(U.WRAP, U.MATCH));
             LinearLayout.LayoutParams hl = U.weight(1, false);
             hl.topMargin = U.u(8);
@@ -190,6 +194,9 @@ final class TopLeft {
             return card;
         });
     }
+
+    private static int keepX;
+    private static android.widget.HorizontalScrollView shown;
 
     private static View cell(Context c, String[] w, List<String> on, boolean bottom) {
         boolean sel = on.contains(w[0]);
@@ -204,6 +211,7 @@ final class TopLeft {
         nm.setGravity(Gravity.CENTER);
         cell.addView(nm, top(5));
         cell.setOnClickListener(v -> {
+            if (shown != null) keepX = shown.getScrollX();
             if (bottom) pickBottom(w[0]);
             else toggle(c, w[0]);
             Sheets.refresh();
