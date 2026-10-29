@@ -122,7 +122,9 @@ public class MainActivity extends Activity {
         tiles = new Tiles(this);
         // the tile area also hosts panels (All apps, settings, phone...) so they stay inside the 2×4 grid
         tileArea = new FrameLayout(this);
-        tileArea.addView(tiles.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        FrameLayout tilesClip = new FrameLayout(this); // the tiles stay inside the tile area as they rise and sink
+        tilesClip.addView(tiles.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        tileArea.addView(tilesClip, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         sheetHost = new FrameLayout(this);
         tileArea.addView(sheetHost, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         middle.addView(tileArea, U.weight(1, false));
@@ -150,6 +152,9 @@ public class MainActivity extends Activity {
         ml.leftMargin = U.u(8);
         ml.rightMargin = U.u(8);
         main.addView(middle, ml);
+        main.setClipChildren(false); // the big map shrinks across into the small map panel
+        middle.setClipChildren(false);
+        tileArea.setClipChildren(false);
 
         // right rail
         rail = new Rail(this);
@@ -633,31 +638,68 @@ public class MainActivity extends Activity {
     }
 
     void drawer(boolean open) {
-        View big = map != null ? map.bigView() : null;
-        if (big == null) { // map not big (yet): nothing to slide
-            drawerOpen = false;
-            return;
-        }
+        if (open == drawerOpen && !peeking) return;
         boolean fromPeek = peeking;
         peeking = false;
         if (open) hideAlertTile();
         drawerOpen = open;
         lockButton(open);
-        // the tiles rise up out of the news ticker; the map lifts away at the top
+        // the tiles rise up out of the news ticker, while the big map shrinks into the small map
+        // panel on the left (and grows back out of it when the tiles go down)
         float h = tileArea.getHeight() + U.u(12);
         android.view.animation.Interpolator ease = new android.view.animation.DecelerateInterpolator(1.8f);
         tiles.view.setTranslationX(0);
-        big.setTranslationX(0);
         if (open) {
             if (Sheets.open()) Sheets.close();
             if (!fromPeek) tiles.view.setTranslationY(h); // from a peek it carries on from where it is
             tiles.view.animate().translationY(0).setDuration(340).setInterpolator(ease).start();
-            big.animate().translationY(-h).setDuration(340).setInterpolator(ease).start();
+            View big = map != null ? map.bigView() : null;
+            if (big == null) return;
+            float[] t = toSmall(big);
+            big.animate().translationX(t[0]).translationY(t[1]).scaleX(t[2]).scaleY(t[3]).setDuration(360).setInterpolator(ease)
+                    .withEndAction(() -> {
+                        if (!drawerOpen) return;
+                        resetTransform(big);
+                        map.expand(false); // the live map is now the small map
+                    }).start();
         } else {
             if (tiles.editing()) tiles.setEditing(false);
             tiles.view.animate().translationY(h).setDuration(300).setInterpolator(ease).start();
-            big.animate().translationY(0).setDuration(300).setInterpolator(ease).start();
+            if (map == null) return;
+            if (!map.expanded()) map.expand(true);
+            View big = map.bigView();
+            if (big == null) return;
+            big.post(() -> { // once it's laid out at full size: start small, grow back
+                float[] t = toSmall(big);
+                big.setPivotX(0);
+                big.setPivotY(0);
+                big.setTranslationX(t[0]);
+                big.setTranslationY(t[1]);
+                big.setScaleX(t[2]);
+                big.setScaleY(t[3]);
+                big.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).setDuration(360).setInterpolator(ease).start();
+            });
         }
+    }
+
+    /** Move and scale that make the big map sit exactly on the small map panel: {dx, dy, sx, sy}. */
+    private float[] toSmall(View big) {
+        int[] a = new int[2], b = new int[2];
+        map.view.getLocationOnScreen(a);
+        tileArea.getLocationOnScreen(b);
+        big.setPivotX(0);
+        big.setPivotY(0);
+        float sx = big.getWidth() > 0 ? map.view.getWidth() / (float) big.getWidth() : 0.3f;
+        float sy = big.getHeight() > 0 ? map.view.getHeight() / (float) big.getHeight() : 0.5f;
+        return new float[]{a[0] - b[0], a[1] - b[1], sx, sy};
+    }
+
+    private static void resetTransform(View v) {
+        v.animate().cancel();
+        v.setTranslationX(0);
+        v.setTranslationY(0);
+        v.setScaleX(1);
+        v.setScaleY(1);
     }
 
     /** "Open the phone" from the hold menu, or a dial request from another app (tel: number). */
