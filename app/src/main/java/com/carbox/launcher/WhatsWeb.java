@@ -34,7 +34,8 @@ final class WhatsWeb {
             + "'body[data-cl=list] #app div:has(> #side){flex:1 1 100% !important;max-width:100% !important;width:100% !important}"
             + " body[data-cl=list] div:has(> #main){display:none !important}"
             + " body[data-cl=chat] #app div:has(> #side){display:none !important}"
-            + " body[data-cl=chat] div:has(> #main){flex:1 1 100% !important;max-width:100% !important;width:100% !important}';"
+            + " body[data-cl=chat] div:has(> #main){flex:1 1 100% !important;max-width:100% !important;width:100% !important}"
+            + " ::-webkit-scrollbar{width:4px !important;height:0 !important} html,body{overflow:hidden !important}';"
             + "document.head.appendChild(st);document.body.dataset.cl='list';"
             + "document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('#pane-side'))"
             + "setTimeout(function(){document.body.dataset.cl='chat';},150);},true);})();";
@@ -58,13 +59,16 @@ final class WhatsWeb {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setUserAgentString(DESKTOP_UA);
-        s.setUseWideViewPort(true);
-        s.setLoadWithOverviewMode(true);
+        // the whole page drawn smaller (not just the text), so more chats fit: the page lays itself out
+        // for a wider screen and is shrunk to fit; − / + change it
+        s.setUseWideViewPort(false);
+        s.setLoadWithOverviewMode(false);
+        web.setInitialScale(Store.num("wa_scale", 75));
         s.setSupportZoom(true);
         s.setBuiltInZoomControls(true);
         s.setDisplayZoomControls(false);
         s.setMediaPlaybackRequiresUserGesture(false);
-        s.setTextZoom(Store.num("wa_zoom", 100));
+        s.setTextZoom(100);
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
         web.setWebViewClient(new WebViewClient() {
@@ -128,8 +132,8 @@ final class WhatsWeb {
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
         tl.leftMargin = U.u(8);
         head.addView(t, tl);
-        head.addView(btn(c, R.drawable.ic_minus, "Smaller text", () -> zoom(-10)));
-        head.addView(btn(c, R.drawable.ic_plus, "Bigger text", () -> zoom(10)));
+        head.addView(btn(c, R.drawable.ic_minus, "Smaller", () -> zoom(-10)));
+        head.addView(btn(c, R.drawable.ic_plus, "Bigger", () -> zoom(10)));
         head.addView(btn(c, R.drawable.ic_refresh, "Reload", () -> web(c).reload()));
         head.addView(btn(c, R.drawable.ic_maximize, full ? "Back to the tiles" : "Full screen", () -> {
             full = !full;
@@ -160,8 +164,11 @@ final class WhatsWeb {
     }
 
     private static void zoom(int step) {
-        int z = Math.max(60, Math.min(200, Store.num("wa_zoom", 100) + step));
-        Store.put("wa_zoom", z);
-        if (web != null) web.getSettings().setTextZoom(z);
+        int z = Math.max(45, Math.min(130, Store.num("wa_scale", 75) + step));
+        Store.put("wa_scale", z);
+        if (web != null) { // the size only takes on a fresh layout: reload (the link to the phone stays)
+            web.setInitialScale(z);
+            web.reload();
+        }
     }
 }

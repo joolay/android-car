@@ -1,2 +1,2 @@
-0.29: Update notice: bigger text, what's new, closes by itself; Dock dividers evenly spaced; Map corners cleaned up; Asks to install updates at start-up; Check for updates button in Settings; Widget chooser keeps its place
+0.29: Update notice: bigger text, what's new, closes by itself; Dock dividers evenly spaced; Map corners cleaned up; Asks to install updates at start-up; Check for updates button in Settings; Widget chooser keeps its place; WhatsApp drawn smaller so more chats fit
 0.28: WhatsApp tile with unread count; Logs kept 3 days and sent by themselves; Automatic updates; Even dock spacing and map rim; Spotify start-up fixes
