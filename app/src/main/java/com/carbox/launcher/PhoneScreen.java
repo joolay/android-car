@@ -24,7 +24,7 @@ final class PhoneScreen {
     private PhoneScreen() {
     }
 
-    private static FrameLayout shown;
+    private static FrameLayout shown, holder;
     private static String tab = "contacts";
     private static String query = "";
     private static final StringBuilder number = new StringBuilder();
@@ -47,8 +47,13 @@ final class PhoneScreen {
             shown.setClickable(true);
             shown.setBackgroundColor(U.BG);
             shown.setBackground(U.round(U.BG, 16));
-            // inside the tile area, under any open panel
-            a.tileArea.addView(shown, a.tileArea.indexOfChild(a.sheetHost), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            // inside the tile area, under any open panel; a clipping holder keeps it inside the
+            // tile area while it slides up out of the ticker, like the tile drawer
+            holder = new FrameLayout(a);
+            holder.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            a.tileArea.addView(holder, a.tileArea.indexOfChild(a.sheetHost), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            shown.setTranslationY(a.tileArea.getHeight() + U.u(12));
+            shown.animate().translationY(0).setDuration(U.ms(340)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
         }
         Store.put("phone_seen", true);
         render();
@@ -61,8 +66,17 @@ final class PhoneScreen {
     static boolean hide() {
         if (shown == null) return false;
         Keyboard.hide();
-        if (shown.getParent() != null) ((ViewGroup) shown.getParent()).removeView(shown);
+        // slides back down into the ticker, then goes
+        final FrameLayout v = shown, h = holder;
         shown = null;
+        holder = null;
+        Runnable gone = () -> {
+            View x = h != null ? h : v;
+            if (x.getParent() != null) ((ViewGroup) x.getParent()).removeView(x);
+        };
+        float down = (h != null ? h.getHeight() : v.getHeight()) + U.u(12);
+        if (U.ms(300) == 0 || down <= U.u(12)) gone.run();
+        else v.animate().translationY(down).setDuration(U.ms(300)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).withEndAction(gone).start();
         return true;
     }
 
