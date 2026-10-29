@@ -297,8 +297,23 @@ final class Rail {
         else gps.setState(StatusIcons.GpsIcon.SEARCHING, Loc.satsVisible);
     }
 
+    private android.animation.ObjectAnimator wPulse;
+
     void updateWeather() {
-        if (wIcon == null || !Weather.ok) return;
+        if (wIcon == null) return;
+        // the icon breathes while a new forecast is being fetched
+        if (Weather.loading() && wPulse == null && U.ms(1) > 0) {
+            wPulse = android.animation.ObjectAnimator.ofFloat(wIcon, View.ALPHA, 1f, 0.3f);
+            wPulse.setDuration(600);
+            wPulse.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+            wPulse.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            wPulse.start();
+        } else if (!Weather.loading() && wPulse != null) {
+            wPulse.cancel();
+            wPulse = null;
+            wIcon.setAlpha(1f);
+        }
+        if (!Weather.ok) return;
         wIcon.setImageResource(Weather.icon(Weather.code, Weather.isDay));
         Weather.Day d = Weather.today();
         if (d != null) {

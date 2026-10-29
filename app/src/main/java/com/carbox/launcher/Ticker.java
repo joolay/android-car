@@ -65,6 +65,65 @@ final class Ticker {
         String mode = Store.str(Store.TICKER_MODE, "alt");
         showingNews = !"traffic".equals(mode);
         applyTag();
+        // the headlines from the last poll, straight away (new ones replace them when they arrive)
+        newsAt = load("ticker_news", newsItems, news);
+        trafficAt = load("ticker_traffic", trafficItems, traffic);
+        updateText();
+    }
+
+    private static void save(String key, List<Item> items, long at) {
+        org.json.JSONArray a = new org.json.JSONArray();
+        try {
+            for (int i = 0; i < items.size() && i < 40; i++) {
+                Item it = items.get(i);
+                org.json.JSONObject o = new org.json.JSONObject();
+                o.put("t", it.title);
+                o.put("l", it.link);
+                o.put("s", it.source);
+                o.put("d", it.date);
+                if (it.desc != null) o.put("x", it.desc.length() > 300 ? it.desc.substring(0, 300) : it.desc);
+                a.put(o);
+            }
+        } catch (Exception ignored) {
+        }
+        Store.put(key, a);
+        Store.put(key + "_at", at);
+    }
+
+    private static long load(String key, List<Item> items, List<String> titles) {
+        org.json.JSONArray a = Store.arr(key);
+        for (int i = 0; i < a.length(); i++) {
+            org.json.JSONObject o = a.optJSONObject(i);
+            if (o == null) continue;
+            Item it = new Item();
+            it.title = o.optString("t", "");
+            it.link = o.optString("l", null);
+            it.source = o.optString("s", null);
+            it.date = o.optLong("d", 0);
+            it.desc = o.optString("x", null);
+            items.add(it);
+            titles.add(it.title);
+        }
+        return items.isEmpty() ? 0 : Store.lng(key + "_at", 0);
+    }
+
+    // ---- while polling, the NEWS / TRAFFIC label breathes
+    private int pending;
+    private android.animation.ObjectAnimator pulse;
+
+    private void busy(int d) {
+        pending = Math.max(0, pending + d);
+        if (pending > 0 && pulse == null && U.ms(1) > 0) {
+            pulse = android.animation.ObjectAnimator.ofFloat(tag, View.ALPHA, 1f, 0.35f);
+            pulse.setDuration(600);
+            pulse.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+            pulse.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            pulse.start();
+        } else if (pending == 0 && pulse != null) {
+            pulse.cancel();
+            pulse = null;
+            tag.setAlpha(1f);
+        }
     }
 
     void start() {
@@ -146,7 +205,9 @@ final class Ticker {
         String trafficUrl = Store.str(Store.TRAFFIC_URL, "");
         if (newsUrl.isEmpty()) newsUrl = "https://news.google.com/rss/search?q=" + Uri.encode(place()) + "&hl=en-ZA&gl=ZA&ceid=ZA:en";
         if (trafficUrl.isEmpty()) trafficUrl = "https://news.google.com/rss/search?q=" + Uri.encode("traffic " + place()) + "+when:2d&hl=en-ZA&gl=ZA&ceid=ZA:en";
+        busy(1);
         Net.get(newsUrl, null, (b, code) -> {
+            busy(-1);
             if (b != null) {
                 List<Item> items = parseItems(b);
                 if (items.isEmpty()) return;
@@ -155,17 +216,22 @@ final class Ticker {
                 news.clear();
                 for (Item it : items) news.add(it.title);
                 newsAt = System.currentTimeMillis();
+                save("ticker_news", newsItems, newsAt);
                 if (showingNews) updateText();
             }
         });
+        busy(1);
         Net.get(trafficUrl, null, (b, code) -> {
+            busy(-1);
             if (b != null) {
                 List<Item> items = parseItems(b);
+                if (items.isEmpty() && !trafficItems.isEmpty()) return; // keep the old ones
                 trafficItems.clear();
                 trafficItems.addAll(items);
                 traffic.clear();
                 for (Item it : items) traffic.add(it.title);
                 trafficAt = System.currentTimeMillis();
+                save("ticker_traffic", trafficItems, trafficAt);
                 if (!showingNews) updateText();
             }
         });
@@ -174,7 +240,9 @@ final class Ticker {
             String bbox = String.format(java.util.Locale.US, "%.3f,%.3f,%.3f,%.3f", Loc.lon - 0.25, Loc.lat - 0.25, Loc.lon + 0.25, Loc.lat + 0.25);
             String url = "https://api.tomtom.com/traffic/services/5/incidentDetails?key=" + Uri.encode(key) + "&bbox=" + bbox
                     + "&fields=%7Bincidents%7Bproperties%7Bevents%7Bdescription%7D,from,to,delay%7D%7D%7D&language=en-GB&timeValidityFilter=present";
+            busy(1);
             Net.get(url, null, (b, code) -> {
+                busy(-1);
                 if (b == null) return;
                 try {
                     org.json.JSONArray inc = new org.json.JSONObject(b).getJSONArray("incidents");

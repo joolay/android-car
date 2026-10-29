@@ -67,9 +67,19 @@ final class Weather {
         fetch();
     }
 
+    /** A poll is under way (the weather icons animate). */
+    static boolean loading() {
+        return loading;
+    }
+
+    private static void changed() {
+        for (Runnable r : new ArrayList<>(listeners)) r.run();
+    }
+
     static void fetch() {
         if (!Loc.has()) return;
         loading = true;
+        changed();
         String url = String.format(Locale.US,
                 "https://api.open-meteo.com/v1/forecast?latitude=%.3f&longitude=%.3f"
                         + "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m"
@@ -80,7 +90,10 @@ final class Weather {
                 Loc.lat, Loc.lon);
         Net.get(url, null, (body, code) -> {
             loading = false;
-            if (body == null) return;
+            if (body == null) {
+                changed(); // stop the animation, keep the old forecast
+                return;
+            }
             try {
                 parse(new JSONObject(body));
                 fetchedAt = SystemClock.elapsedRealtime();
@@ -88,9 +101,9 @@ final class Weather {
                 ok = true;
                 Store.put("weather_last", body); // remembered for next time
                 Store.put("weather_at", updatedAt);
-                for (Runnable r : new ArrayList<>(listeners)) r.run();
             } catch (Exception ignored) {
             }
+            changed();
         });
     }
 
