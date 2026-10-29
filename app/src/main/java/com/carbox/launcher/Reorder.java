@@ -22,17 +22,46 @@ final class Reorder {
         void move(int from, int to);
     }
 
+    /** Turn the page while an app is held at the edge: true to carry on dragging, false when the drag is over. */
+    interface Turn {
+        boolean go(int dir);
+    }
+
     private Reorder() {
     }
 
     /** Make cells.get(index) draggable among `cells`; `hold` runs for a hold that doesn't move. */
     static void attach(View cell, int index, List<View> cells, Moved moved, Runnable hold) {
+        attach(cell, index, cells, moved, hold, null, null);
+    }
+
+    /**
+     * As above; holding the dragged app at the left or right edge of `host` for a moment turns the
+     * page (`turn`). With no host given, the pages it sits in (a {@link Pager}) are used, if any.
+     */
+    static void attach(View cell, int index, List<View> cells, Moved moved, Runnable hold, View host0, Turn turn0) {
         final int slop = ViewConfiguration.get(cell.getContext()).getScaledTouchSlop() * 2;
         final float[] down = new float[2];
         final boolean[] dragging = {false}, moving = {false};
         final ImageView[] ghost = {null};
         final int[] target = {-1};
+        final int[] edge = {0};
+        final Runnable[] turner = {null};
+        final View[] host = {host0};
+        final Turn[] turn = {turn0};
         cell.setOnLongClickListener(v -> {
+            if (host[0] == null) { // inside pages: they turn
+                for (android.view.ViewParent p = v.getParent(); p != null; p = p.getParent())
+                    if (p instanceof Pager) {
+                        Pager pg = (Pager) p;
+                        host[0] = pg;
+                        turn[0] = dir -> {
+                            pg.turn(dir);
+                            return true;
+                        };
+                        break;
+                    }
+            }
             dragging[0] = true;
             moving[0] = false;
             v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
@@ -45,6 +74,7 @@ final class Reorder {
                 case MotionEvent.ACTION_DOWN:
                     down[0] = e.getRawX();
                     down[1] = e.getRawY();
+                    moving[0] = false;
                     return false;
                 case MotionEvent.ACTION_MOVE:
                     if (!dragging[0]) return false;
@@ -53,6 +83,39 @@ final class Reorder {
                     if (ghost[0] != null) {
                         ghost[0].setTranslationX(dx);
                         ghost[0].setTranslationY(dy);
+                    }
+                    // held at the left or right edge: the page turns after a moment (and again while held there)
+                    int dir = 0;
+                    Rect hr = new Rect();
+                    if (host[0] != null && turn[0] != null && host[0].getGlobalVisibleRect(hr)) {
+                        float band = Math.max(U.u(28), hr.width() * 0.1f);
+                        if (e.getRawX() < hr.left + band) dir = -1;
+                        else if (e.getRawX() > hr.right - band) dir = 1;
+                    }
+                    if (dir != edge[0]) {
+                        edge[0] = dir;
+                        if (turner[0] != null) v.removeCallbacks(turner[0]);
+                        turner[0] = null;
+                        if (dir != 0) {
+                            final int d = dir;
+                            turner[0] = new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (!dragging[0] || edge[0] != d) return;
+                                    v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                                    if (turn[0].go(d)) v.postDelayed(this, 900);
+                                    else { // the turn finished the move (e.g. the app went to the next page)
+                                        dragging[0] = false;
+                                        drop(ghost[0], v);
+                                        ghost[0] = null;
+                                        if (target[0] >= 0 && target[0] < cells.size()) cells.get(target[0]).setAlpha(1f);
+                                        target[0] = -1;
+                                        edge[0] = 0;
+                                    }
+                                }
+                            };
+                            v.postDelayed(turner[0], 650);
+                        }
                     }
                     int t = at(cells, e.getRawX(), e.getRawY());
                     if (t != target[0]) {
@@ -63,7 +126,10 @@ final class Reorder {
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    if (!dragging[0]) return false;
+                    if (turner[0] != null) v.removeCallbacks(turner[0]);
+                    turner[0] = null;
+                    edge[0] = 0;
+                    if (!dragging[0]) return moving[0];
                     dragging[0] = false;
                     drop(ghost[0], v);
                     ghost[0] = null;

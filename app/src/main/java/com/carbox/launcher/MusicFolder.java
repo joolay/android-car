@@ -141,7 +141,16 @@ final class MusicFolder {
         // hold and drag an app onto another's place to move it (a hold without moving opens the full grid)
         final int base = page * 4, onPage = cells.size();
         for (int i = 0; i < onPage; i++)
-            Reorder.attach(cells.get(i), i, cells.subList(0, onPage), (from, to) -> move(c, base + from, base + to), () -> showAll(c));
+        {
+            final int at = i;
+            Reorder.attach(cells.get(i), i, cells.subList(0, onPage), (from, to) -> move(c, base + from, base + to), () -> showAll(c),
+                    view, dir -> { // held at the edge: the app goes to the start of the next page (or end of the previous one)
+                        int cnt = apps(c).size(), to = dir > 0 ? Math.min(cnt - 1, base + 4) : Math.max(0, base - 1);
+                        if (to != base + at) move(c, base + at, to);
+                        page(dir);
+                        return false;
+                    });
+        }
         if (cells.size() < 4 && page == n - 1) cells.add(plus(c)); // room left on the last page: + adds an app
         dots.removeAllViews();
         if (n > 1) for (int i = 0; i < n; i++) {

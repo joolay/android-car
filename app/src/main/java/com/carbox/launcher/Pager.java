@@ -89,6 +89,11 @@ final class Pager extends LinearLayout {
         });
     }
 
+    /** Next (1) or previous (-1) page, if there is one. */
+    void turn(int dir) {
+        go(page + dir);
+    }
+
     private void go(int p) {
         page = Math.max(0, Math.min(pages.size() - 1, p));
         if (U.ms(1) == 0) hs.scrollTo(page * w, 0);
