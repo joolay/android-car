@@ -39,6 +39,27 @@ final class NowPlaying {
     private View lyricsBtn;
     private EqView eq;
     private MusicFolder folder;
+    private LinearLayout videoBtns;
+    /** Apps whose "now playing" is a video. */
+    static final String[] VIDEO = {"com.google.android.youtube", "app.revanced.android.youtube", "app.rvx.android.youtube",
+            "com.netflix.mediaclient", "org.videolan.vlc", "com.mxtech.videoplayer.ad", "com.mxtech.videoplayer.pro", "org.xbmc.kodi",
+            "com.plexapp.android", "org.jellyfin.mobile", "com.stremio.one", "com.amazon.avod.thirdpartyclient", "com.disney.disneyplus",
+            "com.showmax.app", "com.dstv.now.android", "com.google.android.apps.youtube.kids", "com.vanced.android.youtube"};
+
+    static boolean isVideo(String pkg) {
+        for (String v : VIDEO) if (v.equals(pkg)) return true;
+        return false;
+    }
+
+    private View videoBtn(int icon, String desc, Runnable r) {
+        FrameLayout f = new FrameLayout(c);
+        f.setBackground(U.outline(0xBF0B0E13, U.ACCENT_SOFT, 1.5f, 15));
+        f.addView(U.icon(c, icon, U.ACCENT_SOFT), U.flpu(16, 16, Gravity.CENTER));
+        f.setContentDescription(desc);
+        f.setOnClickListener(v -> r.run());
+        U.press(f);
+        return f;
+    }
 
     int lyricCount() {
         return lyricText.size();
@@ -118,6 +139,26 @@ final class NowPlaying {
         FrameLayout.LayoutParams bl = U.flpu(30, 30, Gravity.TOP | Gravity.END);
         bl.setMargins(0, U.u(8), U.u(8), 0);
         view.addView(lyricsBtn, bl);
+        // video apps: watch it in the tile area, or full screen
+        videoBtns = U.row(c);
+        videoBtns.addView(videoBtn(R.drawable.ic_apps, "Show video in the tiles", () -> {
+            MediaController m = MediaListener.controller;
+            MainActivity ma = MainActivity.I;
+            if (m == null || ma == null) return;
+            android.graphics.Rect r = new android.graphics.Rect();
+            ma.tileArea.getGlobalVisibleRect(r);
+            Apps.launchInBounds(c, m.getPackageName(), r);
+        }), U.lpu(30, 30));
+        LinearLayout.LayoutParams vg = U.lpu(30, 30);
+        vg.leftMargin = U.u(6);
+        videoBtns.addView(videoBtn(R.drawable.ic_maximize, "Video full screen", () -> {
+            MediaController m = MediaListener.controller;
+            if (m != null) Apps.launchPkg(c, m.getPackageName());
+        }), vg);
+        videoBtns.setVisibility(View.GONE);
+        FrameLayout.LayoutParams vl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.END);
+        vl.setMargins(0, U.u(8), U.u(46), 0); // left of the Lyrics button, clear of the app icon
+        view.addView(videoBtns, vl);
         // live equaliser where the album art would be, when the art is hidden (app icon view)
         eq = new EqView(c, 18, 0x993D8BFD);
         eq.setVisibility(View.GONE);
@@ -248,6 +289,7 @@ final class NowPlaying {
                 empty.setText("Tap to allow notification access so music shows here");
                 empty.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0);
             }
+            if (videoBtns != null) videoBtns.setVisibility(View.GONE);
             if (folder != null) {
                 folder.view.setVisibility(access ? View.VISIBLE : View.GONE);
                 if (access) folder.render();
@@ -256,6 +298,7 @@ final class NowPlaying {
         }
         empty.setVisibility(View.GONE);
         if (folder != null) folder.view.setVisibility(View.GONE);
+        if (videoBtns != null) videoBtns.setVisibility(isVideo(m.getPackageName()) ? View.VISIBLE : View.GONE);
         content.setVisibility(View.VISIBLE);
         Bitmap bm = md.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
         if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_ART);
