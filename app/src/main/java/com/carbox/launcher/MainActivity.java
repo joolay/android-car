@@ -797,9 +797,27 @@ public class MainActivity extends Activity {
         });
     }
 
+    /** While the tiles are up the ticker sits at the top of the middle column (back above the dock after). */
+    private void tickerTop(boolean top) {
+        if (tickerRow == null || middle == null || tickerRow.getVisibility() != View.VISIBLE) return;
+        int at = middle.indexOfChild(tickerRow);
+        if (top == (at == 0)) return;
+        float from = tickerRow.getY();
+        LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) tickerRow.getLayoutParams();
+        middle.removeView(tickerRow);
+        lp.topMargin = top ? 0 : U.u(8);
+        lp.bottomMargin = top ? U.u(8) : 0;
+        middle.addView(tickerRow, top ? 0 : middle.indexOfChild(tileArea) + 1, lp);
+        tickerRow.post(() -> { // glide from where it was
+            tickerRow.setTranslationY(from - tickerRow.getY());
+            tickerRow.animate().translationY(0).setDuration(U.ms(340)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+        });
+    }
+
     void drawer(boolean open) {
         if (open == drawerOpen && !peeking) return;
         mapAside = false;
+        tickerTop(open);
         boolean fromPeek = peeking;
         peeking = false;
         if (open) hideAlertTile();
