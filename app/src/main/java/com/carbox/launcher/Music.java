@@ -151,9 +151,7 @@ final class Music {
                     boolean net = cm != null && cm.getActiveNetwork() != null;
                     log("Guard: silent, pressing play again (session: " + (mc == null ? "none" : Apps.label(mc.getPackageName()) + " state " + (ps == null ? "?" : ps.getState()))
                             + ", internet " + (net ? "yes" : "no") + ")");
-                    MediaController m = MediaListener.controller;
-                    if (m != null) m.getTransportControls().play();
-                    else resume(c);
+                    resume(c); // play on the music app's own session when it has one, else its play button (not any other app's)
                 }
                 U.ui.postDelayed(this, 1500);
             }
