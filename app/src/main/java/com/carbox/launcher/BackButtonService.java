@@ -41,45 +41,6 @@ public class BackButtonService extends AccessibilityService {
         } catch (Exception ignored) {
         }
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
-        // No drawn button of our own any more: Android's own floating accessibility button (the
-        // tab on the screen edge, which Android lets you drag and docks to the edge) is the back
-        // button. Tap = Back; tap twice quickly = the shortcut circle.
-        try {
-            getAccessibilityButtonController().registerAccessibilityButtonCallback(new android.accessibilityservice.AccessibilityButtonController.AccessibilityButtonCallback() {
-                @Override
-                public void onClicked(android.accessibilityservice.AccessibilityButtonController controller) {
-                    if (menu != null) {
-                        closeMenu();
-                        return;
-                    }
-                    if (tapPending) { // second tap: the shortcuts
-                        tapPending = false;
-                        U.ui.removeCallbacks(singleTap);
-                        openMenu(true);
-                        return;
-                    }
-                    tapPending = true;
-                    U.ui.postDelayed(singleTap, 320);
-                }
-            });
-        } catch (Exception ignored) {
-        }
-    }
-
-    private boolean tapPending;
-    private final Runnable singleTap = () -> {
-        tapPending = false;
-        performGlobalAction(GLOBAL_ACTION_BACK);
-    };
-
-    /** Is Android's accessibility button available (switched on for this service)? */
-    static boolean buttonShown() {
-        try {
-            return I != null && android.accessibilityservice.AccessibilityButtonController.class != null
-                    && I.getAccessibilityButtonController().isAccessibilityButtonAvailable();
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     /** "tab": a slim tab that sticks to the left or right edge (magnetised); "round": the floating circle. */

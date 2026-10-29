@@ -143,7 +143,7 @@ final class SettingsPanels {
                 {{"System"},
                         {R.drawable.ic_check, GREY, "Set-up checklist", null, (Runnable) SettingsPanels::setupChecklist},
                         {R.drawable.ic_bolt, GREY, "Startup optimiser", null, (Runnable) Optimiser::show},
-                        {R.drawable.ic_back, GREY, "Floating back button", BackButtonService.enabled(c) ? "On" : "Off", (Runnable) SettingsPanels::floatingBack},
+                        {R.drawable.ic_call, GREY, "Call helper", BackButtonService.enabled(c) ? "On" : "Off", (Runnable) SettingsPanels::floatingBack},
                         {R.drawable.ic_gear, GREY, "Android settings", null, (Runnable) SettingsPanels::androidSettings},
                         {R.drawable.ic_shield, GREY, "About", About.version(c), (Runnable) About::show}}};
 
@@ -496,7 +496,7 @@ final class SettingsPanels {
             b.addView(check(c, R.drawable.ic_mic, U.CARD3, "Car keyboard (optional)", "Big keys and voice typing in every app",
                     kb ? "Done" : "Set up", kb, SettingsPanels::keyboard));
             boolean fb = BackButtonService.enabled(c);
-            b.addView(check(c, R.drawable.ic_back, U.CARD3, "Back button (optional)", "Android's floating button goes back over other apps; tap twice for shortcuts",
+            b.addView(check(c, R.drawable.ic_back, U.CARD3, "Call helper (optional)", "Shows and answers calls from the box's BT Phone app",
                     fb ? "Done" : "Set up", fb, SettingsPanels::floatingBack));
             boolean wg = Store.flag("widgets_seen", false);
             b.addView(check(c, R.drawable.ic_apps, U.CARD3, "Choose your widgets", "Pick what goes on your home screen",
@@ -544,32 +544,15 @@ final class SettingsPanels {
         open(floatPage = () -> {
             Context c = c();
             LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Android's own floating accessibility button works as the back button over other apps. It's a small tab on the screen edge that you can drag; it docks to the edge by itself. Tap it to go back; tap it twice quickly for your shortcuts.", 13, U.SUB, false));
+            b.addView(U.text(c, "Lets Car Launcher show incoming calls and press Answer, Decline and the keypad in the box's BT Phone app. It reads only BT Phone's own screens.", 13, U.SUB, false));
             boolean on = BackButtonService.enabled(c);
             if (!on) b.addView(step(c, 1, "Allow restricted settings", "Tap Turn on below first (Android will block it), then come back here: App info → ⋮ (top right) → Allow restricted settings",
                     "App info", false, () -> Apps.appInfo(c, c.getPackageName())), top(10));
-            b.addView(step(c, on ? 1 : 2, "Turn on \"Car Launcher back button\"", "In Android's Accessibility list",
+            b.addView(step(c, on ? 1 : 2, "Turn on \"Car Launcher call helper\"", "In Android's Accessibility list",
                     on ? "Done" : "Turn on", on, () -> Status.open(c, Settings.ACTION_ACCESSIBILITY_SETTINGS)), on ? top(10) : U.lp(U.MATCH, U.WRAP));
-            boolean shown = BackButtonService.buttonShown();
-            b.addView(step(c, on ? 2 : 3, "Turn on its shortcut as a floating button", "In the same page: \"Car Launcher back button shortcut\" on, then Settings (cog) → Floating button / Tap accessibility button",
-                    shown ? "Done" : "Open", shown, () -> {
-                        Intent i = new Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
-                                .putExtra(Intent.EXTRA_COMPONENT_NAME, new android.content.ComponentName(c, BackButtonService.class).flattenToString());
-                        try {
-                            c.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                        } catch (Exception e) {
-                            Status.open(c, Settings.ACTION_ACCESSIBILITY_SETTINGS);
-                        }
-                    }));
-            boolean ov = BackButtonService.overlay(c);
-            b.addView(step(c, on ? 3 : 4, "Allow display over other apps", "So the shortcuts can open apps while another app is on screen",
-                    ov ? "Done" : "Allow", ov, () -> overlaySettings(c)));
-            String st = BackButtonService.I != null ? (shown ? "Running · button on screen" : "Running · turn on the shortcut (step above)") : on ? "Switched on but not running: switch it off and on again in Accessibility" : "Off";
-            b.addView(U.text(c, "Status: " + st, 13, BackButtonService.I != null && shown ? U.GREEN : U.AMBER, true), top(8));
-            b.addView(Sheets.item("Shortcuts (tap twice)", QuickActions.chosen().size() + " buttons", SettingsPanels::holdMenu), top(4));
-            b.addView(U.text(c, "With ADB you can switch the floating button on in one go:\nadb shell settings put secure accessibility_button_targets " + c.getPackageName() + "/" + BackButtonService.class.getName()
-                    + "\nadb shell settings put secure accessibility_button_mode 1", 11, U.SUB, false), top(10));
-            return Sheets.panel("Back button", b, 640, 432);
+            String st = BackButtonService.I != null ? "Running" : on ? "Switched on but not running: switch it off and on again in Accessibility" : "Off";
+            b.addView(U.text(c, "Status: " + st, 13, BackButtonService.I != null ? U.GREEN : U.AMBER, true), top(8));
+            return Sheets.panel("Call helper", b, 640, 432);
         });
     }
 
@@ -704,7 +687,7 @@ final class SettingsPanels {
             LinearLayout b = U.col(c);
             b.addView(Sheets.item("Set-up checklist", null, SettingsPanels::setupChecklist));
             b.addView(U.hr(c));
-            b.addView(Sheets.item("Floating back button", BackButtonService.enabled(c) ? "On" : "Off", SettingsPanels::floatingBack));
+            b.addView(Sheets.item("Call helper", BackButtonService.enabled(c) ? "On" : "Off", SettingsPanels::floatingBack));
             b.addView(U.hr(c));
             b.addView(Sheets.item("Startup optimiser", null, Optimiser::show));
             b.addView(U.hr(c));
