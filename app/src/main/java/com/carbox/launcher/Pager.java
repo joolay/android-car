@@ -24,7 +24,6 @@ final class Pager extends LinearLayout {
     Pager(Context c, List<View> cells, int cols, int rows, float gap) {
         super(c);
         setOrientation(VERTICAL);
-        int per = Math.max(1, cols * rows);
         hs = new HorizontalScrollView(c) {
             @Override
             public void fling(int velocityX) { // a flick goes one page, never further
@@ -53,34 +52,71 @@ final class Pager extends LinearLayout {
         hs.setOverScrollMode(OVER_SCROLL_NEVER);
         strip = U.row(c);
         strip.setGravity(Gravity.TOP);
-        for (int i = 0; i < cells.size(); i += per) {
-            List<View> sub = new ArrayList<>(cells.subList(i, Math.min(cells.size(), i + per)));
-            LinearLayout pg = AppPanels.grid(c, sub, cols, gap);
-            pages.add(pg);
-            strip.addView(pg, new LayoutParams(0, LayoutParams.WRAP_CONTENT));
-        }
         hs.addView(strip, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
-        addView(hs, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
         dots = U.row(c);
         dots.setGravity(Gravity.CENTER);
-        if (pages.size() > 1) {
-            for (int i = 0; i < pages.size(); i++) {
-                View d = new View(c);
-                LayoutParams dl = U.lpu(7, 7);
-                dl.setMargins(U.u(4), 0, U.u(4), 0);
-                dots.addView(d, dl);
-            }
-            LayoutParams dl = U.lp(U.MATCH, U.u(16));
-            dl.topMargin = U.u(4);
-            addView(dots, dl);
+        this.cells = cells;
+        this.cols = cols;
+        this.gap = gap;
+        auto = rows <= 0;
+        // auto (rows 0): fill the height it's given, the dots always at the bottom
+        addView(hs, auto ? new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1) : new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+        LayoutParams dl = U.lp(U.MATCH, U.u(16));
+        dl.topMargin = U.u(4);
+        addView(dots, dl);
+        if (!auto) build(rows);
+    }
+
+    private final List<View> cells;
+    private final int cols;
+    private final float gap;
+    private final boolean auto;
+    private int rowsBuilt;
+
+    /** Lay the cells out as pages of cols × rows, with a dot for each page. */
+    private void build(int rows) {
+        rowsBuilt = rows;
+        int per = Math.max(1, cols * rows);
+        pages.clear();
+        strip.removeAllViews();
+        for (View v : cells) if (v.getParent() != null) ((android.view.ViewGroup) v.getParent()).removeView(v);
+        for (int i = 0; i < cells.size(); i += per) {
+            List<View> sub = new ArrayList<>(cells.subList(i, Math.min(cells.size(), i + per)));
+            LinearLayout pg = AppPanels.grid(getContext(), sub, cols, gap);
+            pages.add(pg);
+            strip.addView(pg, new LayoutParams(w > 0 ? w : 0, LayoutParams.WRAP_CONTENT));
         }
-        dots(0);
+        dots.removeAllViews();
+        if (pages.size() > 1) for (int i = 0; i < pages.size(); i++) {
+            View d = new View(getContext());
+            LayoutParams l = U.lpu(7, 7);
+            l.setMargins(U.u(4), 0, U.u(4), 0);
+            dots.addView(d, l);
+        }
+        dots.setVisibility(pages.size() > 1 ? VISIBLE : INVISIBLE);
+        page = Math.min(page, Math.max(0, pages.size() - 1));
+        dots(page);
+    }
+
+    /** How many rows fit: the height left above the dots, by one cell's height. */
+    private int fitRows(int width, int height) {
+        if (cells.isEmpty() || width <= 0) return 1;
+        View c0 = cells.get(0);
+        if (c0.getParent() != null) ((android.view.ViewGroup) c0.getParent()).removeView(c0);
+        c0.measure(MeasureSpec.makeMeasureSpec(width / cols, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+        int ch = c0.getMeasuredHeight() + U.u(gap);
+        return Math.max(1, (height - U.u(20)) / Math.max(1, ch));
     }
 
     @Override
     protected void onSizeChanged(int nw, int nh, int ow, int oh) {
         super.onSizeChanged(nw, nh, ow, oh);
-        if (nw == w) return;
+        if (auto && nh > 0 && (nw != w || nh != oh)) { // rows to fit this height
+            int r = fitRows(nw, nh);
+            w = nw;
+            if (r != rowsBuilt) post(() -> build(r));
+        }
+        if (nw == w && !auto) return;
         w = nw;
         post(() -> { // every page exactly as wide as the pager
             for (View p : pages) p.getLayoutParams().width = w;

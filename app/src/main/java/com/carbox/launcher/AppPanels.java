@@ -238,11 +238,8 @@ final class AppPanels {
             cells.add(cell);
         }
         if (cells.isEmpty()) results.addView(U.text(c, "No apps match", 14, U.SUB, false));
-        else { // zoom sets how many across; rows fit the window (fewer when the Select bar shows)
-            float icon = ZOOM_ICON[zoom()], avail = selecting ? 300 : 346;
-            int rows = Math.max(1, (int) (avail / (icon + 46)));
-            results.addView(new Pager(c, cells, ZOOM_COLS[zoom()], rows, 6), U.lp(U.MATCH, U.WRAP));
-        }
+        else // zoom sets how many across; as many rows as fit, page dots at the bottom
+            results.addView(new Pager(c, cells, ZOOM_COLS[zoom()], 0, 6), new LinearLayout.LayoutParams(U.MATCH, U.MATCH));
     }
 
     // zoom levels for All apps: icons across and icon size
