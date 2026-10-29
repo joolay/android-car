@@ -517,9 +517,9 @@ public class MainActivity extends Activity {
 
     // ------------------------------------------------------------------ lifecycle
 
-    @Override
     static long frontAt; // when the home screen last came to the front (0 = not in front)
 
+    @Override
     protected void onResume() {
         frontAt = android.os.SystemClock.elapsedRealtime();
         Trace.event(this, "Home screen shown");
