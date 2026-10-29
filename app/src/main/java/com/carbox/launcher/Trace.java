@@ -157,14 +157,20 @@ final class Trace {
         SettingsPanels.open(() -> {
             Context c = Sheets.ctx();
             android.widget.LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Switch on, then restart Car Launcher (or the box): from then on everything Car Launcher does is logged. "
-                    + "When the problem has happened, switch it off and the log is sent online, so it can be looked at.", 13, U.SUB, false));
-            b.addView(Sheets.switchRow(0, 0, "Troubleshooting mode", on() ? (running ? "Logging now · switch off to send the log" : "Starts logging at the next start") : "Off",
+            b.addView(U.text(c, "Switch on and logging starts straight away. A restart of Car Launcher (or the box) is a good idea so the start-up is "
+                    + "logged too. When the problem has happened, switch it off and the log is sent online, so it can be looked at.", 13, U.SUB, false));
+            b.addView(Sheets.switchRow(0, 0, "Troubleshooting mode", on() ? "Logging now · switch off to send the log" : "Off",
                     on(), v -> {
-                        if (v) arm();
-                        else stopAndSend(c);
+                        if (v) {
+                            arm();
+                            atStart(c); // logging from now on
+                            event(c, "=== Switched on from Settings (no restart yet)");
+                        } else stopAndSend(c);
                         Sheets.refresh();
                     }), Widgets.top(10));
+            if (on()) b.addView(Sheets.item("Restart Car Launcher", "Suggested, so the start-up is in the log too", () -> {
+                if (MainActivity.I != null) MainActivity.I.restartApp();
+            }), Widgets.top(6));
             long sz = size(c);
             if (sz > 0) b.addView(U.text(c, "Logged so far: " + Math.max(1, sz / 1024) + " KB", 12, U.SUB, false), Widgets.top(6));
             if (!on() && Store.flag(PENDING, false))
