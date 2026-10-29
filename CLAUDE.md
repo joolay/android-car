@@ -51,7 +51,7 @@ Ticker at the top of the middle column (hidden: map/tiles take its space, tiles 
 - The app sends crash reports (About.sendPending, switch in Settings → About) to ntfy.sh topic
   `carlauncher-crash-4d6dd33614e4914e`. `.github/workflows/crashes.yml` (hourly, or run it by hand)
   copies them into branch `crashes`, file `crashes.jsonl` (id, time, title, message).
-- To read them: `gh workflow run crashes.yml -R joolay/CarLauncher`, wait for it, then
+- To read them: `gh api -X POST repos/joolay/CarLauncher/actions/workflows/crashes.yml/dispatches -f ref=main` (gh workflow run fails here: no GraphQL), wait ~40 s, then
   `git fetch origin crashes && git show origin/crashes:crashes.jsonl`.
 - Troubleshooting mode (`Trace`, Settings → System → Troubleshooting): logs from the next start until
   switched off (events.log + the app's own logcat), then zips and PUTs it to the same topic as an
