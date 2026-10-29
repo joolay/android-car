@@ -232,6 +232,14 @@ final class Sheets {
 
     /** A titled panel. body is added below the header; scrolls if taller than the panel. */
     static LinearLayout panel(String title, View body, float w, float h) {
+        return panel(null, title, body, w, h, null);
+    }
+
+    /**
+     * A panel whose title can be a view of its own (e.g. an editable name) and with an icon button in
+     * the title bar beside ✕ (`action`, may be null).
+     */
+    static LinearLayout panel(View titleView, String title, View body, float w, float h, View action) {
         LinearLayout p = U.col(ctx);
         p.setBackground(U.round(U.CARD, 16)); // same corners as the tiles it covers
         U.pad(p, 20, 14, 20, 14);
@@ -248,8 +256,12 @@ final class Sheets {
             head.addView(back, U.lpu(ic, ic));
             head.addView(U.gap(ctx, up ? 10 : 12, 1));
         }
-        TextView t = U.line(ctx, title, up ? 15 : 20, U.TEXT, true);
+        View t = titleView != null ? titleView : U.line(ctx, title, up ? 15 : 20, U.TEXT, true);
         head.addView(t, new LinearLayout.LayoutParams(0, U.WRAP, 1));
+        if (action != null) {
+            head.addView(action, U.lpu(ic + 8, ic + 8));
+            head.addView(U.gap(ctx, 12, 1));
+        }
         View x = U.icon(ctx, R.drawable.ic_x, U.SUB);
         x.setOnClickListener(v -> close());
         head.addView(x, U.lpu(ic, ic));

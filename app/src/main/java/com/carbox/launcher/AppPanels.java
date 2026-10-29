@@ -610,12 +610,13 @@ final class AppPanels {
             LinearLayout b = U.col(c);
             if (cells.isEmpty()) b.addView(U.text(c, "This folder is empty.", 14, U.SUB, false));
             else b.addView(new Pager(c, cells, 6, 2, 6), U.lp(U.MATCH, U.WRAP)); // pages of 12, slide sideways
-            LinearLayout btns = U.row(c);
-            btns.addView(U.button(c, "Edit apps", false, () -> editFolder(index)));
-            btns.addView(U.gap(c, 10, 1));
-            btns.addView(U.button(c, "Rename", false, () -> renameFolder(index)));
-            b.addView(btns, top(16));
-            return Sheets.panel(spec.optString("name", "Folder"), b, 640, 400);
+            // edit (apps and name) is an icon in the title bar
+            View ed = U.icon(c, R.drawable.ic_edit, U.ACCENT_SOFT);
+            U.pad(ed, 4, 4, 4, 4);
+            ed.setContentDescription("Edit folder");
+            ed.setOnClickListener(v -> editFolder(index));
+            U.press(ed);
+            return Sheets.panel(null, spec.optString("name", "Folder"), b, 640, 400, ed);
         });
     }
 
@@ -646,9 +647,21 @@ final class AppPanels {
                 cells.add(cell);
             }
             LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Tap apps to add or remove them.", 13, U.SUB, false));
+            b.addView(U.text(c, "Tap apps to add or remove them. Tap the name above to rename the folder.", 13, U.SUB, false));
             b.addView(grid(c, cells, 6, 6), top(10));
-            return Sheets.panel("Apps in " + spec.optString("name"), b, 700, 440);
+            // the folder's name is editable right in the title (saved as you type, if it's free)
+            android.widget.EditText name = Widgets.field("Folder name", spec.optString("name"), false, t -> {
+                String n = t.trim();
+                if (n.isEmpty() || folderNames(index).contains(n.toLowerCase(java.util.Locale.ROOT))) return; // empty or taken: not saved
+                JSONObject sp = Tiles.specs().optJSONObject(index);
+                if (sp == null) return;
+                Widgets.put(sp, "name", n);
+                Tiles.setSpec(index, sp);
+            });
+            name.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, U.uf(16));
+            name.setTypeface(name.getTypeface(), android.graphics.Typeface.BOLD);
+            U.pad(name, 10, 4, 10, 4);
+            return Sheets.panel(name, null, b, 700, 440, null);
         });
     }
 
