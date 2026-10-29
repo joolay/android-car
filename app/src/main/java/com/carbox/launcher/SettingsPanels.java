@@ -39,6 +39,24 @@ final class SettingsPanels {
         return Sheets.ctx();
     }
 
+    /** A small "are you sure?" page. */
+    static void confirm(String title, String text, String yes, Runnable go) {
+        Sheets.push(() -> {
+            Context c = c();
+            LinearLayout b = U.col(c);
+            b.addView(U.text(c, text, 14, U.TEXT2, false));
+            LinearLayout btns = U.row(c);
+            btns.addView(U.button(c, yes, true, () -> {
+                Sheets.close();
+                go.run();
+            }));
+            btns.addView(U.gap(c, 10, 1));
+            btns.addView(U.button(c, "Cancel", false, Sheets::back));
+            b.addView(btns, top(16));
+            return Sheets.panel(title, b, 420, 220);
+        });
+    }
+
     static void open(Sheets.Page p) {
         if (Sheets.open()) Sheets.push(p);
         else Sheets.show(p);
@@ -181,6 +199,13 @@ final class SettingsPanels {
                         {R.drawable.ic_bolt, GREY, "Startup optimiser", null, (Runnable) Optimiser::show},
                         {R.drawable.ic_call, GREY, "Call helper", BackButtonService.enabled(c) ? "On" : "Off", (Runnable) SettingsPanels::floatingBack},
                         {R.drawable.ic_gear, GREY, "Android settings", null, (Runnable) SettingsPanels::androidSettings},
+                        {R.drawable.ic_bolt, GREY, "Restart Car Launcher", "A fresh start of the app", (Runnable) () -> confirm("Restart Car Launcher?", "It closes and opens again in a moment.", "Restart", () -> {
+                            if (MainActivity.I != null) MainActivity.I.restartApp();
+                        })},
+                        {R.drawable.ic_bolt, GREY, "Restart the box", "Opens the power menu", (Runnable) () -> {
+                            Sheets.close();
+                            if (MainActivity.I != null) MainActivity.I.restartBox();
+                        }},
                         {R.drawable.ic_bolt, GREY, "Troubleshooting", Trace.on() ? "Logging · switch off to send" : Store.flag(Trace.PENDING, false) ? "Log waiting to send" : "Off", (Runnable) Trace::settings},
                         {R.drawable.ic_shield, GREY, "About", About.version(c), (Runnable) About::show}}};
 

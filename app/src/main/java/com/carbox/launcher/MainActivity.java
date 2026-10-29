@@ -429,6 +429,18 @@ public class MainActivity extends Activity {
 
     /** First run: the checklist for permissions Android only grants in its own settings screens. */
     /** After installing a new version: offer to run the set-up checklist again (new steps may have been added). */
+    /** Close Car Launcher and open it again a moment later (a fresh start). */
+    void restartApp() {
+        Store.flush();
+        Trace.event(this, "Restart Car Launcher (from Settings)");
+        android.content.Intent i = new android.content.Intent(this, MainActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        android.app.PendingIntent pi = android.app.PendingIntent.getActivity(this, 7, i, android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_CANCEL_CURRENT);
+        android.app.AlarmManager am = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
+        if (am != null) am.set(android.app.AlarmManager.RTC, System.currentTimeMillis() + 800, pi);
+        finishAffinity();
+        android.os.Process.killProcess(android.os.Process.myPid()); // as Home, Android brings it straight back anyway
+    }
+
     /** Android won't let an app restart the box itself: open the power menu (Restart is in it) through the Call helper. */
     void restartBox() {
         if (BackButtonService.I != null && BackButtonService.I.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_POWER_DIALOG)) {
