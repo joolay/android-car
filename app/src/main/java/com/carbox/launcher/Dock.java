@@ -176,16 +176,16 @@ final class Dock {
 
     private int group; // what came last: 0 nothing, 1 dialler, 2 pinned, 3 recent, 4 All apps
 
-    /** The gap before the next item: one equal gap, with a divider in its middle when the group changes. */
+    /** The gap before the next item: one equal gap; where the group changes, a divider with an equal gap each side. */
     private void gapBefore(int next) {
         if (group == 0) {
             group = next;
             return;
         }
-        if (group != next) {
-            spacer(0.5f);
+        if (group != next) { // the divider counts as an item: a full gap either side
+            spacer(1);
             divider();
-            spacer(0.5f);
+            spacer(1);
         } else spacer(1);
         group = next;
     }

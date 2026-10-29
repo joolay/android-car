@@ -240,6 +240,48 @@ final class MapPanel {
         web.loadUrl("file:///android_asset/map.html");
     }
 
+    /**
+     * The big map's rim, plus its corners painted over in the screen's background colour: the map page
+     * doesn't always respect the rounded clip, which left little light quarter-circles at the corners.
+     */
+    static android.graphics.drawable.Drawable rim(float r, float w) {
+        return new android.graphics.drawable.Drawable() {
+            final android.graphics.Paint fill = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG),
+                    line = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+            @Override
+            public void draw(android.graphics.Canvas cv) {
+                android.graphics.Rect b = getBounds();
+                float rr = U.uf(r), sw = U.uf(w);
+                android.graphics.Path p = new android.graphics.Path();
+                p.setFillType(android.graphics.Path.FillType.EVEN_ODD);
+                p.addRect(b.left - 2, b.top - 2, b.right + 2, b.bottom + 2, android.graphics.Path.Direction.CW);
+                p.addRoundRect(b.left, b.top, b.right, b.bottom, rr, rr, android.graphics.Path.Direction.CW);
+                String mode = Store.str(Store.WALL, "black");
+                fill.setColor("color".equals(mode) ? Store.num(Store.WALL_COLOR, U.BG) : android.graphics.Color.BLACK);
+                cv.drawPath(p, fill);
+                line.setStyle(android.graphics.Paint.Style.STROKE);
+                line.setStrokeWidth(sw);
+                line.setColor(U.CARD);
+                float h = sw / 2;
+                cv.drawRoundRect(b.left + h, b.top + h, b.right - h, b.bottom - h, rr - h, rr - h, line);
+            }
+
+            @Override
+            public void setAlpha(int a) {
+            }
+
+            @Override
+            public void setColorFilter(android.graphics.ColorFilter f) {
+            }
+
+            @Override
+            public int getOpacity() {
+                return android.graphics.PixelFormat.TRANSLUCENT;
+            }
+        };
+    }
+
     static void clip(View v, float r) {
         v.setOutlineProvider(new ViewOutlineProvider() {
             @Override
@@ -378,7 +420,7 @@ final class MapPanel {
             bigHolder = new FrameLayout(a);
             MapPanel.clip(bigHolder, 16);
             // a thin card-coloured rim, like the dark cards beside it, so the bright map doesn't look taller than them
-            bigHolder.setForeground(U.outline(0, U.CARD, 2.5f, 16));
+            bigHolder.setForeground(rim(16, 2.5f));
             view.removeView(mapLayer);
             bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
             mapLayer.setVisibility(View.VISIBLE);
