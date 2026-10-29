@@ -272,7 +272,7 @@ final class Rail {
                 });
                 U.press(v);
                 android.widget.FrameLayout f = new android.widget.FrameLayout(c);
-                f.addView(v, new android.widget.FrameLayout.LayoutParams(U.u(46), U.u(40), Gravity.CENTER));
+                f.addView(v, new android.widget.FrameLayout.LayoutParams(U.u(50), U.u(50), Gravity.CENTER));
                 return f;
             }
             default:

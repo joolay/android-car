@@ -69,6 +69,13 @@ final class DataMeter extends View {
         return String.format(java.util.Locale.US, b < 10_000_000 ? "%.1fM" : "%.0fM", b / 1_000_000f);
     }
 
+    /** Short amount for the rail: 850K, 12M, 1.4G. */
+    static String used(long b) {
+        if (b < 1_000_000) return Math.round(b / 1000f) + "K";
+        if (b < 1_000_000_000) return Math.round(b / 1_000_000f) + "M";
+        return String.format(java.util.Locale.US, "%.1fG", b / 1_000_000_000f);
+    }
+
     static String size(long b) {
         if (b < 1_000_000) return Math.round(b / 1000f) + " KB";
         if (b < 1_000_000_000) return Math.round(b / 1_000_000f) + " MB";
@@ -125,8 +132,12 @@ final class DataMeter extends View {
         shownUp = anim ? shownUp + (tU - shownUp) * 0.25f : tU;
         if (shownDown > 0.005f) cv.drawArc(r, 150, 240 * shownDown, false, arc);
         if (shownUp > 0.005f) cv.drawArc(r2, 150, 240 * shownUp, false, inner);
-        text.setTextSize(U.uf(11));
-        cv.drawText(rate(down), cx, cy + U.uf(4), text);
+        // the data actually used since the box started: down inside the gauge, up underneath
+        text.setTextSize(U.uf(10));
+        text.setColor(U.ACCENT_SOFT);
+        cv.drawText("↓" + used(totalDown()), cx, cy + U.uf(3), text);
+        text.setColor(U.AMBER);
+        cv.drawText("↑" + used(totalUp()), cx, cy + rad + U.uf(7), text);
         // keep easing until it settles
         if (anim && (Math.abs(tD - shownDown) > 0.005f || Math.abs(tU - shownUp) > 0.005f)) postInvalidateOnAnimation();
     }
