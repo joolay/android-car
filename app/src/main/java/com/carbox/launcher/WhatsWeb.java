@@ -25,6 +25,24 @@ final class WhatsWeb {
     // WhatsApp Web only works in desktop browsers, so it's told this is Chrome on a computer
     private static final String DESKTOP_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
     private static WebView web;
+    /**
+     * One pane at a time, like on a phone: first the chats list across the whole tile area; tap a chat
+     * and it opens across the whole area; the back button in the bar returns to the list.
+     */
+    private static final String ONE_PANE = "(function(){if(window.__cl)return;window.__cl=1;"
+            + "var st=document.createElement('style');st.textContent="
+            + "'body[data-cl=list] #app div:has(> #side){flex:1 1 100% !important;max-width:100% !important;width:100% !important}"
+            + " body[data-cl=list] div:has(> #main){display:none !important}"
+            + " body[data-cl=chat] #app div:has(> #side){display:none !important}"
+            + " body[data-cl=chat] div:has(> #main){flex:1 1 100% !important;max-width:100% !important;width:100% !important}';"
+            + "document.head.appendChild(st);document.body.dataset.cl='list';"
+            + "document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('#pane-side'))"
+            + "setTimeout(function(){document.body.dataset.cl='chat';},150);},true);})();";
+
+    /** Back to the chats list. */
+    static void chats() {
+        if (web != null) web.evaluateJavascript("document.body&&(document.body.dataset.cl='list');", null);
+    }
     private static boolean full;
 
     private WhatsWeb() {
@@ -50,6 +68,11 @@ final class WhatsWeb {
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
         web.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView v, String url) {
+                v.evaluateJavascript(ONE_PANE, null);
+            }
+
             @Override
             public boolean shouldOverrideUrlLoading(WebView v, android.webkit.WebResourceRequest r) {
                 String u = r.getUrl().toString();
@@ -99,6 +122,7 @@ final class WhatsWeb {
         LinearLayout head = U.row(c);
         head.setGravity(Gravity.CENTER_VERTICAL);
         U.pad(head, 6, 0, 2, 0);
+        head.addView(btn(c, R.drawable.ic_back, "Back to the chats", WhatsWeb::chats));
         head.addView(U.icon(c, R.drawable.ic_chat, U.GREEN), U.lpu(18, 18));
         TextView t = U.line(c, "WhatsApp", 14, U.TEXT, true);
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
