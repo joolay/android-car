@@ -74,15 +74,58 @@ final class LyricsCard {
         x.setOnClickListener(v -> hide());
         shown.addView(x, U.flpu(40, 40, Gravity.TOP | Gravity.END));
         a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        // grows out of the Now playing tile
+        final FrameLayout s0 = shown;
+        s0.setAlpha(0f);
+        s0.post(() -> {
+            float[] t = fromNowPlaying(s0);
+            if (t == null) {
+                s0.setAlpha(1f);
+                return;
+            }
+            s0.setPivotX(0);
+            s0.setPivotY(0);
+            s0.setTranslationX(t[0]);
+            s0.setTranslationY(t[1]);
+            s0.setScaleX(t[2]);
+            s0.setScaleY(t[3]);
+            s0.setAlpha(0.6f);
+            s0.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).alpha(1f).setDuration(340)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+        });
         forKey = null;
         U.ui.post(tick);
     }
 
     static void hide() {
         U.ui.removeCallbacks(tick);
-        if (shown != null && shown.getParent() != null) ((android.view.ViewGroup) shown.getParent()).removeView(shown);
+        final FrameLayout s0 = shown;
         shown = null;
         views.clear();
+        if (s0 == null || s0.getParent() == null) return;
+        float[] t = fromNowPlaying(s0);
+        Runnable gone = () -> {
+            if (s0.getParent() != null) ((android.view.ViewGroup) s0.getParent()).removeView(s0);
+        };
+        if (t == null) {
+            gone.run();
+            return;
+        }
+        // shrinks back into the Now playing tile
+        s0.setPivotX(0);
+        s0.setPivotY(0);
+        s0.animate().translationX(t[0]).translationY(t[1]).scaleX(t[2]).scaleY(t[3]).alpha(0.2f).setDuration(280)
+                .setInterpolator(new android.view.animation.AccelerateInterpolator(1.4f)).withEndAction(gone).start();
+    }
+
+    /** Move and scale that put the lyrics window exactly over the Now playing tile: {dx, dy, sx, sy}. */
+    private static float[] fromNowPlaying(View v) {
+        MainActivity a = MainActivity.I;
+        if (a == null || a.nowPlaying == null || v.getWidth() == 0 || a.nowPlaying.view.getWidth() == 0) return null;
+        int[] np = new int[2], ta = new int[2];
+        a.nowPlaying.view.getLocationOnScreen(np);
+        a.tileArea.getLocationOnScreen(ta);
+        return new float[]{np[0] - ta[0], np[1] - ta[1], a.nowPlaying.view.getWidth() / (float) v.getWidth(), a.nowPlaying.view.getHeight() / (float) v.getHeight()};
     }
 
     private static final Runnable tick = new Runnable() {
