@@ -773,14 +773,9 @@ public class MainActivity extends Activity {
         if (on) {
             if (mapAside || !map.expanded() || big == null) return;
             mapAside = true;
-            float[] t = toSmall(big);
-            big.animate().translationX(t[0]).translationY(t[1]).scaleX(t[2]).scaleY(t[3]).setDuration(U.ms(360))
-                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f))
-                    .withEndAction(() -> {
-                        if (!mapAside) return;
-                        resetTransform(big);
-                        map.expand(false);
-                    }).start();
+            morph(big, true, () -> {
+                if (mapAside) map.expand(false);
+            });
         } else {
             if (!mapAside) return;
             U.ui.post(() -> { // a moment later, so one thing replacing another doesn't bounce the map
@@ -798,17 +793,7 @@ public class MainActivity extends Activity {
         if (!map.expanded()) map.expand(true);
         View big = map.bigView();
         if (big == null) return;
-        big.post(() -> {
-            float[] t = toSmall(big);
-            big.setPivotX(0);
-            big.setPivotY(0);
-            big.setTranslationX(t[0]);
-            big.setTranslationY(t[1]);
-            big.setScaleX(t[2]);
-            big.setScaleY(t[3]);
-            big.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).setDuration(U.ms(360))
-                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
-        });
+        big.post(() -> morph(big, false, null));
     }
 
     /** While the tiles are up the ticker sits at the top of the middle column (back above the dock after). */
@@ -849,13 +834,9 @@ public class MainActivity extends Activity {
             tiles.view.animate().translationY(0).setDuration(U.ms(340)).setInterpolator(ease).start();
             View big = map != null ? map.bigView() : null;
             if (big == null) return;
-            float[] t = toSmall(big);
-            big.animate().translationX(t[0]).translationY(t[1]).scaleX(t[2]).scaleY(t[3]).setDuration(U.ms(360)).setInterpolator(ease)
-                    .withEndAction(() -> {
-                        if (!drawerOpen) return;
-                        resetTransform(big);
-                        map.expand(false); // the live map is now the small map
-                    }).start();
+            morph(big, true, () -> {
+                if (drawerOpen) map.expand(false); // the live map is now the small map
+            });
         } else {
             if (tiles.editing()) tiles.setEditing(false);
             // once down, hide them so no bits of tiles show between the ticker and the dock
@@ -865,20 +846,86 @@ public class MainActivity extends Activity {
             if (!map.expanded()) map.expand(true);
             View big = map.bigView();
             if (big == null) return;
-            big.post(() -> { // once it's laid out at full size: start small, grow back
-                float[] t = toSmall(big);
-                big.setPivotX(0);
-                big.setPivotY(0);
-                big.setTranslationX(t[0]);
-                big.setTranslationY(t[1]);
-                big.setScaleX(t[2]);
-                big.setScaleY(t[3]);
-                big.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).setDuration(U.ms(360)).setInterpolator(ease).start();
-            });
+            big.post(() -> morph(big, false, null)); // once it's laid out at full size: start small, grow back
         }
     }
 
     /** Move and scale that make the big map sit exactly on the small map panel: {dx, dy, sx, sy}. */
+    private android.animation.ValueAnimator morphAnim;
+
+    /**
+     * The big map shrinks into the small map panel (or grows out of it) without squashing: it scales
+     * evenly and its edges are trimmed to the panel's shape, so the middle of the map lands exactly on
+     * the panel. When shrinking, `end` swaps the live map into the panel before the big one is reset
+     * (no flash of the big map at full size).
+     */
+    private void morph(View big, boolean shrink, Runnable end) {
+        if (morphAnim != null) morphAnim.cancel();
+        big.animate().cancel();
+        float bw = big.getWidth(), bh = big.getHeight(), mw = map.view.getWidth(), mh = map.view.getHeight();
+        if (bw <= 0 || bh <= 0 || mw <= 0 || mh <= 0) {
+            if (end != null) end.run();
+            resetMorph(big);
+            return;
+        }
+        int[] a = new int[2], b = new int[2];
+        map.view.getLocationOnScreen(a);
+        tileArea.getLocationOnScreen(b);
+        float s, cl = 0, ct = 0;
+        if (mw / mh < bw / bh) { // panel narrower than the map: trim the sides
+            s = mh / bh;
+            cl = (bw - mw / s) / 2f;
+        } else { // trim top and bottom
+            s = mw / bw;
+            ct = (bh - mh / s) / 2f;
+        }
+        final float tx = a[0] - b[0] - cl * s, ty = a[1] - b[1] - ct * s, sc = s, fcl = cl, fct = ct;
+        big.setPivotX(0);
+        big.setPivotY(0);
+        android.graphics.Rect clip = new android.graphics.Rect();
+        android.animation.ValueAnimator.AnimatorUpdateListener step = va -> {
+            float v = (float) va.getAnimatedValue(), f = shrink ? v : 1 - v;
+            big.setScaleX(1 + (sc - 1) * f);
+            big.setScaleY(1 + (sc - 1) * f);
+            big.setTranslationX(tx * f);
+            big.setTranslationY(ty * f);
+            clip.set(Math.round(fcl * f), Math.round(fct * f), Math.round(bw - fcl * f), Math.round(bh - fct * f));
+            big.setClipBounds(clip);
+        };
+        android.animation.ValueAnimator va = android.animation.ValueAnimator.ofFloat(0f, 1f);
+        va.setDuration(U.ms(360));
+        va.setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f));
+        va.addUpdateListener(step);
+        va.addListener(new android.animation.AnimatorListenerAdapter() {
+            boolean cancelled;
+
+            @Override
+            public void onAnimationCancel(android.animation.Animator x) {
+                cancelled = true; // a new move took over
+            }
+
+            @Override
+            public void onAnimationEnd(android.animation.Animator x) {
+                if (cancelled) return;
+                morphAnim = null;
+                if (!shrink) {
+                    resetMorph(big);
+                    return;
+                }
+                if (end != null) end.run(); // the live map moves into the panel first…
+                big.post(() -> resetMorph(big)); // …then the (now empty) big holder is put back
+            }
+        });
+        if (!shrink) step.onAnimationUpdate(va); // start small, on the panel
+        morphAnim = va;
+        va.start();
+    }
+
+    private static void resetMorph(View v) {
+        resetTransform(v);
+        v.setClipBounds(null);
+    }
+
     private float[] toSmall(View big) {
         int[] a = new int[2], b = new int[2];
         map.view.getLocationOnScreen(a);
