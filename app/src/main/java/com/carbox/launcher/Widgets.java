@@ -87,10 +87,12 @@ final class Widgets {
         final int index;
         final JSONObject spec;
         final JSONObject cfg;
+        final boolean tl; // made for the Top Left Widget
         View v;
 
         W(Context c, int index, JSONObject spec) {
             this.c = c;
+            tl = TL;
             this.index = index;
             this.spec = spec;
             JSONObject o = spec.optJSONObject("cfg");
@@ -155,7 +157,42 @@ final class Widgets {
      * A live, non-touchable preview of a widget: built at real tile size, then scaled to fit
      * whatever space it's given (the widget gallery and the tile editor).
      */
+    /** True while a widget is being made for the Top Left Widget (its own, roomier design). */
+    static boolean TL;
+
+    /** Text size: a size up in the Top Left Widget. */
+    static float ts(float s) {
+        return TL ? s * 1.25f : s;
+    }
+
+    /** Preview of a widget in its Top Left design (same shape as the Top Left Widget). */
+    static View preview(Context c, String id) {
+        int idx = TopLeft.tileIndex(id);
+        JSONObject spec = idx >= 0 ? Tiles.specs().optJSONObject(idx) : Tiles.widget(id);
+        int fw = U.u(200), fh = U.u(232);
+        if (MainActivity.I != null && MainActivity.I.map != null && MainActivity.I.map.view.getWidth() > 0) {
+            fw = MainActivity.I.map.view.getWidth();
+            fh = MainActivity.I.map.view.getHeight();
+        }
+        TL = true;
+        try {
+            return preview(c, spec, fw, fh);
+        } finally {
+            TL = false;
+        }
+    }
+
     static View preview(Context c, JSONObject spec) {
+        int tw = U.u(122), th = U.u(165);
+        if (MainActivity.I != null && MainActivity.I.tiles.view.getWidth() > 0) {
+            View t = MainActivity.I.tiles.view;
+            tw = Math.round((t.getWidth() - U.u(8) * 3) / 4f);
+            th = Math.round((t.getHeight() - U.u(8)) / 2f);
+        }
+        return preview(c, spec, tw, th);
+    }
+
+    private static View preview(Context c, JSONObject spec, int tw, int th) {
         final View live;
         try {
             W w = make(c, -1, spec);
@@ -166,12 +203,6 @@ final class Widgets {
             live = w.v;
         } catch (Exception e) {
             return new View(c);
-        }
-        int tw = U.u(122), th = U.u(165);
-        if (MainActivity.I != null && MainActivity.I.tiles.view.getWidth() > 0) {
-            View t = MainActivity.I.tiles.view;
-            tw = Math.round((t.getWidth() - U.u(8) * 3) / 4f);
-            th = Math.round((t.getHeight() - U.u(8)) / 2f);
         }
         final int fw = tw, fh = th;
         FrameLayout box = new FrameLayout(c) {
@@ -336,7 +367,7 @@ final class Widgets {
             l.addView(head);
             dial = new Dial(c);
             l.addView(dial, U.weight(1, false));
-            topT = U.line(c, "", 11, U.SUB, false);
+            topT = U.line(c, "", ts(11), U.SUB, false);
             topT.setGravity(Gravity.CENTER);
             l.addView(topT, U.lp(U.MATCH, U.WRAP));
             v = l;
@@ -398,16 +429,16 @@ final class Widgets {
             l.addView(new View(c), U.weight(1, false));
             LinearLayout r = U.row(c);
             r.setGravity(Gravity.BOTTOM);
-            dist = U.text(c, "0.0", 30, U.TEXT, true);
+            dist = U.text(c, "0.0", tl ? 44 : 30, U.TEXT, true);
             r.addView(dist);
-            unit = U.text(c, " km", 13, U.SUB, false);
+            unit = U.text(c, " km", ts(13), U.SUB, false);
             unit.setPadding(0, 0, 0, U.u(4));
             r.addView(unit);
             l.addView(r);
             l.addView(new View(c), U.weight(1, false));
-            drive = U.line(c, "", 12, U.TEXT2, false);
+            drive = U.line(c, "", ts(12), U.TEXT2, false);
             l.addView(drive);
-            avg = U.line(c, "", 12, U.TEXT2, false);
+            avg = U.line(c, "", ts(12), U.TEXT2, false);
             l.addView(avg, top(4));
             l.setOnClickListener(x -> Sheets.show(() -> {
                 LinearLayout b = U.col(Sheets.ctx());
@@ -554,16 +585,16 @@ final class Widgets {
             head = label(c, "DRIVING");
             box.addView(head);
             box.addView(new View(c), U.weight(1, false));
-            time = U.text(c, "0:00", 30, U.TEXT, true);
+            time = U.text(c, "0:00", tl ? 44 : 30, U.TEXT, true);
             box.addView(time);
             bar = new Bar(c);
             LinearLayout.LayoutParams bl = U.lp(U.MATCH, U.u(6));
             bl.topMargin = U.u(6);
             box.addView(bar, bl);
             box.addView(new View(c), U.weight(1, false));
-            sub = U.line(c, "", 12, U.TEXT2, false);
+            sub = U.line(c, "", ts(12), U.TEXT2, false);
             box.addView(sub);
-            sub2 = U.line(c, "", 12, U.SUB, false);
+            sub2 = U.line(c, "", ts(12), U.SUB, false);
             box.addView(sub2, top(2));
             box.setOnClickListener(x -> Rest.setup());
             U.press(box);
@@ -711,10 +742,10 @@ final class Widgets {
             cl.topMargin = U.u(6);
             cl.bottomMargin = U.u(6);
             l.addView(compass, cl);
-            dir = U.line(c, "--", 16, U.TEXT, true);
+            dir = U.line(c, "--", tl ? 24 : 16, U.TEXT, true);
             dir.setGravity(Gravity.CENTER);
             l.addView(dir, U.lp(U.MATCH, U.WRAP));
-            alt = U.line(c, "", 11, U.SUB, false);
+            alt = U.line(c, "", ts(11), U.SUB, false);
             alt.setGravity(Gravity.CENTER);
             l.addView(alt, top(3));
             l.setOnClickListener(x -> InfoPanels.heading());
@@ -747,18 +778,30 @@ final class Widgets {
         WeatherW(Context c, int i, JSONObject s) {
             super(c, i, s);
             LinearLayout l = card(c, U.CARD);
-            place = U.line(c, "", 11, U.SUB, true);
+            place = U.line(c, "", ts(11), U.SUB, true);
             l.addView(place);
             icon = U.icon(c, R.drawable.ic_w_partly, 0);
-            LinearLayout.LayoutParams il = U.lpu(48, 48);
-            il.topMargin = U.u(10);
-            l.addView(icon, il);
-            l.addView(new View(c), U.weight(1, false));
-            temp = U.text(c, "--°", 34, U.TEXT, true);
-            l.addView(temp);
-            desc = U.line(c, "", 12, U.TEXT2, false);
+            temp = U.text(c, "--°", tl ? 48 : 34, U.TEXT, true);
+            if (tl) { // Top Left: big icon beside a big temperature
+                l.addView(new View(c), U.weight(1, false));
+                LinearLayout r = U.row(c);
+                r.setGravity(Gravity.CENTER_VERTICAL);
+                r.addView(icon, U.lpu(68, 68));
+                LinearLayout.LayoutParams tl2 = U.lp(U.WRAP, U.WRAP);
+                tl2.leftMargin = U.u(10);
+                r.addView(temp, tl2);
+                l.addView(r);
+                l.addView(new View(c), U.weight(1, false));
+            } else {
+                LinearLayout.LayoutParams il = U.lpu(48, 48);
+                il.topMargin = U.u(10);
+                l.addView(icon, il);
+                l.addView(new View(c), U.weight(1, false));
+                l.addView(temp);
+            }
+            desc = U.line(c, "", ts(12), U.TEXT2, false);
             l.addView(desc, top(2));
-            hilo = U.line(c, "", 12, U.SUB, false);
+            hilo = U.line(c, "", ts(12), U.SUB, false);
             l.addView(hilo, top(3));
             l.setOnClickListener(x -> InfoPanels.weather(0));
             U.press(l);
@@ -1309,12 +1352,12 @@ final class Widgets {
             head.addView(U.icon(c, R.drawable.ic_moon, U.TEAL), U.lpu(18, 18));
             l.addView(head);
             l.addView(new View(c), U.weight(1, false));
-            name = U.line(c, "", 18, U.TEXT2, true);
+            name = U.line(c, "", ts(18), U.TEXT2, true);
             l.addView(name);
-            time = U.line(c, "--:--", 32, U.TEXT, true);
+            time = U.line(c, "--:--", tl ? 46 : 32, U.TEXT, true);
             l.addView(time, top(2));
             l.addView(new View(c), U.weight(1, false));
-            pill = U.line(c, "", 12, U.MINT, true);
+            pill = U.line(c, "", ts(12), U.MINT, true);
             pill.setGravity(Gravity.CENTER);
             pill.setBackground(U.round(0xFF143B2A, 12));
             U.pad(pill, 10, 6, 10, 6);

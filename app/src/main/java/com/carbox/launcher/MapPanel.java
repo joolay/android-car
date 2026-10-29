@@ -278,7 +278,8 @@ final class MapPanel {
         web.evaluateJavascript(String.format(Locale.US, "setPos(%.6f,%.6f,%.0f)", Loc.lat, Loc.lon, b), null);
     }
 
-    private FrameLayout bigHolder, mini;
+    private FrameLayout bigHolder;
+    private SwipeBox mini;
     private boolean tapBig;
     private Widgets.W miniW;
 
@@ -302,24 +303,17 @@ final class MapPanel {
         return bigHolder;
     }
 
-    /** "goto" or "speed": the tile shown in the small panel while the map is big. */
+    /** The Top Left Widget's current widget (the small panel while the map is big). */
     static String miniId() {
-        return Store.str("map_mini", "goto");
+        return TopLeft.current();
     }
 
     private void showMini(boolean on) {
         if (on && mini == null) {
             mini = new SwipeBox(c, this::swapMini);
-            String id = miniId();
-            int idx = -1;
-            org.json.JSONArray s = Tiles.specs();
-            for (int i = 0; i < s.length(); i++) {
-                org.json.JSONObject o = s.optJSONObject(i);
-                if (o != null && id.equals(o.optString("id"))) idx = i; // same tile (its places / settings)
-            }
-            org.json.JSONObject spec = idx >= 0 ? s.optJSONObject(idx) : Tiles.widget(id);
+            mini.onHold(TopLeft::chooser); // hold: choose the Top Left Widget's widgets
             try {
-                miniW = Widgets.make(c, idx, spec);
+                miniW = TopLeft.make(c, miniId()); // same settings as in the tiles, its own design
                 if (miniW != null && miniW.v != null) mini.addView(miniW.v, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
             } catch (Exception ignored) {
             }
@@ -333,15 +327,31 @@ final class MapPanel {
         }
     }
 
-    /** Swipe the small panel (any direction) to switch between Go to and Speed. */
-    private void swapMini() {
-        Store.put("map_mini", "goto".equals(miniId()) ? "speed" : "goto");
+    /** Rebuild the Top Left Widget (after choosing its widgets). */
+    void remini() {
+        if (mini == null) return;
         showMini(false);
         showMini(true);
-        if (mini != null) {
-            mini.setAlpha(0f);
-            mini.animate().alpha(1f).setDuration(U.ms(200)).start();
-        }
+    }
+
+    /** Swipe the Top Left Widget: the next (or previous) chosen widget slides in. */
+    private void swapMini() {
+        if (mini == null) return;
+        int dir = mini.dir;
+        if (TopLeft.list().size() < 2) return;
+        TopLeft.step(dir);
+        final View old = mini;
+        float w = view.getWidth();
+        U.ui.removeCallbacks(miniTick);
+        mini = null;
+        miniW = null;
+        showMini(true);
+        if (mini == null) return;
+        mini.setTranslationX(dir * w);
+        mini.animate().translationX(0).setDuration(U.ms(260)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+        old.animate().translationX(-dir * w).setDuration(U.ms(260)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f))
+                .withEndAction(() -> view.removeView(old)).start();
+        if (U.ms(260) == 0) view.removeView(old);
     }
 
     private final Runnable miniTick = new Runnable() {

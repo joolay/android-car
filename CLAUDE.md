@@ -22,7 +22,9 @@ Package `com.carbox.launcher`, plain Java Android views (no XML layouts, no Andr
 
 ## Layout of the screen
 Left column: map panel (`MapPanel`, WebView `assets/map.html`, OSM or Google with key) over
-Now playing (`NowPlaying`). Middle: 2×4 tile grid (`Tiles`, column-major, endless wrap) that also hosts
+Now playing (`NowPlaying`). While the map is big, the map panel shows the **Top Left Widget** (`TopLeft`:
+swipe = next chosen widget, hold = chooser; same widget/settings as the tiles, made with `Widgets.TL` for its
+roomier design, `W.tl`/`Widgets.ts()`). Middle: 2×4 tile grid (`Tiles`, column-major, endless wrap) that also hosts
 panels (`Sheets` → `MainActivity.tileArea`/`sheetHost`), news/traffic ticker (`Ticker`), dock (`Dock`).
 Right: Rail Bar (`Rail`; quick cards pop out of their icons).
 

@@ -82,7 +82,7 @@ public class MainActivity extends Activity {
         // below; the tiles are a drawer that slides in from the Rail Bar (All apps button)
         if (mapHome()) U.ui.postDelayed(() -> {
             if (map != null && !map.expanded()) {
-                Store.put("map_mini", "goto");
+                Store.put("map_mini", TopLeft.list().get(0)); // the Top Left Widget starts on its first widget
                 map.expand(true);
             }
         }, 600);

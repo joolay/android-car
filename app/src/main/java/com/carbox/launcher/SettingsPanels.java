@@ -768,10 +768,8 @@ final class SettingsPanels {
                     U.seg(c, "North up", !hu, () -> { Store.put("map_heading_up", false); if (MainActivity.I != null) MainActivity.I.map.applyHeading(); Sheets.refresh(); })), top(8));
             b.addView(Sheets.switchRow(0, 0, "Map is the home view", "The big map with Go to beside it; the All apps button slides your tiles in",
                     Store.flag("map_start_big", true), on -> Store.put("map_start_big", on)), top(8));
-            String mm = MapPanel.miniId();
-            b.addView(Sheets.row("Tap map: small panel shows", U.seg(c, "Go to", "goto".equals(mm), () -> { Store.put("map_mini", "goto"); remini(); Sheets.refresh(); }),
-                    U.seg(c, "Speed", "speed".equals(mm), () -> { Store.put("map_mini", "speed"); remini(); Sheets.refresh(); })), top(8));
-            b.addView(U.text(c, "Tap the map to make it fill the tiles; ✕ on the big map makes it small again. Swipe the small panel to switch between Go to and Speed.", 12, U.SUB, false), top(6));
+            b.addView(Sheets.item("Top Left Widget", TopLeft.list().size() + " widgets · swipe it to go through them", TopLeft::chooser), top(8));
+            b.addView(U.text(c, "Tap the map to make it fill the tiles; ✕ on the big map makes it small again. The Top Left Widget shows above Now playing: swipe it for the next widget, hold it to choose them.", 12, U.SUB, false), top(6));
         }
     }
 
