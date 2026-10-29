@@ -580,6 +580,7 @@ final class AppPanels {
             JSONObject spec = Tiles.specs().optJSONObject(index);
             JSONArray apps = spec.optJSONArray("apps");
             List<View> cells = new ArrayList<>();
+            List<String> keys = new ArrayList<>();
             if (apps != null) for (int i = 0; i < apps.length(); i++) {
                 Apps.App a = Apps.get(apps.optString(i));
                 if (a == null) continue;
@@ -588,11 +589,23 @@ final class AppPanels {
                     Sheets.close();
                     Apps.launch(c, a);
                 });
-                cell.setOnLongClickListener(v -> {
-                    appMenu(a, null);
-                    return true;
-                });
                 cells.add(cell);
+                keys.add(a.key);
+            }
+            // hold and drag an app onto another's place to move it; a hold without moving opens its menu
+            for (int i = 0; i < cells.size(); i++) {
+                final Apps.App a = Apps.get(keys.get(i));
+                Reorder.attach(cells.get(i), i, cells, (from, to) -> {
+                    List<String> order = new ArrayList<>(keys);
+                    order.add(to, order.remove(from));
+                    JSONArray na = new JSONArray();
+                    for (String k : order) na.put(k);
+                    JSONObject sp = Tiles.specs().optJSONObject(index);
+                    if (sp == null) return;
+                    Widgets.put(sp, "apps", na);
+                    Tiles.setSpec(index, sp);
+                    Sheets.refresh();
+                }, () -> appMenu(a, null));
             }
             LinearLayout b = U.col(c);
             if (cells.isEmpty()) b.addView(U.text(c, "This folder is empty.", 14, U.SUB, false));

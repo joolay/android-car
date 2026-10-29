@@ -51,6 +51,15 @@ final class MusicFolder {
         changed();
     }
 
+    /** Move an app to another place in the folder. */
+    static void move(Context c, int from, int to) {
+        List<String> l = apps(c);
+        if (from < 0 || from >= l.size() || to < 0 || to >= l.size()) return;
+        l.add(to, l.remove(from));
+        Store.putList(KEY, l);
+        changed();
+    }
+
     static void remove(Context c, String pkg) {
         List<String> l = apps(c);
         l.remove(pkg);
@@ -129,6 +138,10 @@ final class MusicFolder {
         if (page >= n) page = n - 1;
         List<View> cells = new ArrayList<>();
         for (int i = page * 4; i < Math.min(page * 4 + 4, l.size()); i++) cells.add(cell(c, l.get(i), false));
+        // hold and drag an app onto another's place to move it (a hold without moving opens the full grid)
+        final int base = page * 4, onPage = cells.size();
+        for (int i = 0; i < onPage; i++)
+            Reorder.attach(cells.get(i), i, cells.subList(0, onPage), (from, to) -> move(c, base + from, base + to), () -> showAll(c));
         if (cells.size() < 4 && page == n - 1) cells.add(plus(c)); // room left on the last page: + adds an app
         dots.removeAllViews();
         if (n > 1) for (int i = 0; i < n; i++) {
@@ -227,7 +240,13 @@ final class MusicFolder {
             LinearLayout b = U.col(c);
             b.addView(U.text(c, "Tap to open. − takes an app out of the folder, + adds one.", 12, U.SUB, false));
             List<View> cells = new ArrayList<>();
-            for (String p : apps(c)) cells.add(cell(c, p, true));
+            List<String> all = apps(c);
+            for (String p : all) cells.add(cell(c, p, true));
+            // hold and drag to move an app; a hold without moving takes it out (as the − does)
+            for (int i = 0; i < all.size(); i++) {
+                final String p = all.get(i);
+                Reorder.attach(cells.get(i), i, cells.subList(0, all.size()), (from, to) -> move(c, from, to), () -> remove(c, p));
+            }
             cells.add(plus(c));
             final int COLS = 5;
             for (int i = 0; i < cells.size(); i += COLS) {
