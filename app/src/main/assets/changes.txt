@@ -1,0 +1,2 @@
+0.29: Update notice: bigger text, what's new, closes by itself
+0.28: WhatsApp tile with unread count; Logs kept 3 days and sent by themselves; Automatic updates; Even dock spacing and map rim; Spotify start-up fixes

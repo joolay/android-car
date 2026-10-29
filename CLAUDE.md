@@ -8,6 +8,7 @@ Package `com.carbox.launcher`, plain Java Android views (no XML layouts, no Andr
 - Mockups only when asked ("show me a mockup").
 - Commit locally as you go, but **do not push until the owner says "compile" / "build"**. Every push to
   `main` triggers a GitHub Actions build and release.
+- Before each compile add a one-line entry to `app/src/main/assets/changes.txt` ("0.N: a; b; c", very brief) for the update notice.
 - Versions: `version-major.txt` (currently 0) + next number from existing `v<major>.<n>-alpha` tags,
   e.g. 0.14-alpha → 0.15-alpha. Only change the major when the owner says it's a major update.
 - After a compile, check the run (`gh run watch`), read errors from the check-run annotations

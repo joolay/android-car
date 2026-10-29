@@ -477,10 +477,20 @@ public class MainActivity extends Activity {
         boolean updated = last < 0 ? Store.flag("setup_shown", false) : last != code;
         if (!updated || isFinishing()) return; // first install (the checklist runs anyway) or no change
         if (Sheets.open() || CallState.state != CallState.NONE) return; // don't interrupt
+        final String[] news = changes(ver);
         Sheets.show(() -> {
             android.content.Context c = Sheets.ctx();
             LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Car Launcher was updated to " + ver + ". Restart the box so everything starts fresh? You can also run the set-up checklist again: new steps may have been added, and anything already done stays ticked.", 14, U.TEXT2, false));
+            b.addView(U.text(c, "Now on " + ver + ". Restart the box so everything starts fresh?", 17, U.TEXT, true));
+            if (news.length > 0) { // a very short outline of what's new
+                LinearLayout list = U.col(c);
+                for (String n : news) {
+                    if (n.trim().isEmpty()) continue;
+                    android.widget.TextView t = U.text(c, "•  " + n.trim(), 16, U.TEXT2, false);
+                    list.addView(t, Widgets.top(5));
+                }
+                b.addView(list, Widgets.top(8));
+            }
             LinearLayout btns = U.row(c);
             btns.addView(U.button(c, "Restart box", true, () -> {
                 Sheets.close();
@@ -493,9 +503,25 @@ public class MainActivity extends Activity {
             }));
             btns.addView(U.gap(c, 10, 1));
             btns.addView(U.button(c, "Not now", false, Sheets::close));
-            b.addView(btns, Widgets.top(16));
-            return Sheets.panel("Updated", b, 520, 280);
+            b.addView(btns, Widgets.top(18));
+            b.addView(U.text(c, "Closes by itself in 15 s · set-up ticks stay ticked", 13, U.SUB, false), Widgets.top(8));
+            // closes by itself after 15 s, if it's still the page showing
+            b.postDelayed(() -> {
+                if (b.isAttachedToWindow()) Sheets.close();
+            }, 15000);
+            return Sheets.panel("Updated", b, 560, 400);
         });
+    }
+
+    /** What's new in this version, from assets/changes.txt ("0.29: one; two; three"). */
+    private String[] changes(String ver) {
+        String v = ver == null ? "" : ver.replaceAll("^(\\d+\\.\\d+).*", "$1");
+        try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(getAssets().open("changes.txt")))) {
+            for (String l; (l = r.readLine()) != null; )
+                if (l.startsWith(v + ":")) return l.substring(v.length() + 1).split(";");
+        } catch (Exception ignored) {
+        }
+        return new String[0];
     }
 
     private void firstRunChecklist() {
