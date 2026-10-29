@@ -38,7 +38,30 @@ final class Weather {
         listeners.add(r);
     }
 
+    private static boolean restored;
+
+    /** The forecast from the last poll, kept so it shows straight away after a restart (or with no signal). */
+    static void restore() {
+        if (restored || ok) return;
+        restored = true;
+        String body = Store.str("weather_last", null);
+        if (body == null) return;
+        try {
+            parse(new JSONObject(body));
+            updatedAt = Store.lng("weather_at", 0);
+            // drop the days that have gone by, and the hourly list once it's out of date
+            String today = new java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new java.util.Date());
+            while (!days.isEmpty() && days.get(0).date != null && days.get(0).date.compareTo(today) < 0) days.remove(0);
+            if (System.currentTimeMillis() - updatedAt > 60 * 60 * 1000L) hours.clear();
+            if (days.isEmpty()) return;
+            ok = true;
+            for (Runnable r : new ArrayList<>(listeners)) r.run();
+        } catch (Exception ignored) {
+        }
+    }
+
     static void maybeFetch() {
+        restore();
         if (!Loc.has() || loading) return;
         if (fetchedAt != 0 && SystemClock.elapsedRealtime() - fetchedAt < 20 * 60 * 1000L) return;
         fetch();
@@ -63,6 +86,8 @@ final class Weather {
                 fetchedAt = SystemClock.elapsedRealtime();
                 updatedAt = System.currentTimeMillis();
                 ok = true;
+                Store.put("weather_last", body); // remembered for next time
+                Store.put("weather_at", updatedAt);
                 for (Runnable r : new ArrayList<>(listeners)) r.run();
             } catch (Exception ignored) {
             }
