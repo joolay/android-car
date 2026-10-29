@@ -399,7 +399,7 @@ final class Ticker {
             head.addView(U.gap(c, 14, 1));
             View x = U.icon(c, R.drawable.ic_x, U.SUB);
             x.setOnClickListener(v -> Sheets.close());
-            head.addView(x, U.lpu(24, 24));
+            head.addView(x, U.lpu(28, 28));
             card.addView(head);
             String url = Store.str(n ? Store.NEWS_URL : Store.TRAFFIC_URL, "");
             long at = n ? newsAt : trafficAt;

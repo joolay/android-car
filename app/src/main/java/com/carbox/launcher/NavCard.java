@@ -104,6 +104,6 @@ final class NavCard {
             dismissed = true;
             hide();
         });
-        shown.addView(x, U.flpu(40, 40, Gravity.TOP | Gravity.END));
+        shown.addView(x, U.flpu(46, 46, Gravity.TOP | Gravity.END));
     }
 }

@@ -148,7 +148,7 @@ final class PhoneScreen {
             top.addView(U.line(c, "favourites".equals(tab) ? "Favourites" : "Recent calls", 20, U.TEXT, true), new LinearLayout.LayoutParams(0, U.WRAP, 1));
         }
         View close = square(c, R.drawable.ic_x, PhoneScreen::hide);
-        top.addView(close, U.lpu(44, 44));
+        top.addView(close, U.lpu(48, 48));
         body.addView(top);
 
         LinearLayout lr = U.row(c);
@@ -362,7 +362,7 @@ final class PhoneScreen {
         // top: close, the number (and a contact match), backspace
         LinearLayout top = U.row(c);
         top.setGravity(Gravity.CENTER_VERTICAL);
-        top.addView(square(c, R.drawable.ic_x, PhoneScreen::hide), U.lpu(36, 36));
+        top.addView(square(c, R.drawable.ic_x, PhoneScreen::hide), U.lpu(42, 42));
         LinearLayout num = U.col(c);
         num.setGravity(Gravity.CENTER);
         display = U.text(c, "", 26, U.TEXT, true);

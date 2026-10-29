@@ -292,7 +292,7 @@ final class Sheets {
         }
         View x = U.icon(ctx, R.drawable.ic_x, U.SUB);
         x.setOnClickListener(v -> close());
-        head.addView(x, U.lpu(ic, ic));
+        head.addView(x, U.lpu(ic + 4, ic + 4)); // close: a touch bigger
         if (up) {
             head.setBackground(U.round(U.CARD, 12));
             U.pad(head, 10, 0, 10, 0);

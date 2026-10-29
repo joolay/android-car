@@ -165,7 +165,7 @@ final class InfoPanels {
         rh.addView(U.line(c, "Upcoming", 15, U.TEXT, true), new LinearLayout.LayoutParams(0, U.WRAP, 1));
         View x = U.icon(c, R.drawable.ic_x, U.SUB);
         x.setOnClickListener(v -> Sheets.close());
-        rh.addView(x, U.lpu(22, 22));
+        rh.addView(x, U.lpu(26, 26));
         right.addView(rh);
         if (Cal.hasAlt()) {
             TextView today2 = U.line(c, Cal.format(Cal.alt(), System.currentTimeMillis(), "d MMMM y"), 11, U.TEAL, false);

@@ -96,7 +96,7 @@ final class HomeApproach {
         View x = U.icon(a, R.drawable.ic_x, U.TEXT2);
         U.pad(x, 8, 8, 8, 8);
         x.setOnClickListener(v -> hide());
-        shown.addView(x, U.flpu(40, 40, Gravity.TOP | Gravity.END));
+        shown.addView(x, U.flpu(46, 46, Gravity.TOP | Gravity.END));
         a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         a.growIn(shown, a.alertRect("home")); // grows out of the Home Assistant tile
     }

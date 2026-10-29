@@ -73,7 +73,7 @@ final class LyricsCard {
         View x = U.icon(a, R.drawable.ic_x, U.SUB);
         U.pad(x, 8, 8, 8, 8);
         x.setOnClickListener(v -> hide());
-        shown.addView(x, U.flpu(40, 40, Gravity.TOP | Gravity.END));
+        shown.addView(x, U.flpu(46, 46, Gravity.TOP | Gravity.END));
         a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         // grows out of the Now playing tile
         final FrameLayout s0 = shown;

@@ -53,7 +53,7 @@ final class SpeedCard {
         View x = U.icon(a, R.drawable.ic_x, U.TEXT2);
         U.pad(x, 8, 8, 8, 8);
         x.setOnClickListener(v -> hide());
-        shown.addView(x, U.flpu(40, 40, Gravity.TOP | Gravity.END));
+        shown.addView(x, U.flpu(46, 46, Gravity.TOP | Gravity.END));
         shown.setOnClickListener(v -> hide());
         a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         a.growIn(shown, a.alertRect("speed")); // grows out of the speed tile

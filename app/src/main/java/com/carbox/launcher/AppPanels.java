@@ -161,7 +161,7 @@ final class AppPanels {
         head.addView(U.gap(c, 10, 1));
         View x = U.icon(c, R.drawable.ic_x, U.SUB);
         x.setOnClickListener(v -> Sheets.close());
-        head.addView(x, U.lpu(24, 24));
+        head.addView(x, U.lpu(28, 28));
         card.addView(head);
 
         LinearLayout.LayoutParams sl = U.weight(1, false); // pages of apps (slide sideways), dots underneath
@@ -344,7 +344,7 @@ final class AppPanels {
             head.addView(t, tl);
             View x = U.icon(c, R.drawable.ic_x, U.SUB);
             x.setOnClickListener(v -> Sheets.close());
-            head.addView(x, U.lpu(22, 22));
+            head.addView(x, U.lpu(26, 26));
             b.addView(head);
             b.addView(Sheets.switchRow(R.drawable.ic_pin, U.ACCENT, "Pin to dock", null, Apps.pinned(a.key), on -> {
                 Apps.setPinned(a.key, on);

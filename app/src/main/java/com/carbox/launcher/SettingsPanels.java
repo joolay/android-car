@@ -153,7 +153,7 @@ final class SettingsPanels {
         head.addView(U.line(c, "Settings", 20, U.TEXT, true), new LinearLayout.LayoutParams(0, U.WRAP, 1));
         View x = U.icon(c, R.drawable.ic_x, U.SUB);
         x.setOnClickListener(v -> Sheets.close());
-        head.addView(x, U.lpu(26, 26));
+        head.addView(x, U.lpu(30, 30));
         card.addView(head);
 
         int railOn = 0;

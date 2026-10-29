@@ -99,7 +99,7 @@ final class Alerts {
         View x = U.icon(a, R.drawable.ic_x, U.TEXT2);
         U.pad(x, 8, 8, 8, 8);
         x.setOnClickListener(v -> hideNotice());
-        notice.addView(x, U.flpu(40, 40, Gravity.TOP | Gravity.END));
+        notice.addView(x, U.flpu(46, 46, Gravity.TOP | Gravity.END));
         notice.setOnClickListener(v -> hideNotice());
         a.tileArea.addView(notice, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         a.growIn(notice, a.alertRect("rest")); // grows out of the driving timer tile
