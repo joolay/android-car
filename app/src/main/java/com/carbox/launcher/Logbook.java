@@ -274,7 +274,8 @@ final class Logbook {
             l.addView(new View(c), U.weight(1, false));
             km = U.text(c, "", 26, U.TEXT, true);
             l.addView(km);
-            sub = U.line(c, "", 11, U.SUB, false);
+            sub = U.text(c, "", 12, U.SUB, false);
+            sub.setMaxLines(2);
             l.addView(sub, Widgets.top(2));
             l.addView(new View(c), U.weight(1, false));
             btn = U.text(c, "", 13, U.TEXT, true);
@@ -301,7 +302,7 @@ final class Logbook {
             } else {
                 double[] m = month();
                 km.setText(String.format(Locale.US, "%.0f km", m[0] + m[1]));
-                sub.setText(String.format(Locale.US, "This month · %.0f business", m[0]));
+                sub.setText(String.format(Locale.US, "This month\n%.0f km business", m[0]));
             }
             btn.setText(b ? "Business" : "Personal");
             btn.setBackground(U.round(b ? U.ACCENT : U.CARD3, 12));

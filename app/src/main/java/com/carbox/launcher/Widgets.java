@@ -481,22 +481,29 @@ final class Widgets {
     // ------------------------------------------------------------------ Park here
 
     static final class Park extends W {
-        private final TextView title, sub;
+        private final TextView title, sub, sub2;
         private final LinearLayout box;
 
         Park(Context c, int i, JSONObject s) {
             super(c, i, s);
             box = card(c, U.CARD);
-            box.addView(label(c, "PARKING"));
-            box.addView(new View(c), U.weight(1, false));
+            LinearLayout hd = U.row(c); // PARKING with a small P badge on the right
+            hd.setGravity(Gravity.CENTER_VERTICAL);
+            hd.addView(label(c, "PARKING"), new LinearLayout.LayoutParams(0, U.WRAP, 1));
             FrameLayout ic = new FrameLayout(c);
             ic.setBackground(U.oval(U.ACCENT));
-            ic.addView(U.text(c, "P", 26, U.TEXT, true), U.flpu(26, 34, Gravity.CENTER));
-            box.addView(ic, U.lpu(52, 52));
-            title = U.line(c, "", 17, U.TEXT, true);
-            box.addView(title, top(10));
-            sub = U.line(c, "", 12, U.SUB, false);
-            box.addView(sub, top(2));
+            ic.addView(U.text(c, "P", 16, U.TEXT, true), U.flpu(16, 22, Gravity.CENTER));
+            hd.addView(ic, U.lpu(28, 28));
+            box.addView(hd, U.lp(U.MATCH, U.WRAP));
+            box.addView(new View(c), U.weight(1, false));
+            title = U.line(c, "", tl ? 34 : 26, U.TEXT, true); // the time it was parked, big
+            box.addView(title);
+            sub = U.text(c, "", ts(13), U.TEXT2, false); // town (two lines if it needs them)
+            sub.setMaxLines(2);
+            sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            box.addView(sub, top(4));
+            sub2 = U.line(c, "", ts(12), U.SUB, false); // how long ago
+            box.addView(sub2, top(2));
             box.addView(new View(c), U.weight(1, false));
             box.setOnClickListener(x -> tapped());
             U.press(box);
@@ -509,7 +516,7 @@ final class Widgets {
             else Sheets.show(() -> { // already parked: open, park again or clear
                 Context k = Sheets.ctx();
                 LinearLayout b = U.col(k);
-                b.addView(U.text(k, sub.getText() + "", 14, U.TEXT2, false));
+                b.addView(U.text(k, sub.getText() + " · " + sub2.getText(), 14, U.TEXT2, false));
                 b.addView(Sheets.item("Show in Maps", null, () -> {
                     Sheets.close();
                     Actions.navigateTo(k, Store.str("park_lat", "") + "," + Store.str("park_lon", ""));
@@ -547,11 +554,14 @@ final class Widgets {
             if (at == 0) {
                 title.setText("Park here");
                 sub.setText("Tap to save this spot");
+                sub2.setVisibility(View.GONE);
                 box.setBackground(U.round(U.CARD, 16));
             } else {
-                title.setText("Parked " + new java.text.SimpleDateFormat(Store.flag(Store.H24, true) ? "HH:mm" : "h:mm a", Locale.getDefault()).format(new java.util.Date(at)));
+                title.setText(new java.text.SimpleDateFormat(Store.flag(Store.H24, true) ? "HH:mm" : "h:mm a", Locale.getDefault()).format(new java.util.Date(at)));
                 String town = Store.str("park_town", "");
-                sub.setText((town.isEmpty() ? "" : town + " · ") + Ticker.ago(at));
+                sub.setText(town.isEmpty() ? "Parked here" : town);
+                sub2.setText("Parked " + Ticker.ago(at));
+                sub2.setVisibility(View.VISIBLE);
                 box.setBackground(U.outline(U.CARD, U.ACCENT, 2, 16));
             }
         }
@@ -640,7 +650,8 @@ final class Widgets {
             } else {
                 head.setText("DRIVING");
                 long leftMin = Rest.limitMin() - min;
-                sub.setText("Break in " + U.dur(leftMin * 60000));
+                long lm = Math.max(0, leftMin); // short so it fits: "Break in 2 h", "1 h 25", "40 min"
+                sub.setText("Break in " + (lm < 60 ? lm + " min" : lm % 60 == 0 ? (lm / 60) + " h" : (lm / 60) + " h " + U.two((int) (lm % 60))));
                 if (Rest.limitKm() > 0) {
                     boolean m = mph();
                     double left = (Rest.limitKm() * 1000.0 - Rest.meters) / (m ? 1609.34 : 1000.0);
@@ -773,7 +784,7 @@ final class Widgets {
                 dir.setText(Loc.fresh() ? "Drive to set" : "No GPS");
             }
             compass.invalidate();
-            alt.setText((!Float.isNaN(h) && !Loc.moving() ? "Parked · " : "") + (Double.isNaN(Loc.alt) ? "Altitude --" : "Altitude " + Math.round(mph() ? Loc.alt * 3.28084 : Loc.alt) + (mph() ? " ft" : " m")));
+            alt.setText(Double.isNaN(Loc.alt) ? (!Float.isNaN(h) && !Loc.moving() ? "Parked" : "") : "▲ " + Math.round(mph() ? Loc.alt * 3.28084 : Loc.alt) + (mph() ? " ft" : " m") + " high");
         }
     }
 
@@ -1253,31 +1264,61 @@ final class Widgets {
             U.pad(l, 12, 14, 12, 10);
             l.addView(U.text(c, "Quick dial", 15, U.TEXT, true));
             JSONArray people = cfg.optJSONArray("people");
-            int shown = 0;
-            for (int k = 0; people != null && k < people.length() && k < 4; k++) {
+            List<Person> ps = new ArrayList<>();
+            for (int k = 0; people != null && k < people.length() && ps.size() < 4; k++) {
                 Person p = person(people.optJSONObject(k));
-                if (p == null) continue;
-                LinearLayout r = U.row(c);
-                r.addView(avatar(c, p, 26), U.lpu(26, 26));
-                TextView n = U.line(c, p.name.split(" ")[0], 13, U.TEXT2, false);
-                LinearLayout.LayoutParams nl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-                nl.leftMargin = U.u(8);
-                r.addView(n, nl);
-                r.setOnClickListener(x -> {
-                    if (MainActivity.I != null) Actions.call(MainActivity.I, p.number);
-                });
-                LinearLayout.LayoutParams rl = U.lpu(U.MATCH, 30);
-                rl.topMargin = U.u(shown == 0 ? 10 : 4);
-                l.addView(r, rl);
-                shown++;
+                if (p != null) ps.add(p);
             }
-            if (shown == 0) {
-                TextView t = U.text(c, "Tap to choose four contacts", 12, U.SUB, false);
-                l.addView(t, top(10));
-                l.setOnClickListener(x -> quickDialSetup(index));
+            // the contacts as big faces filling the tile: one alone in the middle, else 2 × 2 (+ adds more)
+            LinearLayout grid = U.col(c);
+            int n = ps.size() <= 1 ? 1 : 4, cols = n == 1 ? 1 : 2;
+            for (int r = 0; r < n / cols; r++) {
+                LinearLayout row = U.row(c);
+                for (int k = 0; k < cols; k++) {
+                    int at = r * cols + k;
+                    row.addView(at < ps.size() ? face(c, ps.get(at), n == 1 ? (tl ? 72 : 56) : (tl ? 48 : 36))
+                            : addFace(c, n == 1 ? 56 : 36), new LinearLayout.LayoutParams(0, U.MATCH, 1));
+                }
+                grid.addView(row, new LinearLayout.LayoutParams(U.MATCH, 0, 1));
             }
+            LinearLayout.LayoutParams gl = U.weight(1, false);
+            gl.topMargin = U.u(6);
+            l.addView(grid, gl);
             v = l;
         }
+
+    private static View faceBox(Context c, View pic, float size, String name) {
+        LinearLayout f = U.col(c);
+        f.setGravity(Gravity.CENTER);
+        f.addView(pic, U.lpu(size, size));
+        TextView t = U.line(c, name, size > 50 ? 15 : 12, U.TEXT2, size > 50);
+        t.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams tl = U.lp(U.MATCH, U.WRAP);
+        tl.topMargin = U.u(3);
+        f.addView(t, tl);
+        U.press(f);
+        return f;
+    }
+
+    /** A quick-dial contact: face and first name; tap calls. */
+    private View face(Context c, Person p, float size) {
+        View f = faceBox(c, avatar(c, p, size), size, p.name.split(" ")[0]);
+        f.setOnClickListener(x -> {
+            if (MainActivity.I != null) Actions.call(MainActivity.I, p.number);
+        });
+        f.setContentDescription("Call " + p.name);
+        return f;
+    }
+
+    /** An empty place: + chooses contacts. */
+    private View addFace(Context c, float size) {
+        FrameLayout ring = new FrameLayout(c);
+        ring.setBackground(U.dashed(U.LINE, size / 2));
+        ring.addView(U.icon(c, R.drawable.ic_plus, U.SUB), U.flpu(size * 0.4f, size * 0.4f, Gravity.CENTER));
+        View f = faceBox(c, ring, size, "Add");
+        f.setOnClickListener(x -> quickDialSetup(index));
+        return f;
+    }
     }
 
     static void quickDialSetup(int index) {
