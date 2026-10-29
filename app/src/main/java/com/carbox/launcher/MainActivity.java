@@ -747,8 +747,59 @@ public class MainActivity extends Activity {
         big.animate().translationY(-row).setDuration(U.ms(340)).setInterpolator(ease).start();
     }
 
+    // ---- the big map steps aside (into the small map panel) while lyrics, a dialler or a panel use the tile area
+    private boolean mapAside;
+
+    void mapAside(boolean on) {
+        if (map == null || !mapHome() || drawerOpen) {
+            if (!on) mapAside = false;
+            return;
+        }
+        View big = map.bigView();
+        if (on) {
+            if (mapAside || !map.expanded() || big == null) return;
+            mapAside = true;
+            float[] t = toSmall(big);
+            big.animate().translationX(t[0]).translationY(t[1]).scaleX(t[2]).scaleY(t[3]).setDuration(U.ms(360))
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f))
+                    .withEndAction(() -> {
+                        if (!mapAside) return;
+                        resetTransform(big);
+                        map.expand(false);
+                    }).start();
+        } else {
+            if (!mapAside) return;
+            U.ui.post(() -> { // a moment later, so one thing replacing another doesn't bounce the map
+                if (!mapAside || drawerOpen) return;
+                if (Sheets.inTiles() || LyricsCard.isShown() || PhoneScreen.isShown()) return; // something still there
+                mapAside = false;
+                growMap();
+            });
+        }
+    }
+
+    /** The big map grows back out of the small map panel. */
+    private void growMap() {
+        if (map == null) return;
+        if (!map.expanded()) map.expand(true);
+        View big = map.bigView();
+        if (big == null) return;
+        big.post(() -> {
+            float[] t = toSmall(big);
+            big.setPivotX(0);
+            big.setPivotY(0);
+            big.setTranslationX(t[0]);
+            big.setTranslationY(t[1]);
+            big.setScaleX(t[2]);
+            big.setScaleY(t[3]);
+            big.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).setDuration(U.ms(360))
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+        });
+    }
+
     void drawer(boolean open) {
         if (open == drawerOpen && !peeking) return;
+        mapAside = false;
         boolean fromPeek = peeking;
         peeking = false;
         if (open) hideAlertTile();

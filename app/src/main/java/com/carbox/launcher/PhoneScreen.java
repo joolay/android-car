@@ -56,6 +56,7 @@ final class PhoneScreen {
             shown.animate().translationY(0).setDuration(U.ms(340)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
         }
         Store.put("phone_seen", true);
+        a.mapAside(true); // the big map steps aside for the dialler
         render();
     }
 
@@ -70,6 +71,7 @@ final class PhoneScreen {
         final FrameLayout v = shown, h = holder;
         shown = null;
         holder = null;
+        if (MainActivity.I != null) MainActivity.I.mapAside(false);
         Runnable gone = () -> {
             View x = h != null ? h : v;
             if (x.getParent() != null) ((ViewGroup) x.getParent()).removeView(x);

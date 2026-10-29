@@ -45,6 +45,7 @@ final class LyricsCard {
         shown = new FrameLayout(a);
         shown.setClickable(true);
         shown.setBackground(U.round(U.CARD, 16));
+        a.mapAside(true); // the big map steps aside for the lyrics
         head = U.line(a, "", 11, U.SUB, true);
         head.setLetterSpacing(0.06f);
         FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(U.MATCH, U.WRAP, Gravity.TOP);
@@ -102,6 +103,7 @@ final class LyricsCard {
         final FrameLayout s0 = shown;
         shown = null;
         views.clear();
+        if (MainActivity.I != null) MainActivity.I.mapAside(false);
         if (s0 == null || s0.getParent() == null) return;
         float[] t = fromNowPlaying(s0);
         Runnable gone = () -> {

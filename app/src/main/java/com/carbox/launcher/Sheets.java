@@ -106,6 +106,12 @@ final class Sheets {
         layer = tileLayer;
         for (Runnable r : new ArrayList<>(onClose)) r.run();
         onClose.clear();
+        if (MainActivity.I != null) MainActivity.I.mapAside(false); // and comes back
+    }
+
+    /** A panel is open in the tile area. */
+    static boolean inTiles() {
+        return !stack.isEmpty() && !full;
     }
 
     static void whenClosed(Runnable r) {
@@ -164,6 +170,7 @@ final class Sheets {
         else if (page.getLayoutParams() == null) page.setLayoutParams(centered(640, 440));
         layer.addView(page);
         if (grow && !full && MainActivity.I != null) MainActivity.I.growIn(page, null);
+        if (!full && MainActivity.I != null) MainActivity.I.mapAside(true); // the big map steps aside for the panel
         grow = false;
     }
 
