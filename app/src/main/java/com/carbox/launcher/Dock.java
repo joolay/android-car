@@ -64,22 +64,22 @@ final class Dock {
         need = U.uf(need * scale());
         int avail = view.getWidth();
         fit = avail > 0 ? Math.min(1f, avail / need) : 1f;
-        // icons share the width evenly, so 6 icons spread out instead of bunching on the left
-        spacer();
-        // the dialler first (can be switched off in Settings → Dock)
-        if (dialler()) addDialler();
-        for (Apps.App ap : pinned) {
-            add(ap, true);
-            spacer();
+        // even spacing: exactly one equal gap between neighbours (none at the ends, just the padding);
+        // a divider sits in the middle of its gap where the group changes (dialler | pinned | recent | All apps)
+        group = 0;
+        if (dialler()) {
+            addDialler();
+            group = 1;
         }
-        if (!pinned.isEmpty() && !recent.isEmpty()) {
-            divider();
-            spacer();
+        for (Apps.App ap : pinned) {
+            gapBefore(2);
+            add(ap, true);
         }
         for (Apps.App ap : recent) {
+            gapBefore(3);
             add(ap, false);
-            spacer();
         }
+        gapBefore(4);
         allApps();
     }
 
@@ -94,9 +94,6 @@ final class Dock {
         dial.setContentDescription("Phone");
         U.press(dial);
         view.addView(dial, U.lpu(s(42), s(42)));
-        spacer();
-        divider(); // separates the dialler from the apps
-        spacer();
         dial.setOnLongClickListener(v -> { // hold: dock settings (e.g. to remove the dialler)
             SettingsPanels.dock();
             return true;
@@ -104,7 +101,6 @@ final class Dock {
     }
 
     private void allApps() {
-        divider();
         FrameLayout all = new FrameLayout(a);
         // All apps: a little mosaic of four coloured squares on a dark tile
         all.setBackground(U.round(U.CARD2, 10));
@@ -135,7 +131,6 @@ final class Dock {
         });
         U.press(all);
         LinearLayout.LayoutParams lp = U.lpu(s(40), s(40));
-        lp.leftMargin = U.u(s(14));
         view.addView(all, lp);
     }
 
@@ -172,6 +167,26 @@ final class Dock {
     }
 
     private void spacer() {
-        view.addView(new View(a), new LinearLayout.LayoutParams(0, 1, 1));
+        spacer(1);
+    }
+
+    private void spacer(float w) {
+        view.addView(new View(a), new LinearLayout.LayoutParams(0, 1, w));
+    }
+
+    private int group; // what came last: 0 nothing, 1 dialler, 2 pinned, 3 recent, 4 All apps
+
+    /** The gap before the next item: one equal gap, with a divider in its middle when the group changes. */
+    private void gapBefore(int next) {
+        if (group == 0) {
+            group = next;
+            return;
+        }
+        if (group != next) {
+            spacer(0.5f);
+            divider();
+            spacer(0.5f);
+        } else spacer(1);
+        group = next;
     }
 }
