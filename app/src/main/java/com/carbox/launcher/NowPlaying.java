@@ -38,6 +38,7 @@ final class NowPlaying {
     static NowPlaying I;
     private View lyricsBtn;
     private EqView eq;
+    private View eqBtn;
     private MusicFolder folder;
     private LinearLayout videoBtns;
     /** Apps whose "now playing" is a video. */
@@ -182,8 +183,25 @@ final class NowPlaying {
         eq = new EqView(c, 18, 0x993D8BFD);
         eq.setVisibility(View.GONE);
         FrameLayout.LayoutParams el = new FrameLayout.LayoutParams(U.MATCH, U.u(70), Gravity.TOP);
-        el.setMargins(U.u(14), U.u(54), U.u(14), 0);
+        el.setMargins(U.u(14), U.u(54), U.u(46), 0);
         view.addView(eq, view.indexOfChild(lyricsBtn), el);
+        // on its right: change the animation (Equaliser → Wave → Pulse)
+        eqBtn = U.icon(c, R.drawable.ic_swap, U.TEXT2);
+        eqBtn.setBackground(U.oval(0x66000000));
+        U.pad(eqBtn, 7, 7, 7, 7);
+        eqBtn.setContentDescription("Change the music animation");
+        eqBtn.setOnClickListener(v -> {
+            String st = EqView.style();
+            String nx = "bars".equals(st) ? "wave" : "wave".equals(st) ? "pulse" : "bars";
+            Store.put("eq_style", nx);
+            android.widget.Toast.makeText(c, "bars".equals(nx) ? "Equaliser" : "wave".equals(nx) ? "Wave" : "Pulse", android.widget.Toast.LENGTH_SHORT).show();
+            eq.invalidate();
+        });
+        U.press(eqBtn);
+        eqBtn.setVisibility(View.GONE);
+        FrameLayout.LayoutParams ebl = U.flpu(30, 30, Gravity.TOP | Gravity.END);
+        ebl.setMargins(0, U.u(74), U.u(10), 0);
+        view.addView(eqBtn, ebl);
 
 
         content = U.col(c);
@@ -199,19 +217,19 @@ final class NowPlaying {
         ctl.setGravity(Gravity.CENTER);
         View prev = U.icon(c, R.drawable.ic_prev, U.TEXT);
         prev.setOnClickListener(v -> transport(0));
-        ctl.addView(prev, U.lpu(30, 30));
+        ctl.addView(prev, U.lpu(36, 36));
         FrameLayout play = new FrameLayout(c);
         play.setBackground(U.oval(U.TEXT));
         playBtn = U.icon(c, R.drawable.ic_play, 0xFF000000);
-        play.addView(playBtn, U.flpu(22, 22, Gravity.CENTER));
+        play.addView(playBtn, U.flpu(26, 26, Gravity.CENTER));
         play.setOnClickListener(v -> transport(1));
         U.press(play);
-        LinearLayout.LayoutParams pl = U.lpu(42, 42);
+        LinearLayout.LayoutParams pl = U.lpu(50, 50);
         pl.setMargins(U.u(20), 0, U.u(20), 0);
         ctl.addView(play, pl);
         View next = U.icon(c, R.drawable.ic_next, U.TEXT);
         next.setOnClickListener(v -> transport(2));
-        ctl.addView(next, U.lpu(30, 30));
+        ctl.addView(next, U.lpu(36, 36));
         LinearLayout.LayoutParams cl = U.lp(U.MATCH, U.WRAP);
         cl.topMargin = U.u(8);
         content.addView(ctl, cl);
@@ -304,6 +322,7 @@ final class NowPlaying {
         if (md == null) {
             art.setImageDrawable(null);
             if (eq != null) eq.setVisibility(View.GONE);
+            if (eqBtn != null) eqBtn.setVisibility(View.GONE);
             content.setVisibility(View.INVISIBLE);
             lyricBox.setVisibility(View.GONE);
             boolean access = MediaListener.hasAccess(c);
@@ -328,6 +347,7 @@ final class NowPlaying {
         if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
         android.graphics.drawable.Drawable appIcon = Apps.iconOf(m.getPackageName());
         if (eq != null) eq.setVisibility(showIcon() || bm == null ? View.VISIBLE : View.GONE);
+        if (eqBtn != null && eq != null) eqBtn.setVisibility(eq.getVisibility());
         if (showIcon() && appIcon != null) { // the music app's icon, centred
             art.setImageDrawable(appIcon);
             art.setScaleType(ImageView.ScaleType.FIT_CENTER);

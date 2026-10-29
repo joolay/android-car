@@ -185,16 +185,22 @@ final class Music {
     }
 
     /** Press "play" on the chosen app (or on whatever played last), without opening it. */
+    private static int tries;
+
     static void resume(Context c) {
         String p = pkg();
         MediaController m = MediaListener.controller;
+        if (m == null || (p != null && !p.equals(m.getPackageName()))) m = MediaListener.controllerFor(p); // the chosen app's own session, even if it isn't the "current" one
         if (m != null && (p == null || p.equals(m.getPackageName()))) {
             log("Play pressed on " + Apps.label(m.getPackageName()) + "'s session");
             m.getTransportControls().play();
             return;
         }
-        log(m == null ? "No music session yet: sent a play button to " + (p == null ? "the last player" : Apps.label(p)) : "Session is " + Apps.label(m.getPackageName()) + ", not the chosen app: play button sent");
-        if (p == null) {
+        // no session yet: take turns between the app's own play button and Android's play key
+        // (Android sends that to the last app that played, which after a start is usually the music app)
+        boolean viaAndroid = p == null || (tries++ % 2 == 1);
+        log("No session from " + (p == null ? "a player" : Apps.label(p)) + " yet: " + (viaAndroid ? "Android's play key" : "its play button"));
+        if (viaAndroid) {
             AudioManager am = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
             if (am != null) {
                 am.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY));
