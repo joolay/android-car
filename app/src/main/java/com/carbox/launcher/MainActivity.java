@@ -78,7 +78,17 @@ public class MainActivity extends Activity {
         };
         if (Music.atStart(this) && Music.open(this)) U.ui.postDelayed(() -> {
             NowPlaying.pressHome();
-            splash.run();
+            // the splash once Home is really back in front: shown straight away, the Home press
+            // arriving a moment later closed it again (only its voice was left)
+            final long until = android.os.SystemClock.elapsedRealtime() + 4000;
+            U.ui.post(new Runnable() {
+                @Override
+                public void run() {
+                    long now = android.os.SystemClock.elapsedRealtime();
+                    if ((frontAt != 0 && now - frontAt > 600) || now > until) splash.run();
+                    else U.ui.postDelayed(this, 150);
+                }
+            });
         }, 2500);
         else splash.run();
         U.ui.post(() -> handleOpen(getIntent()));
