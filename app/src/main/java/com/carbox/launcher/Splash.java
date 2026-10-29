@@ -27,6 +27,8 @@ final class Splash {
         maybeShow(a, trigger, null);
     }
 
+    static boolean voiceStarted;
+
     /** Returns true if the splash is showing; `after` then runs once it closes. */
     static boolean maybeShow(Activity a, String trigger, Runnable after) {
         if (!Store.flag(Store.SPLASH_ON, false)) return false;
@@ -46,7 +48,12 @@ final class Splash {
         String mode = mode();
         // the voice waits until the music is really playing (or ~20 s): started together, this box
         // handed the sound to Car Launcher and the music never began
-        if (!"screen".equals(mode)) Music.whenStarted(a, () -> recite(a), 20000);
+        // the voice first, then the car-start music (which waits for it)
+        if (!"screen".equals(mode)) {
+            voiceStarted = true;
+            recite(a);
+            Music.afterVoice();
+        } else Music.go("splash has no voice");
         if ("voice".equals(mode)) return false; // voice only: nothing on screen, start-up carries on
         return show(a, after);
     }

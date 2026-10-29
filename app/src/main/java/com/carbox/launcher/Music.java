@@ -97,23 +97,52 @@ final class Music {
             log("Something is already playing: left alone");
             return false; // something is already playing (e.g. the phone over Bluetooth)
         }
-        guard(a);
-        // the chosen playlist (e.g. Liked Songs) comes first when set to start with it
-        if ("playlist".equals(startWith())) {
-            playPlaylist(a, true);
-            log("Opening " + label() + ", then the splash");
-            return true;
-        }
-        resume(a);
-        // the music app may still be waking up after boot: try once more, then fall back to the playlist
-        U.ui.postDelayed(() -> {
-            if (!musicActive(a)) resume(a);
-        }, 1500);
-        U.ui.postDelayed(() -> {
-            if (!musicActive(a) && !Store.str(Store.MUSIC_PLAYLIST, "").isEmpty()) playPlaylist(a, true);
-        }, 5000);
-        log("Opening " + label() + ", then the splash");
+        // the app is opened now (so it's loaded and ready), but the music only starts once the
+        // splash voice is done: go() is called by the splash, or straight after it when it has no voice
+        pending = () -> {
+            guard(a);
+            // the chosen playlist (e.g. Liked Songs) comes first when set to start with it
+            if ("playlist".equals(startWith())) {
+                playPlaylist(a, true);
+                return;
+            }
+            resume(a);
+            // the music app may still be waking up: try once more, then fall back to the playlist
+            U.ui.postDelayed(() -> {
+                if (!musicActive(a)) resume(a);
+            }, 1500);
+            U.ui.postDelayed(() -> {
+                if (!musicActive(a) && !Store.str(Store.MUSIC_PLAYLIST, "").isEmpty()) playPlaylist(a, true);
+            }, 5000);
+        };
+        U.ui.postDelayed(() -> go("waited 40 s"), 40000); // never left silent
+        log("Opening " + label() + " (waits for the splash voice), then the splash");
         return true;
+    }
+
+    private static Runnable pending;
+
+    /** Start the car-start music now (once): after the splash voice, or when there's none. */
+    static void go(String why) {
+        Runnable r = pending;
+        pending = null;
+        if (r == null) return;
+        log("Starting the music (" + why + ")");
+        r.run();
+    }
+
+    /** Waits for the splash voice to finish (it has a moment to begin), then starts the music. */
+    static void afterVoice() {
+        if (pending == null) return;
+        final long from = SystemClock.elapsedRealtime();
+        U.ui.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (pending == null) return;
+                if (!Rest.speaking() || SystemClock.elapsedRealtime() - from > 35000) go("splash voice done");
+                else U.ui.postDelayed(this, 300);
+            }
+        }, 1200);
     }
 
     // ---- start-up guard: for the first 45 s, nothing but your own pause button stops the music.

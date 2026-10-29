@@ -246,6 +246,15 @@ final class Rest {
     private static android.media.MediaPlayer player;
 
     /** Car Launcher is playing a recording right now (the splash voice, a reminder). */
+    /** The voice (recording or spoken text) is still going. */
+    static boolean speaking() {
+        try {
+            return talking() || (tts != null && tts.isSpeaking());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     static boolean talking() {
         try {
             return player != null && player.isPlaying();

@@ -75,6 +75,9 @@ public class MainActivity extends Activity {
         // Home comes back with the splash; hotspot settings and auto-start apps once it has closed
         Runnable splash = () -> {
             if (!Splash.maybeShow(this, "start", () -> Actions.afterSplash(this))) Actions.afterSplash(this);
+            U.ui.post(() -> { // no splash voice this time: the music starts now
+                if (!Splash.voiceStarted) Music.go("no splash voice");
+            });
         };
         if (Music.atStart(this) && Music.open(this)) U.ui.postDelayed(() -> {
             NowPlaying.pressHome();
