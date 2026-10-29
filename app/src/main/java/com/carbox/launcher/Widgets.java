@@ -794,22 +794,29 @@ final class Widgets {
             head.addView(U.text(c, (more != null && more.length() > 0 ? "+" + more.length() + " " : "") + "›", 13, U.ACCENT_SOFT, true));
             l.addView(head);
             l.setOnClickListener(x -> places(index));
-            l.addView(new View(c), U.weight(1, false));
-            l.addView(place(R.drawable.ic_home, "Home", "home"), U.lpu(U.MATCH, 52));
-            LinearLayout.LayoutParams wl = U.lpu(U.MATCH, 52);
+            // Home and Work share the space under the title (big buttons, at least 52 high)
+            LinearLayout.LayoutParams hl = U.weight(1, false);
+            hl.topMargin = U.u(10);
+            View home = place(R.drawable.ic_home, "Home", "home");
+            home.setMinimumHeight(U.u(52));
+            l.addView(home, hl);
+            LinearLayout.LayoutParams wl = U.weight(1, false);
             wl.topMargin = U.u(8);
-            l.addView(place(R.drawable.ic_work, "Work", "work"), wl);
+            View work = place(R.drawable.ic_work, "Work", "work");
+            work.setMinimumHeight(U.u(52));
+            l.addView(work, wl);
             v = l;
         }
 
         private View place(int icon, String name, String key) {
             LinearLayout b = U.row(c);
             b.setBackground(U.round(U.CARD2, 12));
-            U.pad(b, 10, 0, 8, 0);
-            b.addView(U.icon(c, icon, U.ACCENT_SOFT), U.lpu(22, 22));
-            TextView t = U.line(c, name, 14, U.TEXT, true);
+            b.setGravity(Gravity.CENTER_VERTICAL);
+            U.pad(b, 14, 0, 10, 0);
+            b.addView(U.icon(c, icon, U.ACCENT_SOFT), U.lpu(28, 28));
+            TextView t = U.line(c, name, 18, U.TEXT, true);
             LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-            tl.leftMargin = U.u(8);
+            tl.leftMargin = U.u(12);
             b.addView(t, tl);
             b.setOnClickListener(x -> {
                 String a = cfg.optString(key, "");

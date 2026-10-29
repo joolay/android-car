@@ -67,18 +67,10 @@ final class MusicFolder {
         this.c = c;
         view = new FrameLayout(c);
         LinearLayout box = U.col(c);
-        U.pad(box, 12, 10, 12, 10);
-        LinearLayout head = U.row(c);
-        head.setGravity(Gravity.CENTER_VERTICAL);
-        head.addView(U.icon(c, R.drawable.ic_folder, U.ACCENT_SOFT), U.lpu(16, 16));
-        LinearLayout.LayoutParams hl = U.lp(U.WRAP, U.WRAP);
-        hl.leftMargin = U.u(6);
-        head.addView(U.line(c, "Music", 13, U.TEXT2, true), hl);
-        box.addView(head);
+        U.pad(box, 8, 8, 8, 8);
+        // no title: the icons fill the tile
         grid = U.col(c);
-        LinearLayout.LayoutParams gl = new LinearLayout.LayoutParams(U.MATCH, 0, 1);
-        gl.topMargin = U.u(6);
-        box.addView(grid, gl);
+        box.addView(grid, new LinearLayout.LayoutParams(U.MATCH, 0, 1));
         view.addView(box, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
 
         // maximise, overlapping the top-right corner (only with more than 4 apps)
@@ -119,12 +111,18 @@ final class MusicFolder {
         col.setGravity(Gravity.CENTER);
         ImageView iv = new ImageView(c);
         iv.setImageDrawable(Apps.iconOf(pkg));
-        col.addView(iv, U.lpu(editable ? 44 : 34, editable ? 44 : 34));
-        TextView t = U.line(c, Apps.label(pkg), 10, U.SUB, false);
-        t.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams tl = U.lp(U.MATCH, U.WRAP);
-        tl.topMargin = U.u(3);
-        col.addView(t, tl);
+        if (editable) { // big grid: icon and name
+            col.addView(iv, U.lpu(44, 44));
+            TextView t = U.line(c, Apps.label(pkg), 10, U.SUB, false);
+            t.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams tl = U.lp(U.MATCH, U.WRAP);
+            tl.topMargin = U.u(3);
+            col.addView(t, tl);
+        } else { // in the tile: just the icon, as big as the spot allows
+            iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            U.pad(iv, 6, 6, 6, 6);
+            col.addView(iv, U.lp(U.MATCH, U.MATCH));
+        }
         f.addView(col, new FrameLayout.LayoutParams(U.MATCH, U.MATCH, Gravity.CENTER));
         f.setOnClickListener(v -> {
             if (Sheets.open()) Sheets.close();
@@ -154,8 +152,8 @@ final class MusicFolder {
         FrameLayout f = new FrameLayout(c);
         FrameLayout ring = new FrameLayout(c);
         ring.setBackground(U.outline(0, U.LINE, 1.5f, 10));
-        ring.addView(U.icon(c, R.drawable.ic_plus, U.SUB), U.flpu(18, 18, Gravity.CENTER));
-        f.addView(ring, U.flpu(34, 34, Gravity.CENTER));
+        ring.addView(U.icon(c, R.drawable.ic_plus, U.SUB), U.flpu(24, 24, Gravity.CENTER));
+        f.addView(ring, U.flpu(48, 48, Gravity.CENTER));
         f.setContentDescription("Add a music app");
         f.setOnClickListener(v -> pickApp());
         U.press(f);
