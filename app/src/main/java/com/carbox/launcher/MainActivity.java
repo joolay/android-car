@@ -499,7 +499,7 @@ public class MainActivity extends Activity {
         return Store.flag("map_start_big", true);
     }
 
-    /** All apps button: slide the tiles in from the Right Dock, the map slides away behind the left panels. */
+    /** All apps button: the tiles rise out of the news ticker, the map lifts away. */
     void toggleDrawer() {
         drawer(!drawerOpen);
     }
@@ -553,11 +553,14 @@ public class MainActivity extends Activity {
         View big = map != null ? map.bigView() : null;
         if (big == null || drawerOpen) return;
         peeking = true;
-        float w = tileArea.getWidth() + U.u(12), col = tileArea.getWidth() / 4f + U.u(6);
+        // the top row of tiles (the alert tile is first) rises from the ticker; the map lifts by a row
+        float h = tileArea.getHeight() + U.u(12), row = tileArea.getHeight() / 2f + U.u(4);
         android.view.animation.Interpolator ease = new android.view.animation.DecelerateInterpolator(1.8f);
-        if (tiles.view.getTranslationX() == 0) tiles.view.setTranslationX(w);
-        tiles.view.animate().translationX(w - col).setDuration(340).setInterpolator(ease).start();
-        big.animate().translationX(-col).setDuration(340).setInterpolator(ease).start();
+        tiles.view.setTranslationX(0);
+        big.setTranslationX(0);
+        if (tiles.view.getTranslationY() == 0) tiles.view.setTranslationY(h);
+        tiles.view.animate().translationY(h - row).setDuration(340).setInterpolator(ease).start();
+        big.animate().translationY(-row).setDuration(340).setInterpolator(ease).start();
     }
 
     void drawer(boolean open) {
@@ -570,17 +573,20 @@ public class MainActivity extends Activity {
         peeking = false;
         drawerOpen = open;
         lockButton(open);
-        float w = tileArea.getWidth() + U.u(12);
+        // the tiles rise up out of the news ticker; the map lifts away at the top
+        float h = tileArea.getHeight() + U.u(12);
         android.view.animation.Interpolator ease = new android.view.animation.DecelerateInterpolator(1.8f);
+        tiles.view.setTranslationX(0);
+        big.setTranslationX(0);
         if (open) {
             if (Sheets.open()) Sheets.close();
-            if (!fromPeek) tiles.view.setTranslationX(w); // from a peek it carries on from where it is
-            tiles.view.animate().translationX(0).setDuration(340).setInterpolator(ease).start();
-            big.animate().translationX(-w).setDuration(340).setInterpolator(ease).start();
+            if (!fromPeek) tiles.view.setTranslationY(h); // from a peek it carries on from where it is
+            tiles.view.animate().translationY(0).setDuration(340).setInterpolator(ease).start();
+            big.animate().translationY(-h).setDuration(340).setInterpolator(ease).start();
         } else {
             if (tiles.editing()) tiles.setEditing(false);
-            tiles.view.animate().translationX(w).setDuration(300).setInterpolator(ease).start();
-            big.animate().translationX(0).setDuration(300).setInterpolator(ease).start();
+            tiles.view.animate().translationY(h).setDuration(300).setInterpolator(ease).start();
+            big.animate().translationY(0).setDuration(300).setInterpolator(ease).start();
         }
     }
 
