@@ -156,7 +156,7 @@ public class MainActivity extends Activity {
         dockRow.setGravity(Gravity.CENTER_VERTICAL);
         dockRow.addView(dock.view, new LinearLayout.LayoutParams(0, U.MATCH, 1));
         if (!tickerOn) buildChip(dockRow); // "Tiles" + lock at the end of the dock instead
-        LinearLayout.LayoutParams dl = U.lpu(U.MATCH, tickerOn ? 56 : 64); // a little taller without the ticker
+        LinearLayout.LayoutParams dl = U.lpu(U.MATCH, 64); // same height with or without the ticker (the map / tiles give way)
         dl.topMargin = U.u(8);
         middle.addView(dockRow, dl);
         LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(0, U.MATCH, 1);
@@ -232,7 +232,7 @@ public class MainActivity extends Activity {
      * size with the extra height as padding above and below the grid.
      */
     private void tilePad(boolean tickerShown) {
-        int p = tickerShown ? 0 : U.u(15); // what the ticker freed, less the dock's extra height
+        int p = tickerShown ? 0 : U.u(19); // what the ticker freed
         tilesClip.setPadding(0, p, 0, p);
     }
 

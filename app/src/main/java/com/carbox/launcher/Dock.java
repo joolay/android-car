@@ -17,7 +17,7 @@ final class Dock {
 
     /** The dock stays the same size with or without the news ticker (the map and tiles take that space). */
     static float scale() {
-        return Store.flag("ticker_on", true) ? 1f : 1.12f; // a touch bigger in the taller dock
+        return 1.12f; // the same with or without the ticker
     }
 
     private static float fit = 1f; // shrinks everything a little when the full dock wouldn't fit its width
