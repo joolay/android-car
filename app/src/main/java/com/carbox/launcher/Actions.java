@@ -64,7 +64,7 @@ final class Actions {
 
     /** What the voice button did last (shown in Settings → Assistant, to see why it didn't work). */
     static void assistLog(String s) {
-        Trace.event("Voice button: " + s.replace('\n', ' / '));
+        Trace.event("Voice button: " + s.replace("\n", " / "));
         Store.put("assist_log", new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(new java.util.Date()) + "\n" + s);
     }
 
