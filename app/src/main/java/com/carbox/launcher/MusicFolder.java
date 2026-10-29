@@ -63,8 +63,12 @@ final class MusicFolder {
         Sheets.refresh();
     }
 
+    static MusicFolder I;
+    private static boolean maximised; // the full grid is open: no maximise button on the tile
+
     MusicFolder(Context c) {
         this.c = c;
+        I = this;
         view = new FrameLayout(c);
         LinearLayout box = U.col(c);
         U.pad(box, 8, 8, 8, 8);
@@ -81,11 +85,11 @@ final class MusicFolder {
         // maximise, overlapping the top-right corner (only with more than 4 apps)
         FrameLayout m = new FrameLayout(c);
         m.setBackground(U.oval(U.CARD2));
-        m.addView(U.icon(c, R.drawable.ic_maximize, U.TEXT), U.flpu(14, 14, Gravity.CENTER));
+        m.addView(U.icon(c, R.drawable.ic_maximize, U.TEXT), U.flpu(20, 20, Gravity.CENTER));
         m.setContentDescription("Show all music apps");
         m.setOnClickListener(v -> showAll(c));
         U.press(m);
-        FrameLayout.LayoutParams ml = U.flpu(30, 30, Gravity.TOP | Gravity.END);
+        FrameLayout.LayoutParams ml = U.flpu(40, 40, Gravity.TOP | Gravity.END);
         ml.setMargins(0, U.u(4), U.u(4), 0);
         view.addView(m, ml);
         max = m;
@@ -120,7 +124,7 @@ final class MusicFolder {
     void render() {
         grid.removeAllViews();
         List<String> l = apps(c);
-        max.setVisibility(l.size() > 4 ? View.VISIBLE : View.GONE);
+        max.setVisibility(l.size() > 4 && !maximised ? View.VISIBLE : View.GONE);
         int n = pages(l.size());
         if (page >= n) page = n - 1;
         List<View> cells = new ArrayList<>();
@@ -212,6 +216,12 @@ final class MusicFolder {
 
     /** All the folder's apps as a grid: tap opens, − removes, + adds. */
     static void showAll(Context c0) {
+        maximised = true;
+        if (I != null) I.max.setVisibility(View.GONE);
+        U.ui.post(() -> Sheets.whenClosed(() -> { // back on the tile when the grid closes
+            maximised = false;
+            if (I != null) I.render();
+        }));
         Sheets.show(() -> {
             Context c = Sheets.ctx();
             LinearLayout b = U.col(c);

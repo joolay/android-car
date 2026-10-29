@@ -219,12 +219,11 @@ final class DataMeter extends View {
         r.set(U.uf(1), U.uf(1), w - U.uf(1), h - U.uf(1));
         cv.drawRoundRect(r, U.uf(9), U.uf(9), ring);
         float cx = w / 2f;
-        cap.setTextSize(U.uf(8.5f));
-        cv.drawText("LTE", cx, U.uf(12), cap);
         dn.setTextSize(U.uf(11));
         up.setTextSize(U.uf(10));
-        cv.drawText("↓" + shortSize(Math.round(shownD)), cx, U.uf(26), dn);
-        cv.drawText("↑" + shortSize(Math.round(shownU)), cx, U.uf(39), up);
+        float mid = h / 2f; // mobile data only, no label
+        cv.drawText("↓" + shortSize(Math.round(shownD)), cx, mid - U.uf(2), dn);
+        cv.drawText("↑" + shortSize(Math.round(shownU)), cx, mid + U.uf(11), up);
         if (anim && (Math.abs(m[0] - shownD) > 500 || Math.abs(m[1] - shownU) > 500)) postInvalidateOnAnimation();
     }
 
