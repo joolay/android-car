@@ -679,7 +679,10 @@ final class AppPanels {
      */
     static Sheets.Page galleryRef; // the open widget chooser (it closes on Done or when idle)
 
+    private static int galleryX; // where the widget list was scrolled to (kept while it refreshes)
+
     static void gallery(int index) {
+        galleryX = 0;
         Sheets.Page page = galleryRef = () -> galleryPage(index);
         if (Sheets.open()) Sheets.pushFull(page);
         else Sheets.showFull(page);
@@ -696,7 +699,7 @@ final class AppPanels {
         LinearLayout head = U.row(c);
         LinearLayout titles = U.col(c);
         titles.addView(U.line(c, manage ? "Home screen widgets" : "Choose a widget", 20, U.TEXT, true));
-        titles.addView(U.line(c, manage ? "Your tiles come first: hold and drag to reorder, tap to change · tap a widget below to add it" : "Tap one to put it on this tile · swipe for more", 12, U.SUB, false), top(2));
+        titles.addView(U.line(c, manage ? "Highlighted ones are on your home screen · tap a widget to add it or take it off" : "Tap one to put it on this tile · swipe for more", 12, U.SUB, false), top(2));
         head.addView(titles, new LinearLayout.LayoutParams(0, U.WRAP, 1));
         if (manage) {
             head.addView(U.button(c, "Add all", false, () -> { // every widget not on the home screen yet
@@ -749,26 +752,6 @@ final class AppPanels {
         android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(c);
         LinearLayout chips = U.row(c);
         java.util.Set<String> placed = new java.util.HashSet<>();
-        if (manage) {
-            // 1. what's on the home screen, in order: drag to reorder, tap to change or remove
-            for (String k : on.keySet()) placed.add(k); // these leave their categories
-            LinearLayout block = U.col(c);
-            TextView ht = U.line(c, "ON YOUR HOME SCREEN", 11, U.ACCENT_SOFT, true);
-            ht.setLetterSpacing(0.08f);
-            U.pad(ht, 6, 0, 0, 0);
-            block.addView(ht);
-            block.addView(new TileEditor.Board(c, hs, false), new LinearLayout.LayoutParams(U.WRAP, 0, 1));
-            View sep = new View(c);
-            sep.setBackgroundColor(U.LINE);
-            LinearLayout.LayoutParams sl = U.lpu(1, U.MATCH);
-            sl.setMargins(U.u(8), U.u(20), U.u(16), U.u(4));
-            blocks.addView(block, new LinearLayout.LayoutParams(U.WRAP, U.MATCH));
-            blocks.addView(sep, sl);
-            TextView chip = U.seg(c, "Home screen", true, () -> hs.smoothScrollTo(0, 0));
-            LinearLayout.LayoutParams chl = U.lp(U.WRAP, U.WRAP);
-            chl.rightMargin = U.u(8);
-            chips.addView(chip, chl);
-        }
         for (int ci = 0; ci <= cats.length; ci++) {
             List<String[]> group = new ArrayList<>();
             String cat = ci < cats.length ? cats[ci][0] : "More";
@@ -805,6 +788,10 @@ final class AppPanels {
         hs.setHorizontalScrollBarEnabled(false);
         hs.setFillViewport(true);
         hs.addView(blocks, new android.widget.FrameLayout.LayoutParams(U.WRAP, U.MATCH));
+        // stay where you were after adding or removing one (the page is rebuilt each time)
+        hs.setOnScrollChangeListener((v, x, y, ox, oy) -> galleryX = x);
+        final int keep = galleryX;
+        hs.post(() -> hs.scrollTo(keep, 0));
         LinearLayout.LayoutParams hl = U.weight(1, false);
         hl.topMargin = U.u(8);
         card.addView(hs, hl);
