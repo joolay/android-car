@@ -284,6 +284,11 @@ final class MapPanel {
 
     /** Tap on the map: it fills the 2×4 grid and the small panel shows the Go to or Speed tile. */
     void expand(boolean on) {
+        MainActivity m = MainActivity.I;
+        if (on && m != null && m.drawerOpen) { // tiles are up: tapping the small map brings the big map back
+            m.drawer(false);
+            return;
+        }
         tapBig = on;
         updateNav();
     }
