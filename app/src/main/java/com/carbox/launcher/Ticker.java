@@ -422,13 +422,7 @@ final class Ticker {
                 LinearLayout meta = U.row(c);
                 String m = (it.source != null ? it.source : "") + (it.date > 0 ? (it.source != null ? " · " : "") + ago(it.date) : "");
                 meta.addView(U.line(c, m, 12, U.MUTED, false), new LinearLayout.LayoutParams(0, U.WRAP, 1));
-                if (it.link != null) {
-                    TextView open = U.text(c, "Open in Chrome ›", 12, U.ACCENT_SOFT, true);
-                    U.pad(open, 10, 4, 0, 4);
-                    open.setOnClickListener(v -> openLink(c, it.link));
-                    meta.addView(open);
-                    r.setOnClickListener(v -> openLink(c, it.link));
-                }
+                r.setOnClickListener(v -> reader(it)); // tap: the story, easy to read
                 r.addView(meta, Widgets.top(6));
                 list.addView(r);
             }
@@ -440,6 +434,54 @@ final class Ticker {
             card.addView(sv, sl);
             return card;
         });
+    }
+
+    /** One story, easy to read: big headline, where it's from, the summary, then the article's text when it can be fetched. */
+    static void reader(Item it) {
+        Sheets.push(() -> {
+            Context c = Sheets.ctx();
+            LinearLayout b = U.col(c);
+            TextView t = U.text(c, it.title, 22, U.TEXT, true);
+            t.setLineSpacing(U.uf(3), 1);
+            b.addView(t);
+            String m = (it.source != null ? it.source : "") + (it.date > 0 ? (it.source != null ? " · " : "") + ago(it.date) : "");
+            if (!m.isEmpty()) b.addView(U.line(c, m, 13, U.MUTED, false), Widgets.top(6));
+            if (it.desc != null && !it.desc.isEmpty()) {
+                TextView d = U.text(c, it.desc, 16, U.TEXT2, false);
+                d.setLineSpacing(U.uf(5), 1);
+                b.addView(d, Widgets.top(14));
+            }
+            TextView body = U.text(c, it.link != null ? "Fetching the full story…" : "", 16, U.TEXT2, false);
+            body.setLineSpacing(U.uf(6), 1);
+            b.addView(body, Widgets.top(14));
+            if (it.link != null) Net.get(it.link, null, (html, code) -> {
+                String text = html == null ? null : article(html);
+                body.setText(text != null ? text : "The full story opens in Chrome: tap the icon at the top.");
+                body.setTextColor(text != null ? U.TEXT2 : U.SUB);
+            });
+            View open = null; // open in Chrome: an icon in the title bar
+            if (it.link != null) {
+                open = U.icon(c, R.drawable.ic_open_new, U.ACCENT_SOFT);
+                U.pad(open, 3, 3, 3, 3);
+                open.setContentDescription("Open in Chrome");
+                open.setOnClickListener(v -> openLink(c, it.link));
+                U.press(open);
+            }
+            return Sheets.panel(null, it.source != null ? it.source : "Story", b, 660, 440, open);
+        });
+    }
+
+    /** The readable text of an article page: its paragraphs, or null when there's too little. */
+    private static String article(String html) {
+        java.util.regex.Matcher mt = java.util.regex.Pattern.compile("(?is)<p[^>]*>(.*?)</p>").matcher(html);
+        StringBuilder out = new StringBuilder();
+        while (mt.find() && out.length() < 6000) {
+            String p = android.text.Html.fromHtml(mt.group(1), android.text.Html.FROM_HTML_MODE_COMPACT).toString().replaceAll("\\s+", " ").trim();
+            if (p.length() < 60) continue; // menus, captions, cookie notes
+            if (out.length() > 0) out.append("\n\n");
+            out.append(p);
+        }
+        return out.length() >= 300 ? out.toString() : null;
     }
 
     static void openLink(Context c, String url) {
