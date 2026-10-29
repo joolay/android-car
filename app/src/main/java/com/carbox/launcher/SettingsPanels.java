@@ -50,6 +50,35 @@ final class SettingsPanels {
         Sheets.showFull(SettingsPanels::mainPage); // full screen; its pages open on top of it
     }
 
+    private static int tab; // the settings category showing (kept while Settings is reopened)
+
+    /** A settings row for a tab: coloured icon, name with its current value underneath, and a switch or ›. */
+    private static View bigRow(Context c, int icon, int color, String title, String value, Runnable open, String key, boolean def) {
+        LinearLayout r = U.row(c);
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.setBackground(U.round(U.CARD2, 12));
+        U.pad(r, 10, 6, 10, 6);
+        r.setMinimumHeight(U.u(58));
+        FrameLayout ic = new FrameLayout(c);
+        ic.setBackground(U.oval(color));
+        ic.addView(U.icon(c, icon, U.TEXT), U.flpu(17, 17, Gravity.CENTER));
+        r.addView(ic, U.lpu(32, 32));
+        LinearLayout tx = U.col(c);
+        tx.addView(U.line(c, title, 15, U.TEXT, false));
+        if (value != null && !value.isEmpty()) tx.addView(U.line(c, value, 12, U.SUB, false), top(2));
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+        tl.setMargins(U.u(10), 0, U.u(6), 0);
+        r.addView(tx, tl);
+        if (key != null) r.addView(new U.Toggle(c, Store.flag(key, def), on -> {
+            Store.put(key, on);
+            if (Store.SPLASH_ON.equals(key) || Alerts.GLOBAL.equals(key)) Sheets.refresh();
+        }));
+        else r.addView(U.text(c, "›", 17, U.MUTED, false));
+        if (open != null) r.setOnClickListener(v -> open.run());
+        U.press(r);
+        return r;
+    }
+
     /** A compact settings row: name, current value, and either a switch (on/off settings) or ›. */
     private static View textRow(Context c, String title, String value, Runnable open, String key, boolean def) {
         LinearLayout r = U.row(c);
@@ -154,27 +183,74 @@ final class SettingsPanels {
                         {R.drawable.ic_gear, GREY, "Android settings", null, (Runnable) SettingsPanels::androidSettings},
                         {R.drawable.ic_shield, GREY, "About", About.version(c), (Runnable) About::show}}};
 
-        LinearLayout list = U.col(c);
-        for (Object[][] g : groups) {
-            TextView h = U.line(c, ((String) g[0][0]).toUpperCase(java.util.Locale.ROOT), 11, U.SUB, true);
-            h.setLetterSpacing(0.08f);
-            list.addView(h, top(list.getChildCount() == 0 ? 2 : 14));
-            List<View> cells = new ArrayList<>();
-            for (int k = 1; k < g.length; k++) {
-                Object[] it = g[k];
-                if (it == null) continue;
-                cells.add(textRow(c, (String) it[2], (String) it[3], (Runnable) it[4], it.length > 5 ? (String) it[5] : null, it.length > 6 && (Boolean) it[6]));
+        // categories as tabs down the left; the chosen one's settings fill the rest, two big rows across
+        LinearLayout body = U.row(c);
+        body.setGravity(Gravity.TOP);
+        LinearLayout tabs = U.col(c);
+        if (tab >= groups.length) tab = 0;
+        for (int gi = 0; gi < groups.length; gi++) {
+            final int g = gi;
+            Object[] first = null;
+            for (int k = 1; k < groups[gi].length && first == null; k++) first = groups[gi][k];
+            LinearLayout t = U.row(c);
+            t.setGravity(Gravity.CENTER_VERTICAL);
+            U.pad(t, 10, 0, 8, 0);
+            t.setMinimumHeight(U.u(44));
+            boolean on = gi == tab;
+            t.setBackground(on ? U.round(U.CARD2, 12) : null);
+            if (first != null) {
+                FrameLayout ic = new FrameLayout(c);
+                ic.setBackground(U.oval((Integer) first[1]));
+                ic.addView(U.icon(c, (Integer) first[0], U.TEXT), U.flpu(15, 15, Gravity.CENTER));
+                t.addView(ic, U.lpu(26, 26));
             }
-            list.addView(AppPanels.grid(c, cells, 3, 4), top(2)); // three columns of compact rows
+            TextView tn = U.line(c, (String) groups[gi][0][0], 13, on ? U.TEXT : U.SUB, on);
+            LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+            tl.leftMargin = U.u(10);
+            t.addView(tn, tl);
+            if (on) {
+                View bar = new View(c);
+                bar.setBackground(U.round(U.ACCENT, 2));
+                t.addView(bar, U.lpu(3, 20));
+            }
+            t.setOnClickListener(v -> {
+                tab = g;
+                Sheets.refresh();
+            });
+            U.press(t);
+            tabs.addView(t, top(gi == 0 ? 0 : 4));
         }
+        android.widget.ScrollView ts = new android.widget.ScrollView(c);
+        ts.setVerticalScrollBarEnabled(false);
+        ts.addView(tabs);
+        body.addView(ts, U.lpu(196, U.MATCH));
+        View div = new View(c);
+        div.setBackgroundColor(U.LINE);
+        LinearLayout.LayoutParams dl = U.lpu(1, U.MATCH);
+        dl.setMargins(U.u(12), 0, U.u(14), 0);
+        body.addView(div, dl);
+
+        LinearLayout list = U.col(c);
+        Object[][] g = groups[tab];
+        TextView h = U.line(c, (String) g[0][0], 17, U.TEXT, true);
+        list.addView(h);
+        List<View> cells = new ArrayList<>();
+        for (int k = 1; k < g.length; k++) {
+            Object[] it = g[k];
+            if (it == null) continue;
+            cells.add(bigRow(c, (Integer) it[0], (Integer) it[1], (String) it[2], (String) it[3], (Runnable) it[4],
+                    it.length > 5 ? (String) it[5] : null, it.length > 6 && (Boolean) it[6]));
+        }
+        list.addView(AppPanels.grid(c, cells, 2, 8), top(10));
         TextView hint = U.text(c, "More settings: hold the map for map and navigation, hold Now playing for music. Hold a tile for its own settings.", 12, U.SUB, false);
         list.addView(hint, top(16));
         android.widget.ScrollView sv = new android.widget.ScrollView(c);
         sv.setVerticalScrollBarEnabled(false);
         sv.addView(list);
-        LinearLayout.LayoutParams sl = U.weight(1, false);
-        sl.topMargin = U.u(8);
-        card.addView(sv, sl);
+        body.addView(sv, new LinearLayout.LayoutParams(0, U.MATCH, 1));
+        LinearLayout.LayoutParams bl = U.weight(1, false);
+        bl.topMargin = U.u(12);
+        card.addView(body, bl);
         return card;
     }
 
