@@ -438,6 +438,19 @@ final class MapPanel {
         LinearLayout.LayoutParams cbl = U.lpu(42, 42);
         cbl.topMargin = col.getChildCount() > 0 ? U.u(8) : 0;
         col.addView(cb, cbl);
+        // day / night colours: tap goes Auto → Light → Dark (moon = dark, sun = light, blue = auto)
+        View db = round(a, R.drawable.ic_sun, true, () -> {
+            String m = colours();
+            Store.put("map_colours", "auto".equals(m) ? "light" : "light".equals(m) ? "dark" : "auto");
+            android.widget.Toast.makeText(a, "Map colours: " + ("auto".equals(colours()) ? "Auto (day / night)" : "light".equals(colours()) ? "Light" : "Dark"), android.widget.Toast.LENGTH_SHORT).show();
+            styleDay();
+            reload();
+        });
+        dayIcon = (ImageView) ((FrameLayout) db).getChildAt(0);
+        LinearLayout.LayoutParams dbl = U.lpu(42, 42);
+        dbl.topMargin = U.u(8);
+        col.addView(db, dbl);
+        styleDay();
         if (google()) {
             View tb = round(a, R.drawable.ic_traffic, true, () -> {
                 boolean on = !Store.flag("map_traffic", false);
@@ -508,6 +521,15 @@ final class MapPanel {
         o.addView(bl, bll);
         updateControls();
         return o;
+    }
+
+    private ImageView dayIcon;
+
+    private void styleDay() {
+        if (dayIcon == null) return;
+        boolean dark = darkNow();
+        dayIcon.setImageResource(dark ? R.drawable.ic_moon : R.drawable.ic_sun);
+        dayIcon.setColorFilter("auto".equals(colours()) ? U.ACCENT_SOFT : U.TEXT);
     }
 
     private final Runnable controlTick = new Runnable() {
