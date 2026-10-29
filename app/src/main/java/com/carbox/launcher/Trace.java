@@ -18,6 +18,8 @@ import java.util.Locale;
  */
 final class Trace {
     static final String KEEP = "logs_keep", PENDING = "trace_pending";
+    /** TEMPORARY (owner's box, before the Play Store): send the logs by themselves after every start. */
+    static final String AUTO = "logs_auto";
     private static final long KEEP_MS = 3 * 24 * 3600 * 1000L, MAX_BYTES = 40L * 1024 * 1024;
     private static boolean running;
     private static Process logcat;
@@ -55,6 +57,11 @@ final class Trace {
                     "-f", f.getAbsolutePath(), "-r", "1024", "-n", "1"});
         } catch (Exception e) {
             event(c, "Android log not available: " + e);
+        }
+        // 3 minutes in (so the start-up is in it): send what's new since the last time, by itself
+        if (Store.flag(AUTO, true)) {
+            final Context app = c.getApplicationContext();
+            U.ui.postDelayed(() -> send(app, Store.lng("logs_auto_at", 0), true), 180000);
         }
     }
 
@@ -96,8 +103,14 @@ final class Trace {
 
     /** Zip the last 3 days and send them online (the logs stay on the box). */
     static void send(Context c) {
+        send(c, 0, false);
+    }
+
+    /** Send the logs changed since `since` (0 = all); `auto` = by itself after a start (quiet unless it fails). */
+    static void send(Context c, long since, boolean auto) {
         final Context app = c.getApplicationContext();
-        event(app, "=== Logs sent from Settings");
+        final long started = System.currentTimeMillis();
+        event(app, auto ? "=== Logs sent by themselves (after start)" : "=== Logs sent from Settings");
         Store.put(PENDING, true);
         Net.bg(() -> {
             String result;
@@ -110,10 +123,10 @@ final class Trace {
                 } catch (Exception ignored) {
                 }
                 File zip = new File(app.getCacheDir(), "logs.zip");
-                File[] fs = dir(app).listFiles();
+                File[] fs = dir(app).listFiles(f -> f.lastModified() > since);
                 if (fs == null || fs.length == 0) {
                     Store.put(PENDING, false);
-                    U.ui.post(() -> toast(app, "There are no logs yet"));
+                    if (!auto) U.ui.post(() -> toast(app, "There are no logs yet"));
                     return;
                 }
                 try (java.util.zip.ZipOutputStream z = new java.util.zip.ZipOutputStream(new FileOutputStream(zip))) {
@@ -123,7 +136,7 @@ final class Trace {
                         z.closeEntry();
                     }
                 }
-                String name = "logs-" + new SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(new Date()) + ".zip";
+                String name = (auto ? "autolog-" : "logs-") + new SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(new Date()) + ".zip";
                 java.net.HttpURLConnection h = (java.net.HttpURLConnection) new java.net.URL("https://ntfy.sh/" + About.TOPIC).openConnection();
                 h.setRequestMethod("PUT");
                 h.setDoOutput(true);
@@ -142,14 +155,15 @@ final class Trace {
                 zip.delete();
                 if (code >= 200 && code < 300) {
                     Store.put(PENDING, false);
-                    result = "Logs sent";
+                    if (auto) Store.put("logs_auto_at", started);
+                    result = auto ? null : "Logs sent";
                 } else result = "Couldn't send the logs (" + code + "). Try again in Settings → Logs";
             } catch (Exception e) {
                 result = "Couldn't send the logs: no connection? Try again in Settings → Logs";
             }
             final String r = result;
             U.ui.post(() -> {
-                toast(app, r);
+                if (r != null && !auto) toast(app, r);
                 Sheets.refresh();
             });
         });
@@ -176,6 +190,8 @@ final class Trace {
                 }
                 Sheets.refresh();
             }), Widgets.top(10));
+            b.addView(Sheets.switchRow(0, 0, "Send by themselves after every start", "For now, while Car Launcher is being built: the new logs go online 3 minutes after each start",
+                    Store.flag(AUTO, true), v -> Store.put(AUTO, v)), Widgets.top(6));
             long sz = size(c);
             b.addView(U.text(c, "Kept now: " + Math.max(sz > 0 ? 1 : 0, sz / 1024) + " KB", 12, U.SUB, false), Widgets.top(6));
             android.widget.LinearLayout btns = U.row(c);

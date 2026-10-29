@@ -13,6 +13,9 @@ Package `com.carbox.launcher`, plain Java Android views (no XML layouts, no Andr
 - After a compile, check the run (`gh run watch`), read errors from the check-run annotations
   (`gh api repos/joolay/CarLauncher/check-runs/<job id>/annotations`), fix, push again.
 - Speak plainly to the owner: what changed and how to use it, not class names.
+- **Before every compile**, fetch the newest logs (run crashes.yml, fetch the `crashes` branch, unzip the latest
+  `logs/*autolog-*.zip` / `*logs-*.zip`, read `crashes.jsonl`) and look for useful information: errors, the music
+  start-up steps, voice button results, anything odd. Fix what's clear, and tell the owner briefly what the logs showed.
 
 ## Build
 - CI: `.github/workflows/build.yml` builds the APK, signs it with the fixed `app/carlauncher.keystore`
@@ -63,6 +66,10 @@ Ticker at the top of the middle column (hidden: map/tiles take its space, tiles 
 - `Updater` checks GitHub releases (start + 6 h), downloads the APK, installs when parked (PackageInstaller,
   Android confirms). **Temporary built-in read-only key `Updater.BUILT_IN_KEY`** (owner's box only): when the
   owner says he's publishing to the Play Store, remove it from the code and remind him to delete the token on GitHub.
+
+## Before the Play Store (when the owner says he's publishing)
+- Remove `Updater.BUILT_IN_KEY` (and remind him to delete that token on GitHub).
+- Remove the automatic log sending after every start (`Trace.AUTO`, its switch) and default crash reports to off.
 
 ## With ADB on the box
 - Crashes: `adb logcat -b crash` or Settings → About → crash reports.
