@@ -52,6 +52,7 @@ final class About {
             Store.putList(UNSENT, q);
             Store.put("crash_new", true);
             Store.flush();
+            sendPending(c); // errors that didn't close the app go online straight away
         } catch (Throwable ignored) {
         }
     }
