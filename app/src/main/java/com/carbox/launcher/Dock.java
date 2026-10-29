@@ -17,15 +17,15 @@ final class Dock {
 
     /** The dock stays the same size with or without the news ticker (the map and tiles take that space). */
     static float scale() {
-        return 1f;
+        return Store.flag("ticker_on", true) ? 1f : 1.12f; // a touch bigger in the taller dock
     }
 
     private static float s(float du) {
         return du * scale();
     }
-    /** Icons in the dock before All apps: 5 to 7 (the dialler counts as one when shown). */
+    /** Icons in the dock before All apps: 5 to 8 (the dialler counts as one when shown). */
     static int icons() {
-        return Math.max(5, Math.min(7, Store.num("dock_icons", 6)));
+        return Math.max(5, Math.min(8, Store.num("dock_icons", 7)));
     }
 
     static boolean dialler() {

@@ -900,7 +900,7 @@ final class SettingsPanels {
             }), top(4));
             int n = Dock.icons();
             List<View> segs = new ArrayList<>();
-            for (int k = 5; k <= 7; k++) {
+            for (int k = 5; k <= 8; k++) {
                 final int v = k;
                 segs.add(U.seg(c, String.valueOf(k), k == n, () -> {
                     Store.put("dock_icons", v);

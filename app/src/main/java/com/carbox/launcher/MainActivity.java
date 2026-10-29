@@ -153,7 +153,7 @@ public class MainActivity extends Activity {
         dockRow.setGravity(Gravity.CENTER_VERTICAL);
         dockRow.addView(dock.view, new LinearLayout.LayoutParams(0, U.MATCH, 1));
         if (!tickerOn) buildChip(dockRow); // "Tiles" + lock at the end of the dock instead
-        LinearLayout.LayoutParams dl = U.lpu(U.MATCH, 56);
+        LinearLayout.LayoutParams dl = U.lpu(U.MATCH, tickerOn ? 56 : 64); // a little taller without the ticker
         dl.topMargin = U.u(8);
         middle.addView(dockRow, dl);
         LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(0, U.MATCH, 1);
@@ -190,7 +190,7 @@ public class MainActivity extends Activity {
      * size with the extra height as padding above and below the grid.
      */
     private void tilePad(boolean tickerShown) {
-        int p = tickerShown ? 0 : U.u(19);
+        int p = tickerShown ? 0 : U.u(15); // what the ticker freed, less the dock's extra height
         tilesClip.setPadding(0, p, 0, p);
     }
 
@@ -707,6 +707,7 @@ public class MainActivity extends Activity {
         tilesChip = U.row(this);
         tilesChip.setGravity(Gravity.CENTER_VERTICAL);
         TextView w = U.line(this, "Tiles", 13, U.TEXT2, true);
+        if (!Store.flag("ticker_on", true)) w.setVisibility(View.GONE); // in the dock: just the lock
         tilesChip.addView(w);
         lock = new LockView(this);
         lock.set(drawerLocked(), false);
@@ -724,8 +725,11 @@ public class MainActivity extends Activity {
         row.addView(tilesChip, cl);
     }
 
+    private final Runnable lockAway = () -> lockButton(false);
+
     private void lockButton(boolean show) {
         if (tilesChip == null) return;
+        if (!show) U.ui.removeCallbacks(lockAway);
         tilesChip.animate().cancel();
         if (show) {
             lock.set(drawerLocked(), false);
@@ -733,6 +737,9 @@ public class MainActivity extends Activity {
             tilesChip.setAlpha(0f);
             tilesChip.setTranslationX(U.u(40));
             tilesChip.animate().alpha(1f).translationX(0).setDuration(U.ms(300)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+            // ticker hidden: the lock sits in the dock for 5 s, then goes so the dock has its room back
+            U.ui.removeCallbacks(lockAway);
+            if (!Store.flag("ticker_on", true)) U.ui.postDelayed(lockAway, 5000);
         } else tilesChip.animate().alpha(0f).translationX(U.u(40)).setDuration(U.ms(220)).withEndAction(() -> tilesChip.setVisibility(View.GONE)).start();
     }
 
