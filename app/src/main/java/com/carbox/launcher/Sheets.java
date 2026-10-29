@@ -176,7 +176,9 @@ final class Sheets {
         scrimColor = 0x59000000;
         full = true; // rail pop-ups sit next to the rail, over the whole screen, as before
         render();
-        // close by themselves after the set time (Settings → Right bar icons); a touch restarts it
+        // pop out of the Rail Bar icon that was tapped
+        if (layer != null && layer.getChildCount() > 1 && MainActivity.I != null) MainActivity.I.popFromRail(layer.getChildAt(layer.getChildCount() - 1));
+        // close by themselves after the set time (Settings → Rail Bar); a touch restarts it
         U.ui.removeCallbacks(autoClose);
         int secs = Store.num("card_secs", 15);
         if (secs > 0) U.ui.postDelayed(autoClose, secs * 1000L);

@@ -24,7 +24,7 @@ Package `com.carbox.launcher`, plain Java Android views (no XML layouts, no Andr
 Left column: map panel (`MapPanel`, WebView `assets/map.html`, OSM or Google with key) over
 Now playing (`NowPlaying`). Middle: 2×4 tile grid (`Tiles`, column-major, endless wrap) that also hosts
 panels (`Sheets` → `MainActivity.tileArea`/`sheetHost`), news/traffic ticker (`Ticker`), dock (`Dock`).
-Right: Right Dock (`Rail`).
+Right: Rail Bar (`Rail`; quick cards pop out of their icons).
 
 ## Key code
 - `U` design units (`U.u(du)` for an 800×480 design), drawing helpers. `Store` = SharedPreferences

@@ -79,7 +79,7 @@ public class MainActivity extends Activity {
         U.ui.postDelayed(About::offerReport, 4000); // crashed last time? offer the report
         // start with the big map in the tile area and Go to in the small map panel (setting)
         // the home view: the big map in the tile area, Go to in the small map panel, Now playing
-        // below; the tiles are a drawer that slides in from the Right Dock (All apps button)
+        // below; the tiles are a drawer that slides in from the Rail Bar (All apps button)
         if (mapHome()) U.ui.postDelayed(() -> {
             if (map != null && !map.expanded()) {
                 Store.put("map_mini", "goto");
@@ -464,6 +464,7 @@ public class MainActivity extends Activity {
     public boolean dispatchTouchEvent(android.view.MotionEvent ev) {
         if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN || ev.getActionMasked() == android.view.MotionEvent.ACTION_UP) resetIdle();
         if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && tiles != null) noteTile(ev);
+        if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && rail != null) noteRail(ev);
         // editing tiles: a touch outside the grid (and its edit bar) finishes editing, and does nothing else
         if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && tiles != null && tiles.editing() && !Sheets.open()
                 && !inside(tileArea, ev) && !inside(tickerSlot, ev)) {
@@ -495,6 +496,53 @@ public class MainActivity extends Activity {
                 return;
             }
         }
+    }
+
+    // ---- rail bar pop-up cards pop out of the icon that opened them
+    private final android.graphics.Rect railIcon = new android.graphics.Rect();
+    private long railAt;
+
+    /** Remember which Rail Bar icon a touch landed on (the smallest clickable view under the finger). */
+    private void noteRail(android.view.MotionEvent ev) {
+        android.graphics.Rect best = null, r = new android.graphics.Rect();
+        java.util.ArrayDeque<View> q = new java.util.ArrayDeque<>();
+        q.add(rail.view);
+        while (!q.isEmpty()) {
+            View v = q.poll();
+            if (!v.isShown() || !v.getGlobalVisibleRect(r) || !r.contains((int) ev.getRawX(), (int) ev.getRawY())) continue;
+            if (v.isClickable() && (best == null || r.width() * r.height() < best.width() * best.height())) best = new android.graphics.Rect(r);
+            if (v instanceof android.view.ViewGroup) {
+                android.view.ViewGroup g = (android.view.ViewGroup) v;
+                for (int i = 0; i < g.getChildCount(); i++) q.add(g.getChildAt(i));
+            }
+        }
+        if (best == null) return;
+        railIcon.set(best);
+        railAt = android.os.SystemClock.elapsedRealtime();
+    }
+
+    /** A pop-up card grows out of the Rail Bar icon just tapped (and fades in). */
+    void popFromRail(View v) {
+        if (android.os.SystemClock.elapsedRealtime() - railAt > 1500 || railIcon.isEmpty()) return;
+        final android.graphics.Rect src = new android.graphics.Rect(railIcon);
+        v.setAlpha(0f);
+        v.post(() -> {
+            if (v.getWidth() == 0 || v.getHeight() == 0) {
+                v.setAlpha(1f);
+                return;
+            }
+            int[] at = new int[2];
+            v.getLocationOnScreen(at);
+            // shrink towards the icon's centre: the card starts icon-sized on the icon and grows out of it
+            v.setPivotX(src.exactCenterX() - at[0]);
+            v.setPivotY(src.exactCenterY() - at[1]);
+            float sx = Math.max(0.05f, src.width() / (float) v.getWidth()), sy = Math.max(0.05f, src.height() / (float) v.getHeight());
+            v.setScaleX(sx);
+            v.setScaleY(sy);
+            v.setAlpha(0.4f);
+            v.animate().scaleX(1).scaleY(1).alpha(1f).setDuration(U.ms(300))
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+        });
     }
 
     /** Where an alert's tile is on screen (or the first spot, over the map). */

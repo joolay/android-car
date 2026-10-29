@@ -117,7 +117,7 @@ final class SettingsPanels {
         Object[][][] groups = {
                 {{"Home screen"},
                         {R.drawable.ic_photo, PURPLE, "Wallpaper", "image".equals(w) ? "Image" : "color".equals(w) ? "Colour" : "Black", (Runnable) SettingsPanels::wallpaper},
-                        {R.drawable.ic_drag, PURPLE, "Right Dock", railOn + " of " + Rail.IDS.length + " shown", (Runnable) SettingsPanels::railOrder},
+                        {R.drawable.ic_drag, PURPLE, "Rail Bar", railOn + " of " + Rail.IDS.length + " shown", (Runnable) SettingsPanels::railOrder},
                         {R.drawable.ic_apps, PURPLE, "Dock", Dock.icons() + " icons" + (Dock.dialler() ? " · dialler" : ""), (Runnable) SettingsPanels::dock},
                         {R.drawable.ic_hide, PURPLE, "Hidden from All apps", Apps.hidden().isEmpty() ? "None" : Apps.hidden().size() + " hidden", (Runnable) () -> hiddenApps(false)},
                         {R.drawable.ic_hide, PURPLE, "Hidden from Dock", Apps.dockHidden().isEmpty() ? "None" : Apps.dockHidden().size() + " hidden", (Runnable) () -> hiddenApps(true)},
@@ -186,7 +186,7 @@ final class SettingsPanels {
                 }),
                 U.seg(c, "external".equals(as) && ext != null ? "External · " + Apps.label(ext) + " ›" : "External ›", "external".equals(as), SettingsPanels::assistantPicker)));
 
-            b.addView(U.text(c, "Tip: hold the voice button on the right bar to pick any installed assistant for one go.", 12, U.SUB, false), top(10));
+            b.addView(U.text(c, "Tip: hold the voice button on the Rail Bar to pick any installed assistant for one go.", 12, U.SUB, false), top(10));
             return Sheets.panel("Assistant", b, 560, 260);
         });
     }
@@ -849,11 +849,11 @@ final class SettingsPanels {
                 }));
                 b.addView(r);
             }
-            b.addView(U.text(c, "Switch an icon off to remove it from the Right Dock; the others spread out to fill the space. The clock stays at the top and the mic at the bottom.", 12, U.SUB, false), top(8));
+            b.addView(U.text(c, "Switch an icon off to remove it from the Rail Bar; the others spread out to fill the space. The clock stays at the top and the mic at the bottom.", 12, U.SUB, false), top(8));
             int cs = Store.num("card_secs", 15);
             b.addView(Sheets.row("Pop-ups close after", segNum(c, "card_secs", 5, "5 s", cs), segNum(c, "card_secs", 8, "8 s", cs),
                     segNum(c, "card_secs", 15, "15 s", cs), segNum(c, "card_secs", 30, "30 s", cs), segNum(c, "card_secs", 0, "Never", cs)), top(10));
-            return Sheets.panel("Right Dock", b, 480, 440);
+            return Sheets.panel("Rail Bar", b, 480, 440);
         });
     }
 
@@ -1423,7 +1423,7 @@ final class SettingsPanels {
             b.addView(Sheets.row("Temperature", flagSeg(c, Store.CELSIUS, true, "°C", cel), flagSeg(c, Store.CELSIUS, false, "°F", cel)));
             b.addView(Sheets.row("Clock", flagSeg(c, Store.H24, true, "24 hour", h24), flagSeg(c, Store.H24, false, "12 hour", h24)));
             b.addView(Sheets.row("Speed", flagSeg(c, "mph", false, "km/h", mph), flagSeg(c, "mph", true, "mph", mph)));
-            b.addView(U.text(c, "The right bar clock follows Android's 24-hour setting.", 12, U.SUB, false), top(6));
+            b.addView(U.text(c, "The Rail Bar clock follows Android's 24-hour setting.", 12, U.SUB, false), top(6));
             b.addView(Sheets.item("Date and time settings", null, () -> Status.open(c, Settings.ACTION_DATE_SETTINGS)), top(6));
             return Sheets.panel("Units and clock", b, 520, 330);
         });
