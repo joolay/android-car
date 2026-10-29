@@ -112,6 +112,74 @@ final class EqView extends View {
             level[i] += (target - level[i]) * (target > level[i] ? 0.55f : 0.18f);
             peak[i] = Math.max(level[i], peak[i] - 0.012f);
         }
+        String style = style();
+        if ("wave".equals(style)) {
+            drawWave(cv, w, h);
+        } else if ("pulse".equals(style)) {
+            drawPulse(cv, w, h);
+        } else drawBars(cv, w, h);
+        if (isShown()) postInvalidateOnAnimation();
+    }
+
+    /** "bars" (equaliser), "wave" (flowing wave) or "pulse" (rings that beat with the music). */
+    static String style() {
+        return Store.str("eq_style", "bars");
+    }
+
+    private final android.graphics.Path wave = new android.graphics.Path();
+
+    private void drawWave(Canvas cv, float w, float h) {
+        // two layered waves through the band levels: a soft filled one and a brighter line on top
+        for (int layer = 0; layer < 2; layer++) {
+            wave.reset();
+            float mid = h * 0.62f;
+            wave.moveTo(0, h);
+            for (int x = 0; x <= 48; x++) {
+                float fx = x / 48f;
+                float lv = level[Math.min(bars - 1, (int) (fx * bars))];
+                float y = mid - (lv * h * 0.55f) * (float) Math.sin(fx * Math.PI * (layer == 0 ? 3 : 5) + phase * (layer == 0 ? 1.4f : -2.1f))
+                        - lv * h * 0.12f;
+                wave.lineTo(fx * w, Math.max(0, Math.min(h, y)));
+            }
+            if (layer == 0) {
+                wave.lineTo(w, h);
+                wave.close();
+                p.setStyle(Paint.Style.FILL);
+                p.setColor((color & 0x00FFFFFF) | 0x33000000);
+            } else {
+                p.setStyle(Paint.Style.STROKE);
+                p.setStrokeWidth(U.uf(2.5f));
+                p.setStrokeCap(Paint.Cap.ROUND);
+                p.setColor(color);
+            }
+            cv.drawPath(wave, p);
+        }
+    }
+
+    private float pulseLevel;
+
+    private void drawPulse(Canvas cv, float w, float h) {
+        // overall loudness (weighted to the bass) drives rings spreading from the centre
+        float lv = 0;
+        for (int i = 0; i < bars; i++) lv += level[i] * (i < bars / 3 ? 2f : 1f);
+        lv /= bars * 1.33f;
+        pulseLevel += (lv - pulseLevel) * 0.3f;
+        float cx = w / 2, cy = h / 2, max = Math.min(w, h) / 2;
+        p.setStyle(Paint.Style.STROKE);
+        for (int k = 0; k < 3; k++) {
+            float t = ((phase * 0.35f + k / 3f) % 1f); // rings keep spreading outwards
+            float r = max * (0.25f + 0.75f * t) * (0.7f + 0.5f * pulseLevel);
+            p.setStrokeWidth(U.uf(2) + U.uf(4) * pulseLevel * (1 - t));
+            int a = (int) (200 * (1 - t) * (0.3f + pulseLevel));
+            p.setColor((color & 0x00FFFFFF) | (Math.min(255, a) << 24));
+            cv.drawCircle(cx, cy, r, p);
+        }
+        p.setStyle(Paint.Style.FILL);
+        p.setColor(color);
+        cv.drawCircle(cx, cy, max * (0.12f + 0.22f * pulseLevel), p);
+    }
+
+    private void drawBars(Canvas cv, float w, float h) {
         float gap = w / bars * 0.28f, bw = w / bars - gap;
         p.setStyle(Paint.Style.FILL);
         for (int i = 0; i < bars; i++) {
@@ -122,6 +190,5 @@ final class EqView extends View {
             float py = h - peak[i] * h - U.uf(3);
             cv.drawRect(x, py, x + bw, py + U.uf(2), p);
         }
-        if (isShown()) postInvalidateOnAnimation();
     }
 }

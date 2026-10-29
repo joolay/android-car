@@ -416,6 +416,10 @@ final class SettingsPanels {
             }));
             b.addView(pr, top(10));
 
+            String eq = EqView.style();
+            b.addView(Sheets.row("Music animation", U.seg(c, "Equaliser", "bars".equals(eq), () -> { Store.put("eq_style", "bars"); Sheets.refresh(); }),
+                    U.seg(c, "Wave", "wave".equals(eq), () -> { Store.put("eq_style", "wave"); Sheets.refresh(); }),
+                    U.seg(c, "Pulse", "pulse".equals(eq), () -> { Store.put("eq_style", "pulse"); Sheets.refresh(); })), top(12));
             return Sheets.panel("Music", b, 640, 432);
         });
     }
