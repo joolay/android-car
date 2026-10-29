@@ -115,7 +115,7 @@ final class DataMeter extends View {
     protected void onDraw(Canvas cv) {
         float w = getWidth(), h = getHeight();
         float sw = U.uf(4);
-        float rad = Math.min(w / 2f - sw, h * 0.62f);
+        float rad = Math.min(w / 2f - sw, (h - U.uf(12)) / 1.5f); // room underneath for the upload line
         float cx = w / 2f, cy = rad + sw;
         r.set(cx - rad, cy - rad, cx + rad, cy + rad);
         float rad2 = rad - sw * 1.6f;
@@ -137,7 +137,7 @@ final class DataMeter extends View {
         text.setColor(U.ACCENT_SOFT);
         cv.drawText("↓" + used(totalDown()), cx, cy + U.uf(3), text);
         text.setColor(U.AMBER);
-        cv.drawText("↑" + used(totalUp()), cx, cy + rad + U.uf(7), text);
+        cv.drawText("↑" + used(totalUp()), cx, h - U.uf(2), text);
         // keep easing until it settles
         if (anim && (Math.abs(tD - shownDown) > 0.005f || Math.abs(tU - shownUp) > 0.005f)) postInvalidateOnAnimation();
     }
