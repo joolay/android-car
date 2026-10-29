@@ -154,6 +154,7 @@ final class Apps {
     // ------------------------------------------------------------------ launching
 
     static boolean launch(Context c, App a) {
+        Trace.event("Open app: " + a.label + " (" + a.pkg + ")");
         if (a == null) return false;
         Intent i = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setComponent(a.cn)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);

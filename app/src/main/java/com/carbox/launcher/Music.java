@@ -70,6 +70,7 @@ final class Music {
         l.add(new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(new java.util.Date()) + "  " + what);
         while (l.size() > 14) l.remove(0);
         Store.putList("music_log", l);
+        Trace.event("Music: " + what);
     }
 
     /** At a car start with Play music at car start on: starts the music and returns true (the music app is then opened). */

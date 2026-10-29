@@ -182,6 +182,7 @@ final class Sheets {
         layer.addView(scrim, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         if (MainActivity.I != null) MainActivity.I.tickerTitle(null); // the page sets its title there again if it has one
         View page = stack.get(stack.size() - 1).build();
+        Trace.event("Opened a page (" + (full ? "full screen" : "tile area") + ", " + stack.size() + " deep)");
         page.setClickable(true); // swallow taps so they don't close the sheet
         page.setOnTouchListener((v, e) -> {
             touched();

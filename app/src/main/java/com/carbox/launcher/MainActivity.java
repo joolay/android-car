@@ -51,6 +51,7 @@ public class MainActivity extends Activity {
         w.getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         U.init(this);
         Store.init(this);
+        Trace.atStart(this); // troubleshooting mode: log from here on
         About.catchCrashes(this);
         Apps.init(this);
         Status.init(this);
@@ -506,6 +507,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onResume() {
+        Trace.event(this, "Home screen shown");
         super.onResume();
         resumed = true;
         immersive();
@@ -534,6 +536,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        Trace.event(this, "Home screen left (another app in front)");
         super.onPause();
         resumed = false;
         ticker.stop();

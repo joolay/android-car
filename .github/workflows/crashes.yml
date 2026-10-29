@@ -1,10 +1,11 @@
 name: Collect crash reports
 
-# Car Launcher sends crash reports to a private ntfy.sh topic (kept there ~12 h). This copies them
-# into the "crashes" branch (crashes.jsonl, one report per line) so they can be read any time.
+# Car Launcher sends crash reports and troubleshooting logs to a private ntfy.sh topic (messages kept
+# there ~12 h, attached logs ~3 h). This copies them into the "crashes" branch so they can be read any
+# time: crashes.jsonl (one report per line) and logs/ (the troubleshooting log zips).
 on:
   schedule:
-    - cron: "41 */4 * * *"
+    - cron: "41 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -29,10 +30,15 @@ jobs:
           curl -fsS "https://ntfy.sh/carlauncher-crash-4d6dd33614e4914e/json?poll=1&since=all" -o new.jsonl || true
           touch new.jsonl
           # keep only messages, skip ones already saved (by id)
-          jq -c 'select(.event=="message") | {id, time, title, message}' new.jsonl > msgs.jsonl || true
+          jq -c 'select(.event=="message") | {id, time, title, message, file: (.attachment.name // null), url: (.attachment.url // null)}' new.jsonl > msgs.jsonl || true
+          mkdir -p logs
           while IFS= read -r line; do
             id=$(echo "$line" | jq -r .id)
-            grep -q "\"id\":\"$id\"" crashes.jsonl || echo "$line" >> crashes.jsonl
+            if ! grep -q "\"id\":\"$id\"" crashes.jsonl; then
+              echo "$line" >> crashes.jsonl
+              url=$(echo "$line" | jq -r '.url // empty'); file=$(echo "$line" | jq -r '.file // empty')
+              [ -n "$url" ] && curl -fsSL "$url" -o "logs/${id}-${file:-log.zip}" || true
+            fi
           done < msgs.jsonl
           rm -f new.jsonl msgs.jsonl
       - name: Save
@@ -40,5 +46,5 @@ jobs:
           cd work
           git config user.name "crash-collector"
           git config user.email "actions@users.noreply.github.com"
-          git add crashes.jsonl
+          git add crashes.jsonl logs
           git diff --cached --quiet || { git commit -qm "Crash reports $(date -u +%F\ %H:%M)"; git push -q origin crashes; }

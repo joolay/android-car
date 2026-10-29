@@ -45,6 +45,7 @@ final class About {
             l.add(0, report);
             while (l.size() > 5) l.remove(l.size() - 1);
             Store.putList(CRASHES, l);
+            Trace.event(c, "ERROR in " + where + ": " + trace);
             // queued to go online (sent at once if it can be, else next time Car Launcher opens)
             List<String> q = new ArrayList<>(Store.list(UNSENT));
             q.add(report);

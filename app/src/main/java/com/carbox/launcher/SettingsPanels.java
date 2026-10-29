@@ -181,6 +181,7 @@ final class SettingsPanels {
                         {R.drawable.ic_bolt, GREY, "Startup optimiser", null, (Runnable) Optimiser::show},
                         {R.drawable.ic_call, GREY, "Call helper", BackButtonService.enabled(c) ? "On" : "Off", (Runnable) SettingsPanels::floatingBack},
                         {R.drawable.ic_gear, GREY, "Android settings", null, (Runnable) SettingsPanels::androidSettings},
+                        {R.drawable.ic_bolt, GREY, "Troubleshooting", Trace.on() ? "Logging · switch off to send" : Store.flag(Trace.PENDING, false) ? "Log waiting to send" : "Off", (Runnable) Trace::settings},
                         {R.drawable.ic_shield, GREY, "About", About.version(c), (Runnable) About::show}}};
 
         // categories as tabs down the left; the chosen one's settings fill the rest, two big rows across
