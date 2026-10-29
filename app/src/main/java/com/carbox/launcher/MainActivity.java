@@ -463,6 +463,7 @@ public class MainActivity extends Activity {
     @Override
     public boolean dispatchTouchEvent(android.view.MotionEvent ev) {
         if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN || ev.getActionMasked() == android.view.MotionEvent.ACTION_UP) resetIdle();
+        if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && tiles != null) noteTile(ev);
         // editing tiles: a touch outside the grid (and its edit bar) finishes editing, and does nothing else
         if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && tiles != null && tiles.editing() && !Sheets.open()
                 && !inside(tileArea, ev) && !inside(tickerSlot, ev)) {
@@ -478,6 +479,61 @@ public class MainActivity extends Activity {
     }
 
     private boolean swallow;
+
+    // ---- things that open in the tile area grow out of the tile they came from
+    private final android.graphics.Rect touchTile = new android.graphics.Rect();
+    private long touchAt;
+
+    /** Remember which tile a touch landed on, so what it opens can grow out of it. */
+    private void noteTile(android.view.MotionEvent ev) {
+        android.graphics.Rect r = new android.graphics.Rect();
+        for (int i = 0; i < tiles.view.getChildCount(); i++) {
+            View t = tiles.view.getChildAt(i);
+            if (t.getGlobalVisibleRect(r) && r.contains((int) ev.getRawX(), (int) ev.getRawY())) {
+                touchTile.set(r);
+                touchAt = android.os.SystemClock.elapsedRealtime();
+                return;
+            }
+        }
+    }
+
+    /** Where an alert's tile is on screen (or the first spot, over the map). */
+    android.graphics.Rect alertRect(String kind) {
+        android.graphics.Rect r = new android.graphics.Rect();
+        org.json.JSONArray s = Tiles.specs();
+        for (int i = 0; i < s.length() && i < tiles.view.getChildCount(); i++) {
+            org.json.JSONObject o = s.optJSONObject(i);
+            if (o != null && kind.equals(Alerts.kindOf(o.optString("id"))) && tiles.view.getChildAt(i).getGlobalVisibleRect(r) && r.width() > U.u(40)) return r;
+        }
+        int[] ta = new int[2];
+        tileArea.getLocationOnScreen(ta);
+        int cw = (tileArea.getWidth() - U.u(8) * 3) / 4, ch = (tileArea.getHeight() - U.u(8)) / 2;
+        return new android.graphics.Rect(ta[0], ta[1], ta[0] + cw, ta[1] + ch);
+    }
+
+    /** Grow v (filling the tile area) out of a tile: `from` on screen, or the tile just touched. */
+    void growIn(View v, android.graphics.Rect from) {
+        android.graphics.Rect src = from != null ? from : android.os.SystemClock.elapsedRealtime() - touchAt < 1500 ? new android.graphics.Rect(touchTile) : null;
+        if (src == null || src.isEmpty()) return;
+        v.setAlpha(0f);
+        v.post(() -> {
+            if (v.getWidth() == 0 || v.getHeight() == 0) {
+                v.setAlpha(1f);
+                return;
+            }
+            int[] ta = new int[2];
+            tileArea.getLocationOnScreen(ta);
+            v.setPivotX(0);
+            v.setPivotY(0);
+            v.setTranslationX(src.left - ta[0]);
+            v.setTranslationY(src.top - ta[1]);
+            v.setScaleX(src.width() / (float) v.getWidth());
+            v.setScaleY(src.height() / (float) v.getHeight());
+            v.setAlpha(0.7f);
+            v.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).alpha(1f).setDuration(320)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+        });
+    }
 
     private static boolean inside(View v, android.view.MotionEvent ev) {
         if (v == null || !v.isShown()) return false;

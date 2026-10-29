@@ -41,8 +41,7 @@ final class SalahCard {
         shown.addView(x, U.flpu(40, 40, Gravity.TOP | Gravity.END));
         shown.setOnClickListener(v -> hide());
         a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        shown.setAlpha(0f);
-        shown.animate().alpha(1f).setDuration(250).start();
+        a.growIn(shown, a.alertRect("salah")); // grows out of the prayer tile
         a.resetIdle(); // minimises by itself after the usual 15 s
     }
 

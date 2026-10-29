@@ -102,6 +102,7 @@ final class Alerts {
         notice.addView(x, U.flpu(40, 40, Gravity.TOP | Gravity.END));
         notice.setOnClickListener(v -> hideNotice());
         a.tileArea.addView(notice, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        a.growIn(notice, a.alertRect("rest")); // grows out of the driving timer tile
         a.resetIdle();
     }
 

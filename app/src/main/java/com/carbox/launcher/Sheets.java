@@ -61,8 +61,11 @@ final class Sheets {
         modes.add(false);
         scrimColor = 0x99000000;
         full = false;
+        grow = true;
         render();
     }
+
+    private static boolean grow; // the next tile-area panel grows out of the tile that opened it
 
     /** Open a page on top of the current one (back arrow returns). */
     static void push(Page p) {
@@ -160,6 +163,8 @@ final class Sheets {
         if (!full) page.setLayoutParams(new FrameLayout.LayoutParams(U.MATCH, U.MATCH)); // fill the tile area exactly
         else if (page.getLayoutParams() == null) page.setLayoutParams(centered(640, 440));
         layer.addView(page);
+        if (grow && !full && MainActivity.I != null) MainActivity.I.growIn(page, null);
+        grow = false;
     }
 
     /** Lighter scrim for small anchored cards. */

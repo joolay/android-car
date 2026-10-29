@@ -56,6 +56,7 @@ final class SpeedCard {
         shown.addView(x, U.flpu(40, 40, Gravity.TOP | Gravity.END));
         shown.setOnClickListener(v -> hide());
         a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        a.growIn(shown, a.alertRect("speed")); // grows out of the speed tile
         update();
         a.resetIdle(); // minimises after 15 s like the other panels
     }

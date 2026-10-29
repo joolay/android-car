@@ -98,6 +98,7 @@ final class HomeApproach {
         x.setOnClickListener(v -> hide());
         shown.addView(x, U.flpu(40, 40, Gravity.TOP | Gravity.END));
         a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        a.growIn(shown, a.alertRect("home")); // grows out of the Home Assistant tile
     }
 
     private static View button(Context c, String id) {
