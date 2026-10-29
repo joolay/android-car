@@ -83,6 +83,12 @@ final class BtAuto {
 
     /** "answer", "decline" or "hangup". Returns false if no button could be found. */
     static boolean press(String what) {
+        boolean ok = press0(what);
+        Trace.event("Call: pressed " + what + " in BT Phone: " + (ok ? "done" : "couldn't (no button found / Call helper off)"));
+        return ok;
+    }
+
+    private static boolean press0(String what) {
         AccessibilityService s = BackButtonService.I;
         if (s == null) return false;
         AccessibilityNodeInfo root = btRoot(s);
@@ -109,6 +115,7 @@ final class BtAuto {
 
     /** Open BT Phone and type the number in, then press its call button. */
     static void dial(android.app.Activity a, String number, String btPkg) {
+        Trace.event("Call: dialling a number through " + btPkg);
         pendingNumber = number.replaceAll("[^0-9+*#]", "");
         pendingAt = System.currentTimeMillis();
         typing = false;

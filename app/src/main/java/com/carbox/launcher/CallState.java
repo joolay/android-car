@@ -27,6 +27,11 @@ final class CallState {
     static final int NONE = 0, RINGING = 1, DIALING = 2, ACTIVE = 3, HOLDING = 4;
 
     static int state = NONE;
+
+    /** For the logs. */
+    static String stateName() {
+        return state == RINGING ? "ringing" : state == DIALING ? "dialling" : state == ACTIVE ? "on a call" : state == HOLDING ? "on hold" : "none";
+    }
     static String name, number;
     static Bitmap photo;
     static long activeSince;
@@ -75,6 +80,7 @@ final class CallState {
         number = isNumber ? who : "";
         via = "Bluetooth";
         state = ringing ? RINGING : ACTIVE;
+        Trace.event("Call: " + stateName() + " (from BT Phone notification)");
         if (state == ACTIVE && before != ACTIVE) activeSince = android.os.SystemClock.elapsedRealtime();
         if (before == state && name.equals(who)) return;
         changed();
@@ -187,6 +193,7 @@ final class CallState {
         int before = state;
         state = s == Call.STATE_RINGING ? RINGING : s == Call.STATE_DIALING || s == Call.STATE_CONNECTING ? DIALING
                 : s == Call.STATE_ACTIVE ? ACTIVE : s == Call.STATE_HOLDING ? HOLDING : s == Call.STATE_DISCONNECTED ? NONE : state;
+        Trace.event("Call: " + stateName() + " (from Android's phone (Telecom))");
         if (state == ACTIVE && before != ACTIVE && activeSince == 0) activeSince = SystemClock.elapsedRealtime();
         if (state == NONE) clear();
         else changed();
@@ -241,6 +248,7 @@ final class CallState {
         hfp = true;
         int before = state;
         state = hfpState == 4 || hfpState == 5 ? RINGING : hfpState == 2 || hfpState == 3 ? DIALING : hfpState == 0 ? ACTIVE : HOLDING;
+        Trace.event("Call: " + stateName() + " (from Bluetooth hands-free)");
         if (notifKey == null) { // a notification, if any, already filled in the caller
             number = num == null ? "" : num;
             String contact = number.isEmpty() ? null : PhoneScreen.lookup(c, number);
@@ -288,6 +296,7 @@ final class CallState {
         int before = state;
         String all = (title + " " + text).toLowerCase(Locale.ROOT);
         state = ans != null || all.contains("incoming") || all.contains("来电") ? RINGING : ACTIVE;
+        Trace.event("Call: " + stateName() + " (from BT Phone screen)");
         if (state == ACTIVE && before != ACTIVE) activeSince = SystemClock.elapsedRealtime();
         changed();
         if (before == NONE || (before == RINGING) != (state == RINGING)) CallScreen.open(c);
@@ -311,6 +320,7 @@ final class CallState {
 
     static void clear() {
         state = NONE;
+        Trace.event("Call: ended");
         call = null;
         notifKey = null;
         answerPI = declinePI = hangupPI = openPI = null;
