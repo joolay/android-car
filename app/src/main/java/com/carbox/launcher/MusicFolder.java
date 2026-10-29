@@ -133,9 +133,10 @@ final class MusicFolder {
     void render() {
         grid.removeAllViews();
         List<String> l = apps(c);
-        max.setVisibility(l.size() > 4 && !maximised ? View.VISIBLE : View.GONE);
         int n = pages(l.size());
         if (page >= n) page = n - 1;
+        // maximise: from the 2nd page on, and only with 8 or more apps
+        max.setVisibility(l.size() >= 8 && page >= 1 && !maximised ? View.VISIBLE : View.GONE);
         List<View> cells = new ArrayList<>();
         for (int i = page * 4; i < Math.min(page * 4 + 4, l.size()); i++) cells.add(cell(c, l.get(i), false));
         // hold and drag an app onto another's place to move it (a hold without moving opens the full grid)
