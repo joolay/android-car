@@ -535,14 +535,19 @@ final class InfoPanels {
         Boolean on = null;           // null = no toggle
         U.Cb<Boolean> toggle = null;
         switch (id) {
-            case "data":
+            case "data": {
                 icon = R.drawable.ic_bolt;
-                title = "Data";
-                DataMeter.sample();
-                line1 = "Now ↓ " + DataMeter.rate(DataMeter.down) + "B/s   ↑ " + DataMeter.rate(DataMeter.up) + "B/s";
-                line2 = "This month: ↓ " + DataMeter.size(DataMeter.totalDown()) + " · ↑ " + DataMeter.size(DataMeter.totalUp());
-                hint = "Counts start again on the 1st. Blue is download, amber upload. Hold the meter for Android's data usage";
+                title = "Data this month";
+                long[] lte = DataMeter.used(c, DataMeter.LTE), wf = DataMeter.used(c, DataMeter.WIFI), hs = DataMeter.used(c, DataMeter.HOTSPOT);
+                line1 = "LTE  ↓ " + DataMeter.size(lte[0]) + "  ↑ " + DataMeter.size(lte[1])
+                        + "\nHotspot  ↓ " + DataMeter.size(hs[0]) + "  ↑ " + DataMeter.size(hs[1])
+                        + "\nWi-Fi  ↓ " + DataMeter.size(wf[0]) + "  ↑ " + DataMeter.size(wf[1]);
+                long[][] sp = DataMeter.speed;
+                line2 = "Now: LTE " + DataMeter.rate(sp[0][0] + sp[0][1]) + " · Wi-Fi " + DataMeter.rate(sp[1][0] + sp[1][1])
+                        + " · Hotspot " + DataMeter.rate(sp[2][0] + sp[2][1]);
+                hint = "The icon shows LTE only. Hotspot data also counts in LTE (it comes over mobile). Starts again on the 1st. Hold for Android's data usage";
                 break;
+            }
             case "cell":
                 icon = R.drawable.ic_bolt;
                 title = "Mobile data";

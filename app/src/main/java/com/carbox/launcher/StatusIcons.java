@@ -153,16 +153,18 @@ final class StatusIcons {
         protected void onMeasure(int wSpec, int hSpec) {
             int h = MeasureSpec.getSize(hSpec);
             float u = h / 24f;
-            setMeasuredDimension(Math.round(24 * u + typeWidth(u)), h);
+            setMeasuredDimension(Math.round(24 * u), h); // LTE / 5G sits inside, over the short bars
         }
 
         @Override
         protected void onDraw(Canvas c) {
             float u = unit();
             float h = 24 * u;
-            float tw = typeWidth(u);
-            if (netType != null) c.drawText(netType, 0, 11 * u, type);
-            float left0 = tw;
+            if (netType != null) { // small, top left, above the two short bars
+                type.setTextSize(7.5f * u);
+                c.drawText(netType, 0.5f * u, 7f * u, type);
+            }
+            float left0 = 0;
             float bw = 4.2f * u, gap = 1.6f * u, base = h - 3 * u;
             int sweep = (int) (phase * 5) % 5; // 0..4, 4 = all dark pause
             for (int i = 0; i < 4; i++) {

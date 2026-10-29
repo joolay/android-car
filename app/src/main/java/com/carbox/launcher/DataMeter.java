@@ -9,120 +9,129 @@ import android.os.SystemClock;
 import android.view.View;
 
 /**
- * Rail Bar data meter: a small gauge of how fast data is moving right now (down, with up as a thin
- * inner arc), the needle easing to each new reading, and the speed underneath.
+ * Rail Bar data meter: this month's mobile (LTE) data, down and up, counting up smoothly. Tap it for
+ * the full breakdown (LTE, hotspot, Wi-Fi). Also keeps the live speeds for the small speed bars beside
+ * the signal, Wi-Fi and hotspot icons ({@link SpeedBar}).
+ *
+ * The box counts all data and mobile data; what isn't mobile went over Wi-Fi, or to hotspot devices
+ * when the hotspot is on and Wi-Fi isn't connected (a close estimate when both are on).
  */
 final class DataMeter extends View {
-    /** Bytes per second right now, and totals since the box started. */
-    static long down, up;
-    private static long lastRx = -1, lastTx = -1, lastAt;
 
-    private final Paint track = new Paint(Paint.ANTI_ALIAS_FLAG), arc = new Paint(Paint.ANTI_ALIAS_FLAG),
-            inner = new Paint(Paint.ANTI_ALIAS_FLAG), text = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final RectF r = new RectF(), r2 = new RectF();
-    private float shownDown, shownUp; // 0..1 on the gauge, eased
-    private boolean running;
+    // ------------------------------------------------------------------ counting
 
-    DataMeter(Context c) {
-        super(c);
-        track.setStyle(Paint.Style.STROKE);
-        track.setStrokeCap(Paint.Cap.ROUND);
-        track.setColor(U.LINE);
-        arc.setStyle(Paint.Style.STROKE);
-        arc.setStrokeCap(Paint.Cap.ROUND);
-        arc.setColor(U.ACCENT);
-        inner.setStyle(Paint.Style.STROKE);
-        inner.setStrokeCap(Paint.Cap.ROUND);
-        inner.setColor(U.AMBER);
-        text.setColor(U.TEXT);
-        text.setFakeBoldText(true);
-        text.setTextAlign(Paint.Align.CENTER);
-        setContentDescription("Data meter");
-    }
+    static final int LTE = 0, WIFI = 1, HOTSPOT = 2;
+    /** Bytes per second right now, per connection: {down, up}. */
+    static final long[][] speed = new long[3][2];
+    /** This month, per connection: {down, up}. */
+    private static final long[][] month = new long[3][2];
+    private static boolean loaded;
+    private static long seenAll = -1, seenAllTx, seenMob, seenMobTx, lastAt, savedAt;
 
-    /** Read the counters (once a second is plenty). */
-    static void sample() {
-        long rx = TrafficStats.getTotalRxBytes(), tx = TrafficStats.getTotalTxBytes(), now = SystemClock.elapsedRealtime();
-        if (rx < 0 || tx < 0) return; // not supported on this box
-        if (lastRx >= 0 && now > lastAt) {
-            float s = (now - lastAt) / 1000f;
-            down = Math.max(0, Math.round((rx - lastRx) / s));
-            up = Math.max(0, Math.round((tx - lastTx) / s));
-        }
-        lastRx = rx;
-        lastTx = tx;
-        lastAt = now;
-    }
-
-    // ---- this month's totals, kept across restarts; they start again on the 1st of each month
-    private static long monthDown = -1, monthUp, seenRx = -1, seenTx = -1;
-    private static long savedAt;
-
-    private static String month() {
+    private static String monthKey() {
         return new java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(new java.util.Date());
     }
 
-    /** Add what's been used since we last looked (the box's own counters start at 0 each start). */
-    private static void count() {
-        long rx = TrafficStats.getTotalRxBytes(), tx = TrafficStats.getTotalTxBytes();
-        if (rx < 0 || tx < 0) return;
-        long boot = System.currentTimeMillis() - SystemClock.elapsedRealtime();
-        if (monthDown < 0) { // first look since the launcher started
-            monthDown = Store.lng("data_m_down", 0);
-            monthUp = Store.lng("data_m_up", 0);
-            boolean sameBoot = Math.abs(Store.lng("data_boot", 0) - boot) < 60000;
-            seenRx = sameBoot ? Store.lng("data_seen_rx", 0) : 0; // after a restart the counters began again at 0
-            seenTx = sameBoot ? Store.lng("data_seen_tx", 0) : 0;
+    private static final String[] NAMES = {"lte", "wifi", "hot"};
+
+    private static void load(long boot) {
+        loaded = true;
+        for (int k = 0; k < 3; k++) {
+            month[k][0] = Store.lng("du_" + NAMES[k] + "_d", 0);
+            month[k][1] = Store.lng("du_" + NAMES[k] + "_u", 0);
         }
-        if (!month().equals(Store.str("data_month", ""))) { // a new month: start again
-            Store.put("data_month", month());
-            monthDown = 0;
-            monthUp = 0;
+        if (Math.abs(Store.lng("du_boot", 0) - boot) < 60000) { // same start: carry on from the last look
+            seenAll = Store.lng("du_seen_rx", 0);
+            seenAllTx = Store.lng("du_seen_tx", 0);
+            seenMob = Store.lng("du_seen_mrx", 0);
+            seenMobTx = Store.lng("du_seen_mtx", 0);
+        } else { // after a restart the box's counters began again at 0
+            seenAll = seenAllTx = seenMob = seenMobTx = 0;
         }
-        if (rx < seenRx || tx < seenTx) { // counters went back (restart while we weren't looking)
-            seenRx = 0;
-            seenTx = 0;
+    }
+
+    private static void save(long boot) {
+        for (int k = 0; k < 3; k++) {
+            Store.put("du_" + NAMES[k] + "_d", month[k][0]);
+            Store.put("du_" + NAMES[k] + "_u", month[k][1]);
         }
-        monthDown += rx - seenRx;
-        monthUp += tx - seenTx;
-        seenRx = rx;
-        seenTx = tx;
+        Store.put("du_seen_rx", seenAll);
+        Store.put("du_seen_tx", seenAllTx);
+        Store.put("du_seen_mrx", seenMob);
+        Store.put("du_seen_mtx", seenMobTx);
+        Store.put("du_boot", boot);
+    }
+
+    /** Read the counters; at most about once a second whoever asks. */
+    static void sample() {
         long now = SystemClock.elapsedRealtime();
+        if (loaded && now - lastAt < 900) return;
+        long rx = TrafficStats.getTotalRxBytes(), tx = TrafficStats.getTotalTxBytes();
+        long mrx = Math.max(0, TrafficStats.getMobileRxBytes()), mtx = Math.max(0, TrafficStats.getMobileTxBytes());
+        if (rx < 0 || tx < 0) return; // not supported on this box
+        long boot = System.currentTimeMillis() - now;
+        if (!loaded) load(boot);
+        if (!monthKey().equals(Store.str("du_month", ""))) { // a new month: start again
+            Store.put("du_month", monthKey());
+            for (long[] m : month) m[0] = m[1] = 0;
+        }
+        if (rx < seenAll || tx < seenAllTx || mrx < seenMob || mtx < seenMobTx) seenAll = seenAllTx = seenMob = seenMobTx = 0;
+        long dAll = rx - seenAll, uAll = tx - seenAllTx, dMob = mrx - seenMob, uMob = mtx - seenMobTx;
+        long dLoc = Math.max(0, dAll - dMob), uLoc = Math.max(0, uAll - uMob);
+        // what isn't mobile: Wi-Fi when connected, else the hotspot's own devices
+        int local = Status.hotspotOn && !Status.wifiConnected ? HOTSPOT : WIFI;
+        month[LTE][0] += dMob;
+        month[LTE][1] += uMob;
+        month[local][0] += dLoc;
+        month[local][1] += uLoc;
+        float s = lastAt > 0 && now > lastAt ? (now - lastAt) / 1000f : 0;
+        for (long[] sp : speed) sp[0] = sp[1] = 0;
+        if (s > 0 && seenAll > 0) {
+            speed[LTE][0] = Math.round(dMob / s);
+            speed[LTE][1] = Math.round(uMob / s);
+            speed[local][0] = Math.round(dLoc / s);
+            speed[local][1] = Math.round(uLoc / s);
+        }
+        seenAll = rx;
+        seenAllTx = tx;
+        seenMob = mrx;
+        seenMobTx = mtx;
+        lastAt = now;
         if (savedAt == 0 || now - savedAt > 30000) { // saved every 30 s
             save(boot);
             savedAt = now;
         }
     }
 
-    private static void save(long boot) {
-        Store.put("data_m_down", monthDown);
-        Store.put("data_m_up", monthUp);
-        Store.put("data_seen_rx", seenRx);
-        Store.put("data_seen_tx", seenTx);
-        Store.put("data_boot", boot);
-    }
+    private static long[] nsm;
+    private static long nsmAt;
 
-    /** Downloaded this month. */
-    static long totalDown() {
-        count();
-        return Math.max(0, monthDown);
-    }
-
-    /** Uploaded this month. */
-    static long totalUp() {
-        count();
-        return Math.max(0, monthUp);
-    }
-
-    /** 1.2M, 340K, 0 (bytes per second, short for the rail). */
-    static String rate(long b) {
-        if (b < 1000) return b < 50 ? "0" : String.valueOf(b);
-        if (b < 1000_000) return Math.round(b / 1000f) + "K";
-        return String.format(java.util.Locale.US, b < 10_000_000 ? "%.1fM" : "%.0fM", b / 1_000_000f);
+    /** This month on a connection: {down, up}. Mobile uses Android's own count when usage access is on (the whole month). */
+    static long[] used(Context c, int k) {
+        sample();
+        if (k == LTE && nsmAt != 0 && SystemClock.elapsedRealtime() - nsmAt < 30000) { // asked at most every 30 s
+            if (nsm != null) return nsm;
+        } else if (k == LTE && Apps.hasUsageAccess()) {
+            nsmAt = SystemClock.elapsedRealtime();
+            nsm = null;
+            try {
+                android.app.usage.NetworkStatsManager sm = (android.app.usage.NetworkStatsManager) c.getSystemService(Context.NETWORK_STATS_SERVICE);
+                java.util.Calendar cal = java.util.Calendar.getInstance();
+                cal.set(java.util.Calendar.DAY_OF_MONTH, 1);
+                cal.set(java.util.Calendar.HOUR_OF_DAY, 0);
+                cal.set(java.util.Calendar.MINUTE, 0);
+                cal.set(java.util.Calendar.SECOND, 0);
+                android.app.usage.NetworkStats.Bucket b = sm.querySummaryForDevice(android.net.ConnectivityManager.TYPE_MOBILE, null,
+                        cal.getTimeInMillis(), System.currentTimeMillis());
+                if (b != null && b.getRxBytes() + b.getTxBytes() > 0) return nsm = new long[]{b.getRxBytes(), b.getTxBytes()};
+            } catch (Exception ignored) {
+            }
+        }
+        return new long[]{month[k][0], month[k][1]};
     }
 
     /** Short amount for the rail: 850K, 12M, 1.4G. */
-    static String used(long b) {
+    static String shortSize(long b) {
         if (b < 1_000_000) return Math.round(b / 1000f) + "K";
         if (b < 1_000_000_000) return Math.round(b / 1_000_000f) + "M";
         return String.format(java.util.Locale.US, "%.1fG", b / 1_000_000_000f);
@@ -134,16 +143,47 @@ final class DataMeter extends View {
         return String.format(java.util.Locale.US, "%.2f GB", b / 1_000_000_000f);
     }
 
-    /** Where a speed sits on the gauge: log scale, 10 KB/s to 10 MB/s fills it. */
-    private static float level(long b) {
-        if (b <= 1000) return 0f;
-        return (float) Math.max(0, Math.min(1, (Math.log10(b) - 3) / 4.0));
+    /** 1.2 MB/s, 340 KB/s. */
+    static String rate(long b) {
+        if (b < 1000) return b + " B/s";
+        if (b < 1_000_000) return Math.round(b / 1000f) + " KB/s";
+        return String.format(java.util.Locale.US, "%.1f MB/s", b / 1_000_000f);
+    }
+
+    /** Where a speed sits on a bar: log scale, 2 KB/s to 10 MB/s fills it. */
+    static float level(long b) {
+        if (b <= 2000) return 0f;
+        return (float) Math.max(0, Math.min(1, (Math.log10(b) - 3.3) / 3.7));
+    }
+
+    // ------------------------------------------------------------------ the meter (LTE only)
+
+    private final Paint cap = new Paint(Paint.ANTI_ALIAS_FLAG), dn = new Paint(Paint.ANTI_ALIAS_FLAG), up = new Paint(Paint.ANTI_ALIAS_FLAG),
+            ring = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final RectF r = new RectF();
+    private double shownD = -1, shownU = -1; // count up smoothly to the real amounts
+    private boolean running;
+
+    DataMeter(Context c) {
+        super(c);
+        cap.setColor(U.SUB);
+        cap.setFakeBoldText(true);
+        cap.setTextAlign(Paint.Align.CENTER);
+        cap.setLetterSpacing(0.08f);
+        dn.setColor(U.ACCENT_SOFT);
+        dn.setFakeBoldText(true);
+        dn.setTextAlign(Paint.Align.CENTER);
+        up.setColor(U.AMBER);
+        up.setFakeBoldText(true);
+        up.setTextAlign(Paint.Align.CENTER);
+        ring.setStyle(Paint.Style.STROKE);
+        ring.setColor(U.LINE);
+        setContentDescription("Mobile data used this month");
     }
 
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
-            sample();
             invalidate();
             if (running) postDelayed(this, 1000);
         }
@@ -165,32 +205,82 @@ final class DataMeter extends View {
 
     @Override
     protected void onDraw(Canvas cv) {
-        float w = getWidth(), h = getHeight();
-        float sw = U.uf(4);
-        float rad = Math.min(w / 2f - sw, (h - U.uf(12)) / 1.5f); // room underneath for the upload line
-        float cx = w / 2f, cy = rad + sw;
-        r.set(cx - rad, cy - rad, cx + rad, cy + rad);
-        float rad2 = rad - sw * 1.6f;
-        r2.set(cx - rad2, cy - rad2, cx + rad2, cy + rad2);
-        track.setStrokeWidth(sw);
-        arc.setStrokeWidth(sw);
-        inner.setStrokeWidth(sw * 0.55f);
-        // a 240° gauge, open at the bottom
-        cv.drawArc(r, 150, 240, false, track);
-        // ease the needle towards the reading (animations off: jump)
-        float tD = level(down), tU = level(up);
+        long[] m = used(getContext(), LTE);
         boolean anim = U.ms(1) > 0;
-        shownDown = anim ? shownDown + (tD - shownDown) * 0.25f : tD;
-        shownUp = anim ? shownUp + (tU - shownUp) * 0.25f : tU;
-        if (shownDown > 0.005f) cv.drawArc(r, 150, 240 * shownDown, false, arc);
-        if (shownUp > 0.005f) cv.drawArc(r2, 150, 240 * shownUp, false, inner);
-        // the data actually used since the box started: down inside the gauge, up underneath
-        text.setTextSize(U.uf(10));
-        text.setColor(U.ACCENT_SOFT);
-        cv.drawText("↓" + used(totalDown()), cx, cy + U.uf(3), text);
-        text.setColor(U.AMBER);
-        cv.drawText("↑" + used(totalUp()), cx, h - U.uf(2), text);
-        // keep easing until it settles
-        if (anim && (Math.abs(tD - shownDown) > 0.005f || Math.abs(tU - shownUp) > 0.005f)) postInvalidateOnAnimation();
+        if (shownD < 0 || !anim) {
+            shownD = m[0];
+            shownU = m[1];
+        } else {
+            shownD += (m[0] - shownD) * 0.2;
+            shownU += (m[1] - shownU) * 0.2;
+        }
+        float w = getWidth(), h = getHeight();
+        ring.setStrokeWidth(U.uf(1));
+        r.set(U.uf(1), U.uf(1), w - U.uf(1), h - U.uf(1));
+        cv.drawRoundRect(r, U.uf(9), U.uf(9), ring);
+        float cx = w / 2f;
+        cap.setTextSize(U.uf(8.5f));
+        cv.drawText("LTE", cx, U.uf(12), cap);
+        dn.setTextSize(U.uf(11));
+        up.setTextSize(U.uf(10));
+        cv.drawText("↓" + shortSize(Math.round(shownD)), cx, U.uf(26), dn);
+        cv.drawText("↑" + shortSize(Math.round(shownU)), cx, U.uf(39), up);
+        if (anim && (Math.abs(m[0] - shownD) > 500 || Math.abs(m[1] - shownU) > 500)) postInvalidateOnAnimation();
+    }
+
+    // ------------------------------------------------------------------ speed bar
+
+    /** A thin upright bar beside a connection's icon: fills with that connection's live speed (down and up together). */
+    static final class SpeedBar extends View {
+        private final int kind;
+        private final Paint track = new Paint(Paint.ANTI_ALIAS_FLAG), fill = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF r = new RectF();
+        private float shown;
+        private boolean running;
+
+        SpeedBar(Context c, int kind) {
+            super(c);
+            this.kind = kind;
+            track.setColor(U.LINE);
+            fill.setColor(kind == LTE ? U.ACCENT : kind == WIFI ? U.TEAL : U.AMBER);
+        }
+
+        private final Runnable tick = new Runnable() {
+            @Override
+            public void run() {
+                sample();
+                invalidate();
+                if (running) postDelayed(this, 1000);
+            }
+        };
+
+        @Override
+        protected void onAttachedToWindow() {
+            super.onAttachedToWindow();
+            running = true;
+            post(tick);
+        }
+
+        @Override
+        protected void onDetachedFromWindow() {
+            running = false;
+            removeCallbacks(tick);
+            super.onDetachedFromWindow();
+        }
+
+        @Override
+        protected void onDraw(Canvas cv) {
+            float w = getWidth(), h = getHeight(), rad = w / 2f;
+            r.set(0, 0, w, h);
+            cv.drawRoundRect(r, rad, rad, track);
+            float t = level(speed[kind][0] + speed[kind][1]);
+            boolean anim = U.ms(1) > 0;
+            shown = anim ? shown + (t - shown) * 0.25f : t;
+            if (shown > 0.02f) {
+                r.set(0, h - Math.max(w, h * shown), w, h);
+                cv.drawRoundRect(r, rad, rad, fill);
+            }
+            if (anim && Math.abs(t - shown) > 0.01f) postInvalidateOnAnimation();
+        }
     }
 }

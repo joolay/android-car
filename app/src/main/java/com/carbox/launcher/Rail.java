@@ -219,7 +219,7 @@ final class Rail {
                     Status.open(c, Settings.ACTION_DATA_ROAMING_SETTINGS);
                     return true;
                 });
-                return wrap(v, 22, true);
+                return withSpeed(wrap(v, 22, true), DataMeter.LTE);
             }
             case "wifi": {
                 wifi = new StatusIcons.WifiIcon(c);
@@ -230,7 +230,7 @@ final class Rail {
                     Status.open(c, Settings.ACTION_WIFI_SETTINGS);
                     return true;
                 });
-                return wrap(v, 22, false);
+                return withSpeed(wrap(v, 22, false), DataMeter.WIFI);
             }
             case "gps": {
                 gps = new StatusIcons.GpsIcon(c);
@@ -251,7 +251,7 @@ final class Rail {
                     Status.tetherSettings(c);
                     return true;
                 });
-                return wrap(v, 22, false);
+                return withSpeed(wrap(v, 22, false), DataMeter.HOTSPOT);
             }
             case "tailscale": {
                 tsIcon = U.icon(c, R.drawable.ic_vpnkey, U.MUTED);
@@ -263,7 +263,7 @@ final class Rail {
                 });
                 return wrap(v, 22, false);
             }
-            case "data": { // live data speed gauge
+            case "data": { // this month's mobile data (tap: the full breakdown)
                 v = new DataMeter(c);
                 v.setOnClickListener(x -> InfoPanels.quick("data"));
                 v.setOnLongClickListener(x -> {
@@ -272,13 +272,24 @@ final class Rail {
                 });
                 U.press(v);
                 android.widget.FrameLayout f = new android.widget.FrameLayout(c);
-                f.addView(v, new android.widget.FrameLayout.LayoutParams(U.u(50), U.u(50), Gravity.CENTER));
+                f.addView(v, new android.widget.FrameLayout.LayoutParams(U.u(50), U.u(46), Gravity.CENTER));
                 return f;
             }
             default:
                 return null;
         }
         return v;
+    }
+
+    /** A connection's icon with its live speed bar beside it. */
+    private View withSpeed(View icon, int kind) {
+        LinearLayout r = U.row(c);
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.addView(icon);
+        LinearLayout.LayoutParams bl = U.lpu(4, 20);
+        bl.leftMargin = U.u(4);
+        r.addView(new DataMeter.SpeedBar(c, kind), bl);
+        return r;
     }
 
     /** Give small icons a bigger tap area. */
