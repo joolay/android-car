@@ -60,7 +60,7 @@ final class MapPanel {
                 public void onPageFinished(WebView v, String url) {
                     pageReady = true;
                     String key = Store.str(Store.MAP_KEY, "").replace("'", "");
-                    web.evaluateJavascript("setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setTraffic(" + Store.flag("map_traffic", false) + ")", null);
+                    web.evaluateJavascript("setZoomPref(" + Store.str("map_zoom", "15") + ");setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setTraffic(" + Store.flag("map_traffic", false) + ")", null);
                     push();
                 }
             });
@@ -73,6 +73,11 @@ final class MapPanel {
                         scaleText = scaleLabel;
                         updateControls();
                     });
+                }
+
+                @android.webkit.JavascriptInterface
+                public void mapZoom(double z) { // remembered for next time
+                    Store.put("map_zoom", String.format(java.util.Locale.US, "%.2f", z));
                 }
 
                 @android.webkit.JavascriptInterface
@@ -356,20 +361,24 @@ final class MapPanel {
 
     /** Navigate: a full-width bar on the small map, a centred pill on the big one. */
     private void pill(boolean big) {
-        FrameLayout.LayoutParams gl = big ? new FrameLayout.LayoutParams(U.WRAP, U.u(38), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL)
+        FrameLayout.LayoutParams gl = big ? new FrameLayout.LayoutParams(U.WRAP, U.u(42), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL)
                 : new FrameLayout.LayoutParams(U.MATCH, U.u(36), Gravity.BOTTOM);
         gl.setMargins(U.u(10), 0, U.u(10), U.u(big ? 12 : 10));
         go.setLayoutParams(gl);
-        U.pad(go, big ? 18 : 0, 0, big ? 18 : 0, 0);
-        go.setBackground(U.round(U.ACCENT, big ? 19 : 12));
+        U.pad(go, big ? 22 : 0, 0, big ? 22 : 0, 0);
+        go.setBackground(U.round(U.ACCENT, big ? 21 : 12));
+        go.setElevation(big ? U.uf(4) : 0);
     }
+
+    private static final int BTN_BG = 0xEB141922, BTN_EDGE = 0x33FFFFFF;
 
     private View round(Context a, int icon, boolean tint, Runnable r) {
         FrameLayout f = new FrameLayout(a);
-        f.setBackground(U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 19));
+        f.setBackground(U.outline(BTN_BG, BTN_EDGE, 1, 21));
+        f.setElevation(U.uf(4));
         ImageView iv = tint ? U.icon(a, icon, U.TEXT) : new ImageView(a);
         if (!tint) iv.setImageResource(icon);
-        f.addView(iv, U.flpu(20, 20, Gravity.CENTER));
+        f.addView(iv, U.flpu(22, 22, Gravity.CENTER));
         f.setOnClickListener(v -> r.run());
         U.press(f);
         return f;
@@ -378,22 +387,23 @@ final class MapPanel {
     private FrameLayout controls(Context a) {
         FrameLayout o = new FrameLayout(a);
         // street you're on
-        street = U.line(a, "", 12, U.TEXT, false);
-        street.setBackground(U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 10));
-        U.pad(street, 10, 4, 10, 4);
+        street = U.line(a, "", 13, U.TEXT, true);
+        street.setBackground(U.outline(BTN_BG, BTN_EDGE, 1, 12));
+        U.pad(street, 12, 6, 12, 6);
+        street.setElevation(U.uf(4));
         FrameLayout.LayoutParams rl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.START);
         rl.setMargins(U.u(10), U.u(10), U.u(60), 0);
         o.addView(street, rl);
         // right-hand column: close, compass, traffic
         LinearLayout col = U.col(a);
-        if (!MainActivity.mapHome()) col.addView(round(a, R.drawable.ic_x, true, () -> expand(false)), U.lpu(38, 38)); // the map is home: no close
+        if (!MainActivity.mapHome()) col.addView(round(a, R.drawable.ic_x, true, () -> expand(false)), U.lpu(42, 42)); // the map is home: no close
         View cb = round(a, R.drawable.ic_compass, false, () -> { // direction of travel ⇄ north up
             Store.put("map_heading_up", !headingUp());
             applyHeading();
             updateControls();
         });
         compass = (ImageView) ((FrameLayout) cb).getChildAt(0);
-        LinearLayout.LayoutParams cbl = U.lpu(38, 38);
+        LinearLayout.LayoutParams cbl = U.lpu(42, 42);
         cbl.topMargin = col.getChildCount() > 0 ? U.u(8) : 0;
         col.addView(cb, cbl);
         if (google()) {
@@ -404,7 +414,7 @@ final class MapPanel {
                 updateControls();
             });
             tb.setTag("traffic");
-            LinearLayout.LayoutParams tl = U.lpu(38, 38);
+            LinearLayout.LayoutParams tl = U.lpu(42, 42);
             tl.topMargin = U.u(8);
             col.addView(tb, tl);
         }
@@ -413,26 +423,27 @@ final class MapPanel {
         o.addView(col, cl);
         // zoom
         LinearLayout zoom = U.col(a);
-        zoom.setBackground(U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 19));
+        zoom.setBackground(U.outline(BTN_BG, BTN_EDGE, 1, 21));
+        zoom.setElevation(U.uf(4));
         View zin = U.icon(a, R.drawable.ic_plus, U.TEXT), zout = U.icon(a, R.drawable.ic_minus, U.TEXT);
-        U.pad(zin, 9, 9, 9, 9);
-        U.pad(zout, 9, 9, 9, 9);
+        U.pad(zin, 10, 10, 10, 10);
+        U.pad(zout, 10, 10, 10, 10);
         zin.setOnClickListener(v -> js("zoomBy(1)"));
         zout.setOnClickListener(v -> js("zoomBy(-1)"));
-        zoom.addView(zin, U.lpu(38, 38));
+        zoom.addView(zin, U.lpu(42, 42));
         View sep = new View(a);
         sep.setBackgroundColor(0x33FFFFFF);
         LinearLayout.LayoutParams sl = U.lpu(20, 1);
         sl.gravity = Gravity.CENTER_HORIZONTAL;
         zoom.addView(sep, sl);
-        zoom.addView(zout, U.lpu(38, 38));
+        zoom.addView(zout, U.lpu(42, 42));
         FrameLayout.LayoutParams zl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.BOTTOM | Gravity.END);
         zl.setMargins(0, 0, U.u(10), U.u(58));
         o.addView(zoom, zl);
         // back to my location (only once you've moved the map)
         recentre = round(a, R.drawable.ic_myloc, true, () -> js("recenter()"));
         recentre.setBackground(U.oval(U.ACCENT));
-        FrameLayout.LayoutParams ml = U.flpu(38, 38, Gravity.BOTTOM | Gravity.END);
+        FrameLayout.LayoutParams ml = U.flpu(42, 42, Gravity.BOTTOM | Gravity.END);
         ml.setMargins(0, 0, U.u(10), U.u(12));
         o.addView(recentre, ml);
         // bottom left: limit sign, speed, scale
@@ -443,10 +454,11 @@ final class MapPanel {
         android.graphics.drawable.GradientDrawable sign = U.oval(0xFFFFFFFF);
         sign.setStroke(U.u(3), 0xFFD33A3A);
         limit.setBackground(sign);
-        bl.addView(limit, U.lpu(36, 36));
+        bl.addView(limit, U.lpu(40, 40));
         spd = U.line(a, "", 13, U.TEXT, true);
-        spd.setBackground(U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 10));
-        U.pad(spd, 10, 4, 10, 4);
+        spd.setBackground(U.outline(BTN_BG, BTN_EDGE, 1, 12));
+        U.pad(spd, 12, 6, 12, 6);
+        spd.setElevation(U.uf(4));
         LinearLayout.LayoutParams pl = U.lp(U.WRAP, U.WRAP);
         pl.leftMargin = U.u(8);
         bl.addView(spd, pl);

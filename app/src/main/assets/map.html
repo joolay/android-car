@@ -13,6 +13,7 @@ html,body{margin:0;height:100%;width:100%;background:#171c24;overflow:hidden}
 .maplibregl-ctrl-attrib-button{display:none}
 .me{width:18px;height:18px;margin:-9px 0 0 -9px;position:relative}
 .gl .me{margin:0}
+.gl.dark .maplibregl-canvas{filter:invert(1) hue-rotate(180deg) brightness(.95) contrast(.9)}
 .me .d{position:absolute;inset:3px;border-radius:50%;background:#3d8bfd;border:2px solid #fff;box-shadow:0 0 0 6px rgba(61,139,253,.25)}
 .me .a{position:absolute;left:4px;top:-9px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid #3d8bfd;display:none}
 .gm-style-cc,.gmnoprint a,.gm-style a[href^="https://maps.google.com/maps"]{opacity:.55}
@@ -33,7 +34,7 @@ var headUp=true, rot=0, glBearing=0;
 // diagonal so no corners show). MapLibre: the map turns itself, so labels stay upright.
 function size(){
   var W=innerWidth,H=innerHeight,el=document.getElementById('m');
-  var big=headUp&&!gl, D=big?Math.ceil(Math.sqrt(W*W+H*H)):0;
+  var big=headUp&&!isGl(), D=big?Math.ceil(Math.sqrt(W*W+H*H)):0;
   el.style.width=(big?D:W)+'px'; el.style.height=(big?D:H)+'px';
   el.style.left=(big?(W-D)/2:0)+'px'; el.style.top=(big?(H-D)/2:0)+'px';
   if(map) map.invalidateSize(false);
@@ -43,8 +44,9 @@ function size(){
 window.addEventListener('resize',size);
 function setHeadingUp(b){ headUp=!!b; if(!headUp) turn(0,true); size(); }
 // turn to a heading the short way round (no spinning past north)
+function isGl(){ return mode==='ofm'||mode==='pmtiles'; }
 function turn(b,reset){
-  if(gl){ glBearing=reset?0:b; gl.easeTo({bearing:glBearing,duration:800}); return; }
+  if(isGl()){ glBearing=reset?0:b; if(gl) gl.easeTo({bearing:glBearing,duration:800}); return; }
   var t=reset?0:-b, d=((t-rot)%360+540)%360-180;
   rot=reset?0:rot+d;
   document.getElementById('m').style.transform='rotate('+rot+'deg)';
@@ -52,7 +54,7 @@ function turn(b,reset){
 function centre(){
   if(!pending) return;
   if(gmap) gmap.panTo({lat:pending[0],lng:pending[1]});
-  else if(gl) gl.easeTo({center:[pending[1],pending[0]],bearing:headUp&&follow?glBearing:gl.getBearing(),duration:700});
+  else if(gl) gl.easeTo({center:[pending[1],pending[0]],bearing:headUp&&follow?glBearing:(headUp?gl.getBearing():0),duration:700});
   else if(map) map.panTo([pending[0],pending[1]],{animate:true});
 }
 // exploring by finger: north up again until you tap the locate button (or 30 s pass)
@@ -84,6 +86,10 @@ function state(){
     Android.mapState(follow, Math.round(m/mpp), m>=1000?(m/1000)+' km':m+' m');
   }catch(e){}
 }
+// the zoom you last chose is kept (raster maps and vector maps count zoom one apart)
+var zoomPref=15;
+function setZoomPref(z){ if(z>=3&&z<=19) zoomPref=z; }
+function saveZoom(){ try{ var z=gl?gl.getZoom()+1:map?map.getZoom():gmap?gmap.getZoom():15; zoomPref=z; Android.mapZoom(z); }catch(e){} }
 function note(t){ try{ Android.mapNote(t); }catch(e){} }
 
 // Called from Android once the page has loaded: setup(mode, googleKey, option)
@@ -108,6 +114,7 @@ function initOsm(){
   me=L.marker([0,0],{icon:icon,interactive:false});
   map.on('dragstart',explore);
   map.on('zoomend',state);
+  map.on('zoomend',saveZoom);
   setInteractive(inter);
   size();
   if(pending) setPos(pending[0],pending[1],pending[2]);
@@ -144,20 +151,18 @@ function initGl(){
     if(typeof pmtiles==='undefined'){ fallback('Couldn\'t load the offline map, using Standard'); return; }
     var proto=new pmtiles.Protocol(); maplibregl.addProtocol('pmtiles',proto.tile);
     style=pmStyle();
-  } else style='https://tiles.openfreemap.org/styles/'+(opt||'liberty');
-  document.getElementById('m').className='gl';
+  } else style='https://tiles.openfreemap.org/styles/'+(opt==='dark'||!opt?'positron':opt);
+  var el0=document.getElementById('m');
+  el0.style.transform=''; rot=0; // never the CSS turn for vector maps
+  var darkOfm=mode==='ofm'&&(opt==='dark'||!opt);
+  document.getElementById('m').className=darkOfm?'gl dark':'gl'; // dark: only the map picture is turned dark, not your arrow
   glOn=false;
   gl=new maplibregl.Map({container:'m',style:style,center:[0,0],zoom:2,attributionControl:{compact:false},pitchWithRotate:false,fadeDuration:0});
   var el=document.createElement('div'); el.innerHTML='<div class="me"><div class="a" id="arr"></div><div class="d"></div></div>';
   glMe=new maplibregl.Marker({element:el.firstChild,rotationAlignment:'map'});
   gl.on('dragstart',explore);
   gl.on('zoomend',state);
-  var styleOk=false;
-  gl.on('style.load',function(){ styleOk=true; });
-  gl.on('error',function(e){
-    // an OpenFreeMap style that doesn't exist: use Liberty instead
-    if(!styleOk&&mode==='ofm'&&opt!=='liberty'){ styleOk=true; opt='liberty'; gl.setStyle('https://tiles.openfreemap.org/styles/liberty'); }
-  });
+  gl.on('zoomend',saveZoom);
   setInteractive(inter);
   size();
   if(pending) setPos(pending[0],pending[1],pending[2]);
@@ -181,6 +186,8 @@ function gInit(){
     clickableIcons:false,keyboardShortcuts:false,gestureHandling:'greedy',styles:NIGHT,backgroundColor:'#171c24'});
   gmap.addListener('dragstart',explore);
   gmap.addListener('zoom_changed',state);
+  gmap.addListener('zoom_changed',saveZoom);
+  gmap.setZoom(Math.round(zoomPref));
   setTraffic(trafficOn);
   setInteractive(inter);
   size();
@@ -189,7 +196,7 @@ function gInit(){
 
 function setPos(lat,lon,bearing){
   pending=[lat,lon,bearing];
-  if(headUp&&follow&&bearing>=0&&!gl) turn(bearing);
+  if(headUp&&follow&&bearing>=0&&!isGl()) turn(bearing);
   if(gmap){
     var p={lat:lat,lng:lon};
     var ic=bearing>=0?{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:6,rotation:bearing,fillColor:'#3d8bfd',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}
@@ -201,15 +208,15 @@ function setPos(lat,lon,bearing){
   var a=document.getElementById('arr');
   if(gl){
     glMe.setLngLat([lon,lat]);
-    if(!glOn){ glOn=true; glMe.addTo(gl); gl.jumpTo({center:[lon,lat],zoom:15}); }
+    if(!glOn){ glOn=true; glMe.addTo(gl); gl.jumpTo({center:[lon,lat],zoom:zoomPref-1}); }
     if(a) a.style.display=bearing>=0?'block':'none';
     glMe.setRotation(bearing>=0?bearing:0);
     if(headUp&&follow&&bearing>=0) glBearing=bearing;
-    if(follow) gl.easeTo({center:[lon,lat],bearing:headUp?glBearing:gl.getBearing(),duration:900});
+    if(follow) gl.easeTo({center:[lon,lat],bearing:headUp?glBearing:0,duration:900});
     return;
   }
   if(!map) return;
-  if(!map.hasLayer(me)){ me.setLatLng([lat,lon]).addTo(map); map.setView([lat,lon],15); }
+  if(!map.hasLayer(me)){ me.setLatLng([lat,lon]).addTo(map); map.setView([lat,lon],Math.round(zoomPref)); }
   me.setLatLng([lat,lon]);
   if(a){ if(bearing>=0){a.style.display='block';a.parentNode.style.transform='rotate('+bearing+'deg)';}
          else {a.style.display='none';a.parentNode.style.transform='';} }
