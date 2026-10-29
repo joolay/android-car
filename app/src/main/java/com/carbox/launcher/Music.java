@@ -73,12 +73,15 @@ final class Music {
     }
 
     static void atStart(MainActivity a) {
-        if (!Store.flag(Store.MUSIC_AUTOPLAY, false)) return;
         long bootAt = System.currentTimeMillis() - SystemClock.elapsedRealtime();
         if (Math.abs(Store.lng("music_boot", 0) - bootAt) < 60000) return;
         Store.put("music_boot", bootAt);
         Store.put("music_log", "[]");
         log("Car start (box on for " + SystemClock.elapsedRealtime() / 1000 + " s). App: " + label() + ", start with: " + startWith());
+        if (!Store.flag(Store.MUSIC_AUTOPLAY, false)) { // still logged, so the reason shows in Music settings
+            log("Play music at car start is off: nothing done");
+            return;
+        }
         if (musicActive(a)) {
             log("Something is already playing: left alone");
             return; // something is already playing (e.g. the phone over Bluetooth)

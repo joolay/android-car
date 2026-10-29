@@ -418,10 +418,8 @@ final class SettingsPanels {
             b.addView(pr, top(10));
 
             java.util.List<String> ml = Store.list("music_log");
-            if (!ml.isEmpty()) {
-                b.addView(Sheets.section("Last car start"));
-                b.addView(U.text(c, String.join("\n", ml), 11, U.SUB, false));
-            }
+            b.addView(Sheets.section("Last car start")); // always shown, so it's easy to find
+            b.addView(U.text(c, ml.isEmpty() ? "Nothing logged yet: it fills in at the next car start." : String.join("\n", ml), 11, U.SUB, false));
             String eq = EqView.style();
             b.addView(Sheets.row("Music animation", U.seg(c, "Equaliser", "bars".equals(eq), () -> { Store.put("eq_style", "bars"); Sheets.refresh(); }),
                     U.seg(c, "Wave", "wave".equals(eq), () -> { Store.put("eq_style", "wave"); Sheets.refresh(); }),
@@ -911,6 +909,11 @@ final class SettingsPanels {
                 Store.put("dock_dialer", v);
                 if (MainActivity.I != null) MainActivity.I.dock.render();
             }));
+            // also here (not only in News and traffic): hiding the ticker makes the dock bigger
+            b.addView(Sheets.switchRow(0, 0, "Show the news ticker", "Off: the dock takes its space with bigger icons", Store.flag("ticker_on", true), on -> {
+                Store.put("ticker_on", on);
+                if (MainActivity.I != null) MainActivity.I.recreate();
+            }), top(4));
             int n = Dock.icons();
             List<View> segs = new ArrayList<>();
             for (int k = 5; k <= 7; k++) {

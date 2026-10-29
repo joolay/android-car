@@ -688,6 +688,7 @@ public class MainActivity extends Activity {
         android.view.animation.Interpolator ease = new android.view.animation.DecelerateInterpolator(1.8f);
         tiles.view.setTranslationX(0);
         big.setTranslationX(0);
+        tiles.view.setVisibility(View.VISIBLE);
         if (tiles.view.getTranslationY() == 0) tiles.view.setTranslationY(h);
         tiles.view.animate().translationY(h - row).setDuration(U.ms(340)).setInterpolator(ease).start();
         big.animate().translationY(-row).setDuration(U.ms(340)).setInterpolator(ease).start();
@@ -707,6 +708,7 @@ public class MainActivity extends Activity {
         tiles.view.setTranslationX(0);
         if (open) {
             if (Sheets.open()) Sheets.close();
+            tiles.view.setVisibility(View.VISIBLE);
             if (!fromPeek) tiles.view.setTranslationY(h); // from a peek it carries on from where it is
             tiles.view.animate().translationY(0).setDuration(U.ms(340)).setInterpolator(ease).start();
             View big = map != null ? map.bigView() : null;
@@ -720,7 +722,9 @@ public class MainActivity extends Activity {
                     }).start();
         } else {
             if (tiles.editing()) tiles.setEditing(false);
-            tiles.view.animate().translationY(h).setDuration(U.ms(300)).setInterpolator(ease).start();
+            // once down, hide them so no bits of tiles show between the ticker and the dock
+            tiles.view.animate().translationY(h).setDuration(U.ms(300)).setInterpolator(ease)
+                    .withEndAction(() -> { if (!drawerOpen && !peeking) tiles.view.setVisibility(View.INVISIBLE); }).start();
             if (map == null) return;
             if (!map.expanded()) map.expand(true);
             View big = map.bigView();
