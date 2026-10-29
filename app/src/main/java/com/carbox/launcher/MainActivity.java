@@ -94,6 +94,7 @@ public class MainActivity extends Activity {
         U.ui.post(() -> handleOpen(getIntent()));
         U.ui.postDelayed(this::afterUpdate, 2500);
         U.ui.postDelayed(About::offerReport, 4000); // crashed last time? offer the report
+        Updater.start(this); // new versions from GitHub (needs the key in Settings → System → Updates)
         // start with the big map in the tile area and Go to in the small map panel (setting)
         // the home view: the big map in the tile area, Go to in the small map panel, Now playing
         // below; the tiles are a drawer that slides in from the Rail Bar (All apps button)
