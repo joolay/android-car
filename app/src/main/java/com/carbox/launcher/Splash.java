@@ -44,7 +44,9 @@ final class Splash {
             Store.put("splash_boot", bootAt);
         }
         String mode = mode();
-        if (!"screen".equals(mode)) recite(a);
+        // the voice waits until the music is really playing (or ~20 s): started together, this box
+        // handed the sound to Car Launcher and the music never began
+        if (!"screen".equals(mode)) Music.whenStarted(a, () -> recite(a), 20000);
         if ("voice".equals(mode)) return false; // voice only: nothing on screen, start-up carries on
         return show(a, after);
     }

@@ -68,6 +68,31 @@ final class Actions {
         Store.put("assist_log", new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(new java.util.Date()) + "\n" + s);
     }
 
+    private static void tryVoice(Context c, String[][] tries, int k, StringBuilder log) {
+        for (int i = k; i < tries.length; i++) {
+            String[] t = tries[i];
+            String name = t[0].substring(t[0].lastIndexOf('.') + 1) + " in " + (t[1] == null ? "the default assistant" : Apps.label(t[1]));
+            try {
+                Intent in = new Intent(t[0]).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                if (t[1] != null) in.setPackage(t[1]);
+                c.startActivity(in);
+                log.append("Opened: ").append(name).append("\n");
+                final int next = i + 1;
+                U.ui.postDelayed(() -> { // came straight back to Home: that way doesn't work here
+                    if (MainActivity.frontAt != 0 && android.os.SystemClock.elapsedRealtime() - MainActivity.frontAt < 1400) {
+                        log.append("  …it closed at once\n");
+                        tryVoice(c, tries, next, log);
+                    } else assistLog(log.append("Stayed open").toString());
+                }, 1600);
+                return;
+            } catch (Exception e) {
+                log.append(name).append(": not available\n");
+            }
+        }
+        boolean ok = Apps.launchPkg(c, GEMINI);
+        assistLog(log.append(ok ? "Opened the Gemini app (tap its mic)" : "Couldn't open Gemini").toString());
+    }
+
     static void assistant(Context c) {
         if ("external".equals(Store.str(Store.ASSIST, "gemini"))) {
             String pkg = Store.str(Store.ASSIST_PKG, null);
@@ -78,27 +103,15 @@ final class Actions {
             SettingsPanels.assistantPicker();
             return;
         }
-        // Gemini first, asked by name: the plain voice intents were being caught by the box's own
-        // voice app instead. Gemini's voice overlay, then Google's (Gemini when it has replaced the
-        // Assistant), then just open the Gemini app.
+        // Gemini, step by step: each way is tried, and if it comes straight back to the home screen
+        // (the log showed Google's voice screen closing at once) the next one is tried, ending with
+        // simply opening the Gemini app
         if (Apps.installed(GEMINI)) {
             String[][] tries = {{Intent.ACTION_VOICE_COMMAND, GEMINI}, {Intent.ACTION_ASSIST, GEMINI},
-                    {Intent.ACTION_VOICE_COMMAND, "com.google.android.googlequicksearchbox"}};
-            StringBuilder log = new StringBuilder();
-            for (String[] t : tries) {
-                try {
-                    c.startActivity(new Intent(t[0]).setPackage(t[1]).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                    assistLog(log.append("Opened: ").append(t[0].substring(t[0].lastIndexOf('.') + 1)).append(" in ").append(Apps.label(t[1])).toString());
-                    return;
-                } catch (Exception e) {
-                    log.append(t[0].substring(t[0].lastIndexOf('.') + 1)).append(" in ").append(Apps.label(t[1])).append(": not available\n");
-                }
-            }
-            if (Apps.launchPkg(c, GEMINI)) {
-                assistLog(log.append("Opened the Gemini app").toString());
-                return;
-            }
-            assistLog(log.append("Couldn't open Gemini").toString());
+                    {Intent.ACTION_VOICE_COMMAND, "com.google.android.googlequicksearchbox"},
+                    {"android.intent.action.VOICE_ASSIST", "com.google.android.googlequicksearchbox"}};
+            tryVoice(c, tries, 0, new StringBuilder());
+            return;
         } else assistLog("Gemini isn't installed on this box: tried the box's own assistant");
         // no Gemini: the box's default assistant, listening straight away
         for (String action : new String[]{Intent.ACTION_VOICE_COMMAND, Intent.ACTION_ASSIST, RecognizerIntent.ACTION_VOICE_SEARCH_HANDS_FREE}) {

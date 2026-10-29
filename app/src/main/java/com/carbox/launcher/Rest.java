@@ -245,6 +245,15 @@ final class Rest {
 
     private static android.media.MediaPlayer player;
 
+    /** Car Launcher is playing a recording right now (the splash voice, a reminder). */
+    static boolean talking() {
+        try {
+            return player != null && player.isPlaying();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /**
      * Play a recording over the music (ducking it): an app asset such as "voice/islam1_orig.mp3",
      * or a file the user picked. Returns false if it can't be played, so the caller can fall back.

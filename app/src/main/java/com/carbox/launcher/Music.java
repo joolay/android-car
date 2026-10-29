@@ -56,7 +56,16 @@ final class Music {
         return out;
     }
 
+    /**
+     * Is the music really playing? The music app's own playing state when it's known; otherwise
+     * Android's "sound is playing" — but not while Car Launcher itself is talking (the splash voice
+     * counted as music before, so a start-up that never played looked fine).
+     */
     static boolean musicActive(Context c) {
+        MediaController m = MediaListener.controller;
+        String p = pkg();
+        if (m != null && (p == null || p.equals(m.getPackageName()))) return MediaListener.playing();
+        if (Rest.talking()) return false;
         AudioManager am = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
         return am != null && am.isMusicActive();
     }

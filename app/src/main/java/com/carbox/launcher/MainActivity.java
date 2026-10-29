@@ -518,7 +518,10 @@ public class MainActivity extends Activity {
     // ------------------------------------------------------------------ lifecycle
 
     @Override
+    static long frontAt; // when the home screen last came to the front (0 = not in front)
+
     protected void onResume() {
+        frontAt = android.os.SystemClock.elapsedRealtime();
         Trace.event(this, "Home screen shown");
         super.onResume();
         resumed = true;
@@ -548,6 +551,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        frontAt = 0;
         Trace.event(this, "Home screen left (another app in front)");
         super.onPause();
         resumed = false;
