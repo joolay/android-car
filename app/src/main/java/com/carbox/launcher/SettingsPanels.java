@@ -125,9 +125,15 @@ final class SettingsPanels {
                         {R.drawable.ic_bolt, PURPLE, "Animations", null, null, "anim_on", true}},
                 {{"Driving"},
                         {R.drawable.ic_car, GREEN, "Driving timer", U.dur(Rest.limitMin() * 60000L), (Runnable) Rest::setup, Rest.ON, true},
-                        {R.drawable.ic_bell, GREEN, "News and traffic", tickerLabel(), (Runnable) SettingsPanels::news},
                         {R.drawable.ic_pin, GREEN, "Car location", "Home Assistant", (Runnable) CarHA::settings, CarHA.ON, false},
                         {R.drawable.ic_bell, PURPLE, "Alerts expand", null, (Runnable) Alerts::settings, Alerts.GLOBAL, false}},
+                {{"News ticker"},
+                        {R.drawable.ic_bell, GREEN, "News and traffic", tickerLabel(), (Runnable) SettingsPanels::news},
+                        {R.drawable.ic_bell, GREEN, "Show the ticker", Store.flag("ticker_on", true) ? "On · tap to hide" : "Off · tap to show", (Runnable) () -> {
+                            Store.put("ticker_on", !Store.flag("ticker_on", true));
+                            Sheets.close();
+                            if (MainActivity.I != null) MainActivity.I.recreate();
+                        }}},
                 {{"Start-up"},
                         {R.drawable.ic_bolt, AMBER, "Auto start", Actions.autostart().length() + " apps", (Runnable) AppPanels::autostart},
                         {R.drawable.ic_wifi, AMBER, "Connections at start", connLabel(), (Runnable) SettingsPanels::connections}},

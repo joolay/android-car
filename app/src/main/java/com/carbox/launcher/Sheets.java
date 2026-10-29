@@ -66,6 +66,14 @@ final class Sheets {
     }
 
     private static boolean grow; // the next tile-area panel grows out of the tile that opened it
+    private static boolean slide; // the next one slides down out of the ticker instead
+    private static View slideView; // the page that slides back up when closed
+
+    /** Open in the tile area sliding down out of the news ticker (and back up into it when closed). */
+    static void showSlide(Page p) {
+        slide = true;
+        show(p);
+    }
 
     /** Open a page on top of the current one (back arrow returns). */
     static void push(Page p) {
@@ -100,7 +108,16 @@ final class Sheets {
         Keyboard.hide();
         stack.clear();
         modes.clear();
-        if (tileLayer != null) tileLayer.removeAllViews();
+        final View sv = slideView;
+        slideView = null;
+        if (sv != null && tileLayer != null && sv.getParent() == tileLayer && U.ms(1) > 0 && sv.getHeight() > 0) {
+            final FrameLayout tl = tileLayer; // slides back up into the ticker, then goes
+            for (int i = tl.getChildCount() - 1; i >= 0; i--) if (tl.getChildAt(i) != sv) tl.removeViewAt(i);
+            sv.animate().translationY(-sv.getHeight()).setDuration(U.ms(260)).setInterpolator(new android.view.animation.AccelerateInterpolator(1.4f))
+                    .withEndAction(() -> {
+                        if (sv.getParent() == tl) tl.removeView(sv);
+                    }).start();
+        } else if (tileLayer != null) tileLayer.removeAllViews();
         if (fullLayer != null) fullLayer.removeAllViews();
         full = false;
         layer = tileLayer;
@@ -173,9 +190,19 @@ final class Sheets {
         if (!full) page.setLayoutParams(new FrameLayout.LayoutParams(U.MATCH, U.MATCH)); // fill the tile area exactly
         else if (page.getLayoutParams() == null) page.setLayoutParams(centered(640, 440));
         layer.addView(page);
-        if (grow && !full && MainActivity.I != null) MainActivity.I.growIn(page, null);
+        slideView = null;
+        if (slide && !full) { // down out of the ticker, kept inside the tile area
+            slideView = page;
+            page.setAlpha(0f);
+            page.post(() -> {
+                page.setTranslationY(-page.getHeight());
+                page.setAlpha(1f);
+                page.animate().translationY(0).setDuration(U.ms(320)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+            });
+        } else if (grow && !full && MainActivity.I != null) MainActivity.I.growIn(page, null);
         if (!full && MainActivity.I != null) MainActivity.I.mapAside(true); // the big map steps aside for the panel
         grow = false;
+        slide = false;
     }
 
     /** Lighter scrim for small anchored cards. */

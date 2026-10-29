@@ -373,7 +373,7 @@ final class Ticker {
 
     private void openFeed() {
         final boolean wasNews = showingNews;
-        Sheets.show(() -> {
+        Sheets.showSlide(() -> { // slides down out of the ticker, back up when closed
             Context c = Sheets.ctx();
             boolean n = wasNews;
             List<Item> items = n ? newsItems : trafficItems;
@@ -390,8 +390,13 @@ final class Ticker {
             LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
             tl.leftMargin = U.u(12);
             head.addView(title, tl);
-            head.addView(U.button(c, "Edit source", false, SettingsPanels::news));
-            head.addView(U.gap(c, 12, 1));
+            View ed = U.icon(c, R.drawable.ic_edit, U.ACCENT_SOFT); // the feed's settings
+            U.pad(ed, 3, 3, 3, 3);
+            ed.setContentDescription("Edit source");
+            ed.setOnClickListener(v -> SettingsPanels.news());
+            U.press(ed);
+            head.addView(ed, U.lpu(28, 28));
+            head.addView(U.gap(c, 14, 1));
             View x = U.icon(c, R.drawable.ic_x, U.SUB);
             x.setOnClickListener(v -> Sheets.close());
             head.addView(x, U.lpu(24, 24));
