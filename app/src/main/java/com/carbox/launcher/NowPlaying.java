@@ -38,6 +38,7 @@ final class NowPlaying {
     static NowPlaying I;
     private View lyricsBtn;
     private EqView eq;
+    private MusicFolder folder;
 
     int lyricCount() {
         return lyricText.size();
@@ -160,6 +161,11 @@ final class NowPlaying {
         empty.setGravity(Gravity.CENTER);
         U.pad(empty, 14);
         view.addView(empty, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        // nothing playing: a folder of music apps instead of the empty message
+        folder = new MusicFolder(c);
+        folder.view.setVisibility(View.GONE);
+        view.addView(folder.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        Apps.listen(() -> { if (folder.view.getVisibility() == View.VISIBLE) folder.render(); });
 
         view.setOnClickListener(v -> {
             if (!MediaListener.hasAccess(c)) MediaListener.requestAccess(c);
@@ -236,16 +242,20 @@ final class NowPlaying {
             if (eq != null) eq.setVisibility(View.GONE);
             content.setVisibility(View.INVISIBLE);
             lyricBox.setVisibility(View.GONE);
-            empty.setVisibility(View.VISIBLE);
-            if (!MediaListener.hasAccess(c)) {
+            boolean access = MediaListener.hasAccess(c);
+            empty.setVisibility(access ? View.GONE : View.VISIBLE);
+            if (!access) {
                 empty.setText("Tap to allow notification access so music shows here");
                 empty.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0);
-            } else {
-                empty.setText("Nothing playing\nTap to open music");
+            }
+            if (folder != null) {
+                folder.view.setVisibility(access ? View.VISIBLE : View.GONE);
+                if (access) folder.render();
             }
             return;
         }
         empty.setVisibility(View.GONE);
+        if (folder != null) folder.view.setVisibility(View.GONE);
         content.setVisibility(View.VISIBLE);
         Bitmap bm = md.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
         if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_ART);
