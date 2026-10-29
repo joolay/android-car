@@ -731,10 +731,11 @@ final class SettingsPanels {
             b.addView(radio(c, "Standard", "OpenStreetMap. Free, no account. Dark style.", "osm".equals(prov), () -> setMap("osm")));
             b.addView(radio(c, "OpenFreeMap", "Free vector map with sharp labels that stay upright as it turns.", "ofm".equals(prov), () -> setMap("ofm")));
             if ("ofm".equals(prov)) {
-                String st = Store.str("ofm_style", "dark");
-                b.addView(Sheets.row("Style", U.seg(c, "Dark", "dark".equals(st), () -> { Store.put("ofm_style", "dark"); setMap("ofm"); }),
-                        U.seg(c, "Liberty", "liberty".equals(st), () -> { Store.put("ofm_style", "liberty"); setMap("ofm"); }),
-                        U.seg(c, "Positron", "positron".equals(st), () -> { Store.put("ofm_style", "positron"); setMap("ofm"); })), top(4));
+                String st = Store.str("ofm_style", "liberty");
+                if ("dark".equals(st)) st = "liberty";
+                b.addView(Sheets.row("Day style", U.seg(c, "Liberty", "liberty".equals(st), () -> { Store.put("ofm_style", "liberty"); setMap("ofm"); }),
+                        U.seg(c, "Positron", "positron".equals(st), () -> { Store.put("ofm_style", "positron"); setMap("ofm"); }),
+                        U.seg(c, "Bright", "bright".equals(st), () -> { Store.put("ofm_style", "bright"); setMap("ofm"); })), top(4));
             }
             b.addView(radio(c, "Offline map", "Download the area around you (or use a .pmtiles file). Works with no internet.", "pmtiles".equals(prov), () -> {
                 if (Store.str(OfflineMap.URI, "").isEmpty()) MapDownload.panel();
@@ -750,16 +751,15 @@ final class SettingsPanels {
                 r.addView(U.gap(c, 8, 1));
                 r.addView(U.button(c, "Download map here", true, MapDownload::panel));
                 b.addView(r, top(4));
-                if ("pmtiles".equals(prov)) {
-                    String fl = Store.str("pm_flavor", "dark");
-                    b.addView(Sheets.row("Colours", U.seg(c, "Dark", "dark".equals(fl), () -> { Store.put("pm_flavor", "dark"); setMap("pmtiles"); }),
-                            U.seg(c, "Grey", "grayscale".equals(fl), () -> { Store.put("pm_flavor", "grayscale"); setMap("pmtiles"); }),
-                            U.seg(c, "Light", "light".equals(fl), () -> { Store.put("pm_flavor", "light"); setMap("pmtiles"); })), top(4));
-                }
                 b.addView(U.text(c, "Download map here fetches just the area around the car (choose how far and how detailed). Or choose a .pmtiles file you copied onto the box. Street-name lettering needs internet the first time; the map itself works offline.",
                         12, U.SUB, false), top(6));
             }
-            b.addView(radio(c, "Google Maps", "Needs your own Google Maps API key. Dark style, live traffic.", "google".equals(prov), () -> setMap("google")));
+            b.addView(radio(c, "Google Maps", "Needs your own Google Maps API key. Live traffic.", "google".equals(prov), () -> setMap("google")));
+            String col = MapPanel.colours();
+            b.addView(Sheets.row("Colours", U.seg(c, "Auto (day / night)", "auto".equals(col), () -> { Store.put("map_colours", "auto"); setMap(prov); }),
+                    U.seg(c, "Light", "light".equals(col), () -> { Store.put("map_colours", "light"); setMap(prov); }),
+                    U.seg(c, "Dark", "dark".equals(col), () -> { Store.put("map_colours", "dark"); setMap(prov); })), top(10));
+            b.addView(U.text(c, "Auto: light from sunrise, dark from sunset where the car is (switches by itself).", 12, U.SUB, false), top(4));
             if ("google".equals(prov)) {
                 b.addView(Sheets.section("Google Maps API key"));
                 final String[] key = {Store.str(Store.MAP_KEY, "")};

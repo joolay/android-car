@@ -60,7 +60,8 @@ final class MapPanel {
                 public void onPageFinished(WebView v, String url) {
                     pageReady = true;
                     String key = Store.str(Store.MAP_KEY, "").replace("'", "");
-                    web.evaluateJavascript("setZoomPref(" + Store.str("map_zoom", "15") + ");setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setTraffic(" + Store.flag("map_traffic", false) + ")", null);
+                    shownDark = darkNow();
+                    web.evaluateJavascript("setZoomPref(" + Store.str("map_zoom", "15") + ");setDark(" + shownDark + ");setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setTraffic(" + Store.flag("map_traffic", false) + ")", null);
                     push();
                 }
             });
@@ -190,13 +191,42 @@ final class MapPanel {
         return p;
     }
 
-    /** OpenFreeMap style, or the offline map's colours. */
+    /** OpenFreeMap style, or the offline map's colours (dark at night, your day style in daylight). */
     static String option() {
         String p = provider();
-        if ("ofm".equals(p)) return Store.str("ofm_style", "dark");
-        if ("pmtiles".equals(p)) return Store.str("pm_flavor", "dark");
+        boolean dark = darkNow();
+        if ("ofm".equals(p)) {
+            String day = Store.str("ofm_style", "liberty");
+            return dark ? "dark" : "dark".equals(day) ? "liberty" : day;
+        }
+        if ("pmtiles".equals(p)) return dark ? "dark" : "light";
         return "";
     }
+
+    /** "auto" (light by day, dark from sunset to sunrise), "light" or "dark". */
+    static String colours() {
+        return Store.str("map_colours", "auto");
+    }
+
+    static boolean darkNow() {
+        String m = colours();
+        if ("dark".equals(m)) return true;
+        if ("light".equals(m)) return false;
+        java.util.Calendar c = java.util.Calendar.getInstance();
+        double h = c.get(java.util.Calendar.HOUR_OF_DAY) + c.get(java.util.Calendar.MINUTE) / 60.0;
+        double[] t = Prayer.times(0); // sunrise and sunset where the car is
+        if (t == null) return h < 6 || h >= 18;
+        return h < t[1] || h >= t[4];
+    }
+
+    private boolean shownDark;
+    private final Runnable dayNight = new Runnable() { // auto: switch at sunrise and sunset
+        @Override
+        public void run() {
+            if (darkNow() != shownDark) reload();
+            U.ui.postDelayed(this, 60000);
+        }
+    };
 
     /** Google Maps only when it's chosen and a key has been entered; otherwise OpenStreetMap. */
     static boolean google() {
@@ -222,6 +252,8 @@ final class MapPanel {
 
     void start() {
         running = true;
+        U.ui.removeCallbacks(dayNight);
+        U.ui.postDelayed(dayNight, 60000);
         if (web != null) web.onResume();
         push();
         updateNav();
