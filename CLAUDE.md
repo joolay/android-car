@@ -26,7 +26,7 @@ Now playing (`NowPlaying`). While the map is big, the map panel shows the **Top 
 swipe = next chosen widget, hold = chooser; same widget/settings as the tiles, made with `Widgets.TL` for its
 roomier design, `W.tl`/`Widgets.ts()`). Middle: 2×4 tile grid (`Tiles`, column-major, endless wrap) that also hosts
 panels (`Sheets` → `MainActivity.tileArea`/`sheetHost`), news/traffic ticker (`Ticker`), dock (`Dock`).
-Right: Rail Bar (`Rail`; quick cards pop out of their icons).
+Ticker at the top of the middle column (hidden: map/tiles take its space, tiles padded). Right: Rail Bar (`Rail`; quick cards pop out of their icons).
 
 ## Key code
 - `U` design units (`U.u(du)` for an 800×480 design), drawing helpers. `Store` = SharedPreferences

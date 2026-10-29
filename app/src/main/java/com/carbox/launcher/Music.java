@@ -72,25 +72,27 @@ final class Music {
         Store.putList("music_log", l);
     }
 
-    static void atStart(MainActivity a) {
+    /** At a car start with Play music at car start on: starts the music and returns true (the music app is then opened). */
+    static boolean atStart(MainActivity a) {
         long bootAt = System.currentTimeMillis() - SystemClock.elapsedRealtime();
-        if (Math.abs(Store.lng("music_boot", 0) - bootAt) < 60000) return;
+        if (Math.abs(Store.lng("music_boot", 0) - bootAt) < 60000) return false;
         Store.put("music_boot", bootAt);
         Store.put("music_log", "[]");
         log("Car start (box on for " + SystemClock.elapsedRealtime() / 1000 + " s). App: " + label() + ", start with: " + startWith());
         if (!Store.flag(Store.MUSIC_AUTOPLAY, false)) { // still logged, so the reason shows in Music settings
             log("Play music at car start is off: nothing done");
-            return;
+            return false;
         }
         if (musicActive(a)) {
             log("Something is already playing: left alone");
-            return; // something is already playing (e.g. the phone over Bluetooth)
+            return false; // something is already playing (e.g. the phone over Bluetooth)
         }
         guard(a);
         // the chosen playlist (e.g. Liked Songs) comes first when set to start with it
         if ("playlist".equals(startWith())) {
             playPlaylist(a, true);
-            return;
+            log("Opening " + label() + ", then the splash");
+            return true;
         }
         resume(a);
         // the music app may still be waking up after boot: try once more, then fall back to the playlist
@@ -100,6 +102,8 @@ final class Music {
         U.ui.postDelayed(() -> {
             if (!musicActive(a) && !Store.str(Store.MUSIC_PLAYLIST, "").isEmpty()) playPlaylist(a, true);
         }, 5000);
+        log("Opening " + label() + ", then the splash");
+        return true;
     }
 
     // ---- start-up guard: for the first 45 s, nothing but your own pause button stops the music.

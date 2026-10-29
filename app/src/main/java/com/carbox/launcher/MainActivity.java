@@ -70,22 +70,28 @@ public class MainActivity extends Activity {
         askPermissions();
         Actions.connectionsAtStart(this);
         U.ui.postDelayed(Actions.tsWatch, 60000);
-        // music starts first, even before the splash
-        Music.atStart(this);
-        // splash next; hotspot settings and auto-start apps only once it has closed
-        if (!Splash.maybeShow(this, "start", () -> Actions.afterSplash(this))) Actions.afterSplash(this);
+        // music starts first: at a car start the music app is opened (so it wakes and plays), then
+        // Home comes back with the splash; hotspot settings and auto-start apps once it has closed
+        Runnable splash = () -> {
+            if (!Splash.maybeShow(this, "start", () -> Actions.afterSplash(this))) Actions.afterSplash(this);
+        };
+        if (Music.atStart(this) && Music.open(this)) U.ui.postDelayed(() -> {
+            NowPlaying.pressHome();
+            splash.run();
+        }, 2500);
+        else splash.run();
         U.ui.post(() -> handleOpen(getIntent()));
         U.ui.postDelayed(this::afterUpdate, 2500);
         U.ui.postDelayed(About::offerReport, 4000); // crashed last time? offer the report
         // start with the big map in the tile area and Go to in the small map panel (setting)
         // the home view: the big map in the tile area, Go to in the small map panel, Now playing
         // below; the tiles are a drawer that slides in from the Rail Bar (All apps button)
-        if (mapHome()) U.ui.postDelayed(() -> {
+        if (mapHome()) U.ui.post(() -> { // already open when the home screen first shows
             if (map != null && !map.expanded()) {
                 Store.put("map_mini", TopLeft.list().get(0)); // the Top Left Widget starts on its first widget
                 map.expand(true);
             }
-        }, 600);
+        });
         // traffic for the drive, once per car start (after the splash and auto-start apps settle)
         long bootAt = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime();
         if (Math.abs(Store.lng("traffic_boot", 0) - bootAt) > 60000) {
@@ -122,12 +128,11 @@ public class MainActivity extends Activity {
         tiles = new Tiles(this);
         // the tile area also hosts panels (All apps, settings, phone...) so they stay inside the 2×4 grid
         tileArea = new FrameLayout(this);
-        FrameLayout tilesClip = new FrameLayout(this); // the tiles stay inside the tile area as they rise and sink
+        tilesClip = new FrameLayout(this); // the tiles stay inside the tile area as they rise and sink
         tilesClip.addView(tiles.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         tileArea.addView(tilesClip, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         sheetHost = new FrameLayout(this);
         tileArea.addView(sheetHost, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        middle.addView(tileArea, U.weight(1, false));
         tickerSlot = new FrameLayout(this);
         ticker = new Ticker(this);
         tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
@@ -135,17 +140,20 @@ public class MainActivity extends Activity {
         tickerRow.addView(tickerSlot, new LinearLayout.LayoutParams(0, U.MATCH, 1));
         boolean tickerOn = Store.flag("ticker_on", true);
         if (tickerOn) buildChip(tickerRow);
+        // the ticker sits at the top of the middle column, above the tiles / big map
         LinearLayout.LayoutParams tl = U.lpu(U.MATCH, 30);
-        tl.topMargin = U.u(8);
+        tl.bottomMargin = U.u(8);
         middle.addView(tickerRow, tl);
         this.tickerRow = tickerRow;
-        tickerRow.setVisibility(tickerOn ? View.VISIBLE : View.GONE); // off: the dock takes its place (still shown while editing tiles)
+        tickerRow.setVisibility(tickerOn ? View.VISIBLE : View.GONE); // off: the map / tiles take its space (still shown while editing tiles)
+        middle.addView(tileArea, U.weight(1, false));
+        tilePad(tickerOn);
         dock = new Dock(this);
         LinearLayout dockRow = U.row(this);
         dockRow.setGravity(Gravity.CENTER_VERTICAL);
         dockRow.addView(dock.view, new LinearLayout.LayoutParams(0, U.MATCH, 1));
         if (!tickerOn) buildChip(dockRow); // "Tiles" + lock at the end of the dock instead
-        LinearLayout.LayoutParams dl = U.lpu(U.MATCH, tickerOn ? 56 : 56 + 38);
+        LinearLayout.LayoutParams dl = U.lpu(U.MATCH, 56);
         dl.topMargin = U.u(8);
         middle.addView(dockRow, dl);
         LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(0, U.MATCH, 1);
@@ -175,8 +183,22 @@ public class MainActivity extends Activity {
     /** Swap the ticker for the edit bar while tiles are being rearranged. */
     private LinearLayout tickerRow;
 
+    private FrameLayout tilesClip;
+
+    /**
+     * Without the ticker the tile area is taller: the big map simply grows, and the tiles keep their
+     * size with the extra height as padding above and below the grid.
+     */
+    private void tilePad(boolean tickerShown) {
+        int p = tickerShown ? 0 : U.u(19);
+        tilesClip.setPadding(0, p, 0, p);
+    }
+
     void editMode(boolean on) {
-        if (tickerRow != null && !Store.flag("ticker_on", true)) tickerRow.setVisibility(on ? View.VISIBLE : View.GONE);
+        if (tickerRow != null && !Store.flag("ticker_on", true)) {
+            tickerRow.setVisibility(on ? View.VISIBLE : View.GONE);
+            tilePad(on); // the edit bar takes the padding's place while editing
+        }
         tickerSlot.removeAllViews();
         if (on) tickerSlot.addView(Ticker.editBar(this, () -> tiles.setEditing(false)), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         else tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
@@ -796,27 +818,9 @@ public class MainActivity extends Activity {
         big.post(() -> morph(big, false, null));
     }
 
-    /** While the tiles are up the ticker sits at the top of the middle column (back above the dock after). */
-    private void tickerTop(boolean top) {
-        if (tickerRow == null || middle == null || tickerRow.getVisibility() != View.VISIBLE) return;
-        int at = middle.indexOfChild(tickerRow);
-        if (top == (at == 0)) return;
-        float from = tickerRow.getY();
-        LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) tickerRow.getLayoutParams();
-        middle.removeView(tickerRow);
-        lp.topMargin = top ? 0 : U.u(8);
-        lp.bottomMargin = top ? U.u(8) : 0;
-        middle.addView(tickerRow, top ? 0 : middle.indexOfChild(tileArea) + 1, lp);
-        tickerRow.post(() -> { // glide from where it was
-            tickerRow.setTranslationY(from - tickerRow.getY());
-            tickerRow.animate().translationY(0).setDuration(U.ms(340)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
-        });
-    }
-
     void drawer(boolean open) {
         if (open == drawerOpen && !peeking) return;
         mapAside = false;
-        tickerTop(open);
         boolean fromPeek = peeking;
         peeking = false;
         if (open) hideAlertTile();

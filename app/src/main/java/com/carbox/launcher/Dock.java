@@ -15,9 +15,9 @@ final class Dock {
     private final Activity a;
     final LinearLayout view;
 
-    /** Without the news ticker the dock gets its space, so everything in it is a size up. */
+    /** The dock stays the same size with or without the news ticker (the map and tiles take that space). */
     static float scale() {
-        return Store.flag("ticker_on", true) ? 1f : 1.3f;
+        return 1f;
     }
 
     private static float s(float du) {

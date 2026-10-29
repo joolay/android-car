@@ -891,7 +891,7 @@ final class SettingsPanels {
                 if (MainActivity.I != null) MainActivity.I.dock.render();
             }));
             // also here (not only in News and traffic): hiding the ticker makes the dock bigger
-            b.addView(Sheets.switchRow(0, 0, "Show the news ticker", "Off: the dock takes its space with bigger icons", Store.flag("ticker_on", true), on -> {
+            b.addView(Sheets.switchRow(0, 0, "Show the news ticker", "Off: the map and tiles get its space", Store.flag("ticker_on", true), on -> {
                 Store.put("ticker_on", on);
                 if (MainActivity.I != null) MainActivity.I.recreate();
             }), top(4));
@@ -918,7 +918,7 @@ final class SettingsPanels {
         open(() -> {
             Context c = c();
             LinearLayout b = U.col(c);
-            b.addView(Sheets.switchRow(0, 0, "Show the news ticker", "Off: the dock gets its space and bigger icons (restarts the home screen)", Store.flag("ticker_on", true), on -> {
+            b.addView(Sheets.switchRow(0, 0, "Show the news ticker", "Off: the map and tiles get its space (restarts the home screen)", Store.flag("ticker_on", true), on -> {
                 Store.put("ticker_on", on);
                 if (MainActivity.I != null) MainActivity.I.recreate();
             }));
