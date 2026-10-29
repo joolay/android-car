@@ -312,7 +312,11 @@ final class MapPanel {
         if (on && mini == null) {
             mini = new SwipeBox(c, this::swapMini);
             mini.onHold(TopLeft::chooser); // hold: choose the Top Left Widget's widgets
-            try {
+            if (TopLeft.MUSIC.equals(miniId()) && MainActivity.I != null && MainActivity.I.nowPlaying != null) {
+                View np = MainActivity.I.nowPlaying.view; // Music: the one Now playing moves up here
+                if (np.getParent() != null) ((android.view.ViewGroup) np.getParent()).removeView(np);
+                mini.addView(np, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            } else try {
                 miniW = TopLeft.make(c, miniId()); // same settings as in the tiles, its own design
                 if (miniW != null && miniW.v != null) mini.addView(miniW.v, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
             } catch (Exception ignored) {

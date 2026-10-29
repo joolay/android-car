@@ -544,7 +544,7 @@ final class Ticker {
         d.setBackground(U.round(U.ACCENT, 10));
         U.pad(d, 14, 4, 14, 4);
         d.setOnClickListener(v -> done.run());
-        TextView w = U.text(c, "+ Widgets", 13, U.TEXT, true);
+        TextView w = U.text(c, "+ Tiles", 13, U.TEXT, true);
         w.setGravity(Gravity.CENTER);
         w.setBackground(U.round(0xFF2E3747, 10));
         U.pad(w, 12, 4, 12, 4);

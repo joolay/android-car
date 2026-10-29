@@ -62,7 +62,7 @@ final class Faith {
         Sheets.Page p = () -> {
             Context c = Sheets.ctx();
             LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Religious features are add-ons. Only the faith you pick shows its prayer times, widgets, travel prayers, announcements and calendar.", 13, U.SUB, false));
+            b.addView(U.text(c, "Religious features are add-ons. Only the faith you pick shows its prayer times, tiles, travel prayers, announcements and calendar.", 13, U.SUB, false));
             String cur = get();
             java.util.List<android.view.View> segs = new java.util.ArrayList<>();
             for (String[] f : ALL) segs.add(U.seg(c, f[1], f[0].equals(cur), () -> {

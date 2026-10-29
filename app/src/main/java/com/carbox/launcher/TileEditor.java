@@ -45,7 +45,7 @@ final class TileEditor {
         LinearLayout head = U.row(c);
         LinearLayout titles = U.col(c);
         titles.addView(U.line(c, "Edit tiles", 20, U.TEXT, true));
-        titles.addView(U.line(c, "Hold a tile and drag to move it · tap to change or remove · + to add widgets", 12, U.SUB, false), Widgets.top(2));
+        titles.addView(U.line(c, "Hold a tile and drag to move it · tap to change or remove · + to add tiles", 12, U.SUB, false), Widgets.top(2));
         head.addView(titles, new LinearLayout.LayoutParams(0, U.WRAP, 1));
         head.addView(U.button(c, "Done", true, () -> {
             Sheets.close();
@@ -94,7 +94,7 @@ final class TileEditor {
             JSONArray apps = spec == null ? null : spec.optJSONArray("apps");
             int n = apps == null ? 0 : apps.length();
             sub = "Folder · " + n + (n == 1 ? " app" : " apps");
-        } else sub = empty ? "Tap to choose" : "Widget";
+        } else sub = empty ? "Tap to choose" : "Tile";
         l.addView(U.line(c, sub, 11, U.SUB, false), Widgets.top(2));
         FrameLayout f = new FrameLayout(c);
         f.addView(l, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
@@ -117,7 +117,7 @@ final class TileEditor {
         TextView plus = U.text(c, "+", 30, U.ACCENT_SOFT, true);
         plus.setGravity(Gravity.CENTER);
         l.addView(plus);
-        TextView t = U.text(c, "Add widgets", 13, U.ACCENT_SOFT, false);
+        TextView t = U.text(c, "Add tiles", 13, U.ACCENT_SOFT, false);
         t.setGravity(Gravity.CENTER);
         l.addView(t);
         return l;

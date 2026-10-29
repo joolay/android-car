@@ -57,7 +57,12 @@ final class Widgets {
             {"qibla", "Qibla", "Direction of the Kaaba from here"},
             {"ha", "Home Assistant", "Your own smart home toggles"}};
 
+    /** Categories for the tile and Left Widget choosers (Music is a Left Widget only). */
+    static final String[][] CATS = {{"Driving", "speed,trip,rest,park,safety,logbook,heading,goto"}, {"Phone", "phone,quickdial,contact"},
+            {"Car & home", "carconnect,ha"}, {"Weather", "weather"}, {"Faith", "nextprayer,prayertimes,qibla"}};
+
     static String name(String id) {
+        if ("music".equals(id)) return "Music";
         for (String[] w : CATALOG) if (w[0].equals(id)) return w[1];
         return "none".equals(id) ? "Empty" : id;
     }
@@ -278,7 +283,7 @@ final class Widgets {
         Empty(Context c, int i, JSONObject s) {
             super(c, i, s);
             LinearLayout l = card(c, U.CARD);
-            l.addView(U.text(c, "Tap to choose a widget", 13, U.SUB, false));
+            l.addView(U.text(c, "Tap to choose a tile", 13, U.SUB, false));
             l.setOnClickListener(x -> AppPanels.gallery(index));
             v = l;
         }

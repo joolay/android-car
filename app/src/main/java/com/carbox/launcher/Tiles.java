@@ -334,7 +334,7 @@ final class Tiles {
         TextView plus = U.text(a, "+", 30, U.ACCENT_SOFT, true);
         plus.setGravity(Gravity.CENTER);
         l.addView(plus);
-        TextView t = U.text(a, "Add widgets", 13, U.ACCENT_SOFT, false);
+        TextView t = U.text(a, "Add tiles", 13, U.ACCENT_SOFT, false);
         t.setGravity(Gravity.CENTER);
         l.addView(t);
         l.setOnClickListener(v -> AppPanels.gallery(-1)); // pick widgets to add

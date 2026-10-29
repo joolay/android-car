@@ -116,6 +116,7 @@ final class SettingsPanels {
         final int BLUE = 0xFF1F4E9A, GREEN = 0xFF1F7A46, AMBER = 0xFF8A5A10, PURPLE = 0xFF5A3A9A, GREY = U.CARD3;
         Object[][][] groups = {
                 {{"Home screen"},
+                        {R.drawable.ic_apps, PURPLE, "Left Widgets", "Top: " + TopLeft.list().size() + " · Bottom: " + Widgets.name(TopLeft.bottom()), (Runnable) () -> TopLeft.chooser(false)},
                         {R.drawable.ic_photo, PURPLE, "Wallpaper", "image".equals(w) ? "Image" : "color".equals(w) ? "Colour" : "Black", (Runnable) SettingsPanels::wallpaper},
                         {R.drawable.ic_drag, PURPLE, "Rail Bar", railOn + " of " + Rail.IDS.length + " shown", (Runnable) SettingsPanels::railOrder},
                         {R.drawable.ic_apps, PURPLE, "Dock", Dock.icons() + " icons" + (Dock.dialler() ? " · dialler" : ""), (Runnable) SettingsPanels::dock},
@@ -399,6 +400,7 @@ final class SettingsPanels {
             app.addView(U.text(c, Music.label() + " ›", 14, U.ACCENT_SOFT, true));
             app.setOnClickListener(v -> musicAppPicker());
             b.addView(app);
+            b.addView(Sheets.item("Bottom Left Widget", Widgets.name(TopLeft.bottom()) + " · change it", () -> TopLeft.chooser(true)));
             b.addView(U.hr(c));
             b.addView(Sheets.switchRow(0, 0, "Play music when the car starts", "Starts straight away, before the splash screen",
                     Store.flag(Store.MUSIC_AUTOPLAY, false), on -> Store.put(Store.MUSIC_AUTOPLAY, on)));
@@ -508,7 +510,7 @@ final class SettingsPanels {
             b.addView(check(c, R.drawable.ic_back, U.CARD3, "Call helper (optional)", "Shows and answers calls from the box's BT Phone app",
                     fb ? "Done" : "Set up", fb, SettingsPanels::floatingBack));
             boolean wg = Store.flag("widgets_seen", false);
-            b.addView(check(c, R.drawable.ic_apps, U.CARD3, "Choose your widgets", "Pick what goes on your home screen",
+            b.addView(check(c, R.drawable.ic_apps, U.CARD3, "Choose your tiles", "Pick what goes on your home screen",
                     wg ? "Done" : "Choose", wg, () -> {
                         Store.put("widgets_seen", true);
                         AppPanels.gallery(-1);
@@ -778,7 +780,7 @@ final class SettingsPanels {
             b.addView(Sheets.switchRow(0, 0, "Map is the home view", "The big map with Go to beside it; the All apps button slides your tiles in",
                     Store.flag("map_start_big", true), on -> Store.put("map_start_big", on)), top(8));
             b.addView(Sheets.item("Top Left Widget", TopLeft.list().size() + " widgets · swipe it to go through them", TopLeft::chooser), top(8));
-            b.addView(U.text(c, "Tap the map to make it fill the tiles; ✕ on the big map makes it small again. The Top Left Widget shows above Now playing: swipe it for the next widget, hold it to choose them.", 12, U.SUB, false), top(6));
+            b.addView(U.text(c, "Tap the map to make it fill the tiles; ✕ on the big map makes it small again. The Top Left Widget shows above the Bottom Left one: swipe it for the next widget, hold it to choose them.", 12, U.SUB, false), top(6));
         }
     }
 
@@ -1106,7 +1108,7 @@ final class SettingsPanels {
                         HA.setup(i);
                         return;
                     }
-                Sheets.push(() -> Sheets.panel("Home Assistant", U.text(c(), "Add the Home Assistant widget to a tile first: long-press a tile → ⋯ → Replace with widget.", 14, U.SUB, false), 480, 220));
+                Sheets.push(() -> Sheets.panel("Home Assistant", U.text(c(), "Add the Home Assistant tile first: long-press a tile → ⋯ → Replace with another tile.", 14, U.SUB, false), 480, 220));
             }));
             return Sheets.panel("Connections at start", b, 620, 440);
         });

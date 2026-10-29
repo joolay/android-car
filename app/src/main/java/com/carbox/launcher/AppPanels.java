@@ -697,12 +697,12 @@ final class AppPanels {
             boolean isFolder = spec == null || "f".equals(spec.optString("t"));
             String id = spec == null ? "" : spec.optString("id");
             LinearLayout b = U.col(c);
-            b.addView(Sheets.item("Replace with widget", null, () -> gallery(index)));
+            b.addView(Sheets.item("Replace with another tile", null, () -> gallery(index)));
             if (isFolder) {
                 b.addView(Sheets.item("Edit apps", null, () -> editFolder(index)));
                 b.addView(Sheets.item("Rename folder", null, () -> renameFolder(index)));
             } else {
-                if (Widgets.configurable(id)) b.addView(Sheets.item("Widget settings", null, () -> Widgets.configure(index)));
+                if (Widgets.configurable(id)) b.addView(Sheets.item("Tile settings", null, () -> Widgets.configure(index)));
                 String kind = Alerts.kindOf(id);
                 if (kind != null) b.addView(Sheets.switchRow(0, 0, "Expand alerts into the tile area", Store.flag(Alerts.GLOBAL, false) ? "Off: the alert shows inside this tile" : "All expanding is off in Settings → Alerts",
                         Store.flag("expand_" + kind, true), v -> Store.put("expand_" + kind, v)));
@@ -757,8 +757,8 @@ final class AppPanels {
 
         LinearLayout head = U.row(c);
         LinearLayout titles = U.col(c);
-        titles.addView(U.line(c, manage ? "Home screen widgets" : "Choose a widget", 20, U.TEXT, true));
-        titles.addView(U.line(c, manage ? "Highlighted ones are on your home screen · tap a widget to add it or take it off" : "Tap one to put it on this tile · swipe for more", 12, U.SUB, false), top(2));
+        titles.addView(U.line(c, manage ? "Home screen tiles" : "Choose a tile", 20, U.TEXT, true));
+        titles.addView(U.line(c, manage ? "Highlighted ones are on your home screen · tap a tile to add it or take it off" : "Tap one to put it in this spot · swipe for more", 12, U.SUB, false), top(2));
         head.addView(titles, new LinearLayout.LayoutParams(0, U.WRAP, 1));
         if (manage) {
             head.addView(U.button(c, "Add all", false, () -> { // every widget not on the home screen yet
@@ -804,8 +804,7 @@ final class AppPanels {
         for (String[] w : Widgets.CATALOG) if (Faith.widgetAllowed(w[0])) choices.add(w);
 
         // group by category, each with a heading; chips at the top jump to a category
-        String[][] cats = {{"Driving", "speed,trip,rest,park,safety,logbook,heading,goto"}, {"Phone", "phone,quickdial,contact"},
-                {"Car & home", "carconnect,ha"}, {"Weather", "weather"}, {"Faith", "nextprayer,prayertimes,qibla"}};
+        String[][] cats = Widgets.CATS;
         LinearLayout blocks = U.row(c);
         blocks.setGravity(Gravity.TOP);
         android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(c);

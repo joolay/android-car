@@ -11,7 +11,7 @@ import java.util.List;
 final class About {
     private static final String CRASHES = "crash_log";
     private static final String[][] FEATURES = {
-            {"Home screen", "Tiles of widgets and folders you can drag, loop round and edit; dock, rail and live map"},
+            {"Home screen", "Tiles and folders you can drag, loop round and edit; Left Widgets, dock, rail and live map"},
             {"Driving", "Speed with speed-limit warnings, trip, driving timer with break reminders, Go to places, Park here"},
             {"Music", "Now Playing with synced lyrics, start-up playlist (Liked Songs), auto-start apps"},
             {"Phone", "Own dialler and contacts, BT Phone calls shown in Car Launcher, voice assistants"},

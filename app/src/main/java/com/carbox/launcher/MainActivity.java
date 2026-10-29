@@ -120,7 +120,9 @@ public class MainActivity extends Activity {
         nowPlaying = new NowPlaying(this);
         LinearLayout.LayoutParams np = U.weight(1, false);
         np.topMargin = U.u(8);
-        left.addView(nowPlaying.view, np);
+        bottomSlot = new FrameLayout(this); // the Bottom Left Widget: Music (Now playing) or another widget
+        left.addView(bottomSlot, np);
+        bottomLeft();
         main.addView(left, U.lpu(200, U.MATCH));
 
         // middle: tiles, ticker, dock
@@ -184,6 +186,45 @@ public class MainActivity extends Activity {
     private LinearLayout tickerRow;
 
     private FrameLayout tilesClip;
+
+    // ---- the Bottom Left Widget
+    private FrameLayout bottomSlot;
+    private Widgets.W bottomW;
+    private final Runnable bottomTick = new Runnable() {
+        @Override
+        public void run() {
+            if (bottomW == null) return;
+            try {
+                bottomW.tick();
+            } catch (Exception ignored) {
+            }
+            U.ui.postDelayed(this, 1000);
+        }
+    };
+
+    /** Show the chosen Bottom Left Widget (Music is the one Now playing; others in their Left Widget design). */
+    void bottomLeft() {
+        if (bottomSlot == null) return;
+        U.ui.removeCallbacks(bottomTick);
+        bottomW = null;
+        bottomSlot.removeAllViews();
+        String id = TopLeft.bottom();
+        if (TopLeft.MUSIC.equals(id)) {
+            View np = nowPlaying.view;
+            if (np.getParent() != null) ((android.view.ViewGroup) np.getParent()).removeView(np);
+            bottomSlot.addView(np, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            return;
+        }
+        SwipeBox box = new SwipeBox(this, () -> { });
+        box.onHold(() -> TopLeft.chooser(true)); // hold: change it
+        try {
+            bottomW = TopLeft.make(this, id);
+            if (bottomW != null && bottomW.v != null) box.addView(bottomW.v, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        } catch (Exception ignored) {
+        }
+        bottomSlot.addView(box, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        U.ui.post(bottomTick);
+    }
 
     /**
      * Without the ticker the tile area is taller: the big map simply grows, and the tiles keep their

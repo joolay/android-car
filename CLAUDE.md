@@ -24,7 +24,9 @@ Package `com.carbox.launcher`, plain Java Android views (no XML layouts, no Andr
 Left column: map panel (`MapPanel`, WebView `assets/map.html`, OSM or Google with key) over
 Now playing (`NowPlaying`). While the map is big, the map panel shows the **Top Left Widget** (`TopLeft`:
 swipe = next chosen widget, hold = chooser; same widget/settings as the tiles, made with `Widgets.TL` for its
-roomier design, `W.tl`/`Widgets.ts()`). Middle: 2×4 tile grid (`Tiles`, column-major, endless wrap) that also hosts
+roomier design, `W.tl`/`Widgets.ts()`). Below it the **Bottom Left Widget** (`MainActivity.bottomLeft()`,
+one widget, `TopLeft.bottom()`; default Music = the single `NowPlaying` view, which moves to whichever Left
+Widget has Music — only one may). Grid widgets are called **tiles** in the UI; the left ones **Left Widgets**. Middle: 2×4 tile grid (`Tiles`, column-major, endless wrap) that also hosts
 panels (`Sheets` → `MainActivity.tileArea`/`sheetHost`), news/traffic ticker (`Ticker`), dock (`Dock`).
 Ticker at the top of the middle column (hidden: map/tiles take its space, tiles padded). Right: Rail Bar (`Rail`; quick cards pop out of their icons).
 
