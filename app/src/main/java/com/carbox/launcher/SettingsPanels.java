@@ -206,7 +206,7 @@ final class SettingsPanels {
                             Sheets.close();
                             if (MainActivity.I != null) MainActivity.I.restartBox();
                         }},
-                        {R.drawable.ic_bolt, GREY, "Troubleshooting", Trace.on() ? "Logging · switch off to send" : Store.flag(Trace.PENDING, false) ? "Log waiting to send" : "Off", (Runnable) Trace::settings},
+                        {R.drawable.ic_bolt, GREY, "Logs", Trace.on() ? "Last 3 days kept · tap to send" : "Off", (Runnable) Trace::settings},
                         {R.drawable.ic_shield, GREY, "About", About.version(c), (Runnable) About::show}}};
 
         // categories as tabs down the left; the chosen one's settings fill the rest, two big rows across

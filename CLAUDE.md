@@ -53,10 +53,11 @@ Ticker at the top of the middle column (hidden: map/tiles take its space, tiles 
   copies them into branch `crashes`, file `crashes.jsonl` (id, time, title, message).
 - To read them: `gh api -X POST repos/joolay/CarLauncher/actions/workflows/crashes.yml/dispatches -f ref=main` (gh workflow run fails here: no GraphQL), wait ~40 s, then
   `git fetch origin crashes && git show origin/crashes:crashes.jsonl`.
-- Troubleshooting mode (`Trace`, Settings → System → Troubleshooting): logs from the next start until
-  switched off (events.log + the app's own logcat), then zips and PUTs it to the same topic as an
-  attachment (kept ~3 h on ntfy; crashes.yml runs hourly and saves it to `logs/<id>-troubleshooting-*.zip`
-  on the crashes branch). To read: run crashes.yml, fetch the branch, `git show origin/crashes:logs/<file> > x.zip`, unzip.
+- Logs (`Trace`, Settings → System → Logs, on by default): the last 3 days are always kept on the box
+  (events-<day>.log + the app's own logcat per start, pruned at each start). "Send the last 3 days" zips and PUTs
+  them to the same topic as an attachment (kept ~3 h on ntfy; crashes.yml runs hourly and saves it to
+  `logs/<id>-logs-*.zip` on the crashes branch). To read: run crashes.yml, fetch the branch,
+  `git show origin/crashes:logs/<file> > x.zip`, unzip.
 
 ## With ADB on the box
 - Crashes: `adb logcat -b crash` or Settings → About → crash reports.

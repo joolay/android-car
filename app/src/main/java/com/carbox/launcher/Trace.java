@@ -11,13 +11,14 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * Troubleshooting mode: from the next start of Car Launcher until it's switched off, everything is
- * logged (Car Launcher's own Android log, plus what it does: starts, screens, music, voice, errors).
- * Switched off, the log is zipped and sent online (ntfy.sh attachment on the crash topic, collected
+ * Logs, always kept for the last 3 days (Settings → System → Logs): Car Launcher's own Android log
+ * for each start, plus what it does (starts, apps opened, pages, music, voice button, errors). "Send
+ * the last 3 days" zips them and sends them online (ntfy.sh attachment on the crash topic, collected
  * into the repo's "crashes" branch under logs/ by crashes.yml).
  */
 final class Trace {
-    static final String ON = "trace_on", SINCE = "trace_since", PENDING = "trace_pending";
+    static final String KEEP = "logs_keep", PENDING = "trace_pending";
+    private static final long KEEP_MS = 3 * 24 * 3600 * 1000L, MAX_BYTES = 40L * 1024 * 1024;
     private static boolean running;
     private static Process logcat;
     private static File dir;
@@ -34,31 +35,48 @@ final class Trace {
         return dir;
     }
 
-    /** Called first thing when Car Launcher starts: logging begins if the mode is on. */
+    static boolean on() {
+        return Store.flag(KEEP, true);
+    }
+
+    /** Called first thing when Car Launcher starts: tidies out logs older than 3 days, then logs this start. */
     static void atStart(Context c) {
-        if (running || !Store.flag(ON, false)) return;
+        if (running || !on()) return;
         running = true;
+        prune(c);
         long n = Store.lng("trace_starts", 0) + 1;
         Store.put("trace_starts", n);
         event(c, "=== Car Launcher started (" + About.version(c) + ", " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
                 + ", Android " + android.os.Build.VERSION.RELEASE + ", box on for " + SystemClock.elapsedRealtime() / 1000 + " s)");
-        try { // Car Launcher's own Android log for this start, kept to about 6 MB
-            File f = new File(dir(c), "android-" + n + ".log");
+        try { // Car Launcher's own Android log for this start, kept to about 2 MB
+            String day = new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date());
+            File f = new File(dir(c), "android-" + day + ".log");
             logcat = Runtime.getRuntime().exec(new String[]{"logcat", "-v", "threadtime", "--pid=" + android.os.Process.myPid(),
-                    "-f", f.getAbsolutePath(), "-r", "2048", "-n", "2"});
+                    "-f", f.getAbsolutePath(), "-r", "1024", "-n", "1"});
         } catch (Exception e) {
             event(c, "Android log not available: " + e);
         }
     }
 
-    static boolean on() {
-        return Store.flag(ON, false);
+    /** Logs older than 3 days go, and the oldest ones too if they've grown past ~40 MB. */
+    private static void prune(Context c) {
+        File[] fs = dir(c).listFiles();
+        if (fs == null) return;
+        long now = System.currentTimeMillis(), total = 0;
+        java.util.Arrays.sort(fs, (a, b) -> Long.compare(b.lastModified(), a.lastModified())); // newest first
+        for (File f : fs) {
+            if (now - f.lastModified() > KEEP_MS || total + f.length() > MAX_BYTES) {
+                //noinspection ResultOfMethodCallIgnored
+                f.delete();
+            } else total += f.length();
+        }
     }
 
-    /** One line in the troubleshooting log (only while it's running). */
+    /** One line in the log. */
     static void event(Context c, String what) {
         if (!running || c == null) return;
-        try (FileWriter w = new FileWriter(new File(dir(c), "events.log"), true)) {
+        String day = new SimpleDateFormat("yyyyMMdd", Locale.US).format(new Date());
+        try (FileWriter w = new FileWriter(new File(dir(c), "events-" + day + ".log"), true)) {
             w.write(new SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US).format(new Date()) + "  " + what + "\n");
         } catch (Exception ignored) {
         }
@@ -68,34 +86,7 @@ final class Trace {
         event(MainActivity.I, what);
     }
 
-    /** Switch on: it starts logging from the next start of Car Launcher. */
-    static void arm() {
-        Store.put(ON, true);
-        Store.put(SINCE, System.currentTimeMillis());
-    }
-
-    /** Switch off: stop, zip it all and send it online. */
-    static void stopAndSend(Context c) {
-        event(c, "=== Troubleshooting mode switched off");
-        Store.put(ON, false);
-        running = false;
-        final Process lc = logcat;
-        logcat = null;
-        Store.put(PENDING, true);
-        final Context app = c.getApplicationContext();
-        Net.bg(() -> { // the last few seconds were still in the log's buffer: take them straight from Android first
-            try {
-                File f = new File(dir(app), "android-last.log");
-                Process d = Runtime.getRuntime().exec(new String[]{"logcat", "-d", "-v", "threadtime", "--pid=" + android.os.Process.myPid(), "-f", f.getAbsolutePath()});
-                d.waitFor();
-            } catch (Exception ignored) {
-            }
-            if (lc != null) lc.destroy();
-            U.ui.post(() -> send(app));
-        });
-    }
-
-    /** Size of what's been logged so far. */
+    /** Size of the logs kept. */
     static long size(Context c) {
         long t = 0;
         File[] fs = dir(c).listFiles();
@@ -103,17 +94,26 @@ final class Trace {
         return t;
     }
 
-    /** Zip the log and send it (kept until it has gone, so it can be sent again). */
+    /** Zip the last 3 days and send them online (the logs stay on the box). */
     static void send(Context c) {
         final Context app = c.getApplicationContext();
+        event(app, "=== Logs sent from Settings");
+        Store.put(PENDING, true);
         Net.bg(() -> {
             String result;
             try {
-                File zip = new File(app.getCacheDir(), "troubleshooting.zip");
+                // the last few seconds are still in Android's buffer: take them straight from there first
+                try {
+                    File last = new File(dir(app), "android-last.log");
+                    Runtime.getRuntime().exec(new String[]{"logcat", "-d", "-v", "threadtime", "--pid=" + android.os.Process.myPid(),
+                            "-f", last.getAbsolutePath()}).waitFor();
+                } catch (Exception ignored) {
+                }
+                File zip = new File(app.getCacheDir(), "logs.zip");
                 File[] fs = dir(app).listFiles();
                 if (fs == null || fs.length == 0) {
                     Store.put(PENDING, false);
-                    U.ui.post(() -> toast(app, "There was nothing in the troubleshooting log"));
+                    U.ui.post(() -> toast(app, "There are no logs yet"));
                     return;
                 }
                 try (java.util.zip.ZipOutputStream z = new java.util.zip.ZipOutputStream(new FileOutputStream(zip))) {
@@ -123,15 +123,15 @@ final class Trace {
                         z.closeEntry();
                     }
                 }
-                String name = "troubleshooting-" + new SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(new Date()) + ".zip";
+                String name = "logs-" + new SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(new Date()) + ".zip";
                 java.net.HttpURLConnection h = (java.net.HttpURLConnection) new java.net.URL("https://ntfy.sh/" + About.TOPIC).openConnection();
                 h.setRequestMethod("PUT");
                 h.setDoOutput(true);
                 h.setConnectTimeout(20000);
-                h.setReadTimeout(60000);
+                h.setReadTimeout(120000);
                 h.setRequestProperty("Filename", name);
-                h.setRequestProperty("Title", "Troubleshooting log " + About.version(app));
-                h.setRequestProperty("Message", "Troubleshooting log from " + android.os.Build.MODEL + ", " + Store.lng("trace_starts", 0) + " starts");
+                h.setRequestProperty("Title", "Logs " + About.version(app));
+                h.setRequestProperty("Message", "Last 3 days of logs from " + android.os.Build.MODEL + " (" + Math.max(1, zip.length() / 1024) + " KB)");
                 h.setFixedLengthStreamingMode(zip.length());
                 try (java.io.OutputStream o = h.getOutputStream()) {
                     java.nio.file.Files.copy(zip.toPath(), o);
@@ -141,14 +141,11 @@ final class Trace {
                 //noinspection ResultOfMethodCallIgnored
                 zip.delete();
                 if (code >= 200 && code < 300) {
-                    for (File f : fs) //noinspection ResultOfMethodCallIgnored
-                        f.delete();
                     Store.put(PENDING, false);
-                    Store.put("trace_starts", 0L);
-                    result = "Troubleshooting log sent";
-                } else result = "Couldn't send the troubleshooting log (" + code + "). Try again in Settings → Troubleshooting";
+                    result = "Logs sent";
+                } else result = "Couldn't send the logs (" + code + "). Try again in Settings → Logs";
             } catch (Exception e) {
-                result = "Couldn't send the troubleshooting log: no connection? Try again in Settings → Troubleshooting";
+                result = "Couldn't send the logs: no connection? Try again in Settings → Logs";
             }
             final String r = result;
             U.ui.post(() -> {
@@ -167,25 +164,28 @@ final class Trace {
         SettingsPanels.open(() -> {
             Context c = Sheets.ctx();
             android.widget.LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Switch on and logging starts straight away. A restart of Car Launcher (or the box) is a good idea so the start-up is "
-                    + "logged too. When the problem has happened, switch it off and the log is sent online, so it can be looked at.", 13, U.SUB, false));
-            b.addView(Sheets.switchRow(0, 0, "Troubleshooting mode", on() ? "Logging now · switch off to send the log" : "Off",
-                    on(), v -> {
-                        if (v) {
-                            arm();
-                            atStart(c); // logging from now on
-                            event(c, "=== Switched on from Settings (no restart yet)");
-                        } else stopAndSend(c);
-                        Sheets.refresh();
-                    }), Widgets.top(10));
-            if (on()) b.addView(Sheets.item("Restart Car Launcher", "Suggested, so the start-up is in the log too", () -> {
-                if (MainActivity.I != null) MainActivity.I.restartApp();
-            }), Widgets.top(6));
+            b.addView(U.text(c, "Car Launcher keeps a log of the last 3 days (what it did, and its own Android messages). "
+                    + "When something goes wrong, tap Send so it can be looked at online.", 13, U.SUB, false));
+            b.addView(Sheets.switchRow(0, 0, "Keep logs", on() ? "On · the last 3 days are kept" : "Off · nothing is logged", on(), v -> {
+                Store.put(KEEP, v);
+                if (v) atStart(c);
+                else {
+                    running = false;
+                    if (logcat != null) logcat.destroy();
+                    logcat = null;
+                }
+                Sheets.refresh();
+            }), Widgets.top(10));
             long sz = size(c);
-            if (sz > 0) b.addView(U.text(c, "Logged so far: " + Math.max(1, sz / 1024) + " KB", 12, U.SUB, false), Widgets.top(6));
-            if (!on() && Store.flag(PENDING, false))
-                b.addView(U.button(c, "Send the log again", true, () -> send(c)), Widgets.top(10));
-            return Sheets.panel("Troubleshooting", b, 560, 330);
+            b.addView(U.text(c, "Kept now: " + Math.max(sz > 0 ? 1 : 0, sz / 1024) + " KB", 12, U.SUB, false), Widgets.top(6));
+            android.widget.LinearLayout btns = U.row(c);
+            btns.addView(U.button(c, Store.flag(PENDING, false) ? "Send again" : "Send the last 3 days", true, () -> send(c)));
+            btns.addView(U.gap(c, 10, 1));
+            btns.addView(U.button(c, "Restart Car Launcher", false, () -> {
+                if (MainActivity.I != null) MainActivity.I.restartApp();
+            }));
+            b.addView(btns, Widgets.top(12));
+            return Sheets.panel("Logs", b, 560, 330);
         });
     }
 }
