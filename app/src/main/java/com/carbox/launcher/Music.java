@@ -220,6 +220,10 @@ final class Music {
         String p = pkg();
         MediaController m = MediaListener.controller;
         if (m == null || (p != null && !p.equals(m.getPackageName()))) m = MediaListener.controllerFor(p); // the chosen app's own session, even if it isn't the "current" one
+        // a session with nothing loaded yet (state 0) ignores play: the logs showed Spotify like that
+        // for the first seconds, so then it's treated as no session (play button / Android's play key)
+        android.media.session.PlaybackState st = m == null ? null : m.getPlaybackState();
+        if (m != null && (st == null || st.getState() == android.media.session.PlaybackState.STATE_NONE)) m = null;
         if (m != null && (p == null || p.equals(m.getPackageName()))) {
             log("Play pressed on " + Apps.label(m.getPackageName()) + "'s session");
             m.getTransportControls().play();
