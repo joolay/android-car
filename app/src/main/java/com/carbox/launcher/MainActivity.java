@@ -537,6 +537,14 @@ public class MainActivity extends Activity {
                 return;
             }
         }
+        // the Now playing tile and the Top Left Widget: what they open grows out of them too
+        for (View t : new View[]{nowPlaying != null ? nowPlaying.view : null, map != null ? map.view : null}) {
+            if (t != null && t.getGlobalVisibleRect(r) && r.contains((int) ev.getRawX(), (int) ev.getRawY())) {
+                touchTile.set(r);
+                touchAt = android.os.SystemClock.elapsedRealtime();
+                return;
+            }
+        }
     }
 
     // ---- rail bar pop-up cards pop out of the icon that opened them

@@ -244,6 +244,10 @@ final class NowPlaying {
     }
 
     private void swapArt() {
+        if (folder != null && folder.view.getVisibility() == View.VISIBLE) { // the music folder: next page of apps
+            folder.page(((SwipeBox) view).dir);
+            return;
+        }
         Store.put("np_show", showIcon() ? "art" : "icon");
         art.setAlpha(0f);
         update();

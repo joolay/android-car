@@ -71,6 +71,11 @@ final class MusicFolder {
         // no title: the icons fill the tile
         grid = U.col(c);
         box.addView(grid, new LinearLayout.LayoutParams(U.MATCH, 0, 1));
+        dots = U.row(c); // which page (swipe the tile for the next 4 apps)
+        dots.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams dl = U.lp(U.MATCH, U.u(10));
+        dl.topMargin = U.u(2);
+        box.addView(dots, dl);
         view.addView(box, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
 
         // maximise, overlapping the top-right corner (only with more than 4 apps)
@@ -86,13 +91,50 @@ final class MusicFolder {
         max = m;
     }
 
+    private final LinearLayout dots;
+    private int page;
+
+    /** Pages of 4: the apps, then + (on the last page, or a page of its own when that one is full). */
+    private int pages(int n) {
+        return n / 4 + 1;
+    }
+
+    /** Swipe the tile: the next (dir 1) or previous (dir -1) page of apps slides in. */
+    void page(int dir) {
+        int n = pages(apps(c).size());
+        if (n < 2) return;
+        page = ((page + dir) % n + n) % n;
+        float w = grid.getWidth();
+        if (U.ms(1) == 0 || w == 0) {
+            render();
+            return;
+        }
+        grid.animate().translationX(-dir * w).alpha(0f).setDuration(U.ms(150)).withEndAction(() -> {
+            render();
+            grid.setTranslationX(dir * w);
+            grid.animate().translationX(0).alpha(1f).setDuration(U.ms(200))
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+        }).start();
+    }
+
     void render() {
         grid.removeAllViews();
         List<String> l = apps(c);
         max.setVisibility(l.size() > 4 ? View.VISIBLE : View.GONE);
+        int n = pages(l.size());
+        if (page >= n) page = n - 1;
         List<View> cells = new ArrayList<>();
-        for (int i = 0; i < Math.min(4, l.size()); i++) cells.add(cell(c, l.get(i), false));
-        if (cells.size() < 4) cells.add(plus(c)); // room left: + adds an app
+        for (int i = page * 4; i < Math.min(page * 4 + 4, l.size()); i++) cells.add(cell(c, l.get(i), false));
+        if (cells.size() < 4 && page == n - 1) cells.add(plus(c)); // room left on the last page: + adds an app
+        dots.removeAllViews();
+        if (n > 1) for (int i = 0; i < n; i++) {
+            View d = new View(c);
+            d.setBackground(U.oval(i == page ? U.ACCENT : U.LINE));
+            LinearLayout.LayoutParams p = U.lpu(6, 6);
+            p.setMargins(U.u(3), 0, U.u(3), 0);
+            dots.addView(d, p);
+        }
+        dots.setVisibility(n > 1 ? View.VISIBLE : View.GONE);
         for (int r = 0; r < 2; r++) {
             LinearLayout row = U.row(c);
             for (int k = 0; k < 2; k++) {

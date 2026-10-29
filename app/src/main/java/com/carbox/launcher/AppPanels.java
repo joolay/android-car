@@ -164,12 +164,9 @@ final class AppPanels {
         head.addView(x, U.lpu(24, 24));
         card.addView(head);
 
-        android.widget.ScrollView sv = new android.widget.ScrollView(c);
-        sv.setVerticalScrollBarEnabled(false);
-        sv.addView(results);
-        LinearLayout.LayoutParams sl = U.weight(1, false);
+        LinearLayout.LayoutParams sl = U.weight(1, false); // pages of apps (slide sideways), dots underneath
         sl.topMargin = U.u(12);
-        card.addView(sv, sl);
+        card.addView(results, sl);
         fillApps(c, results);
 
         if (selecting) {
@@ -241,7 +238,11 @@ final class AppPanels {
             cells.add(cell);
         }
         if (cells.isEmpty()) results.addView(U.text(c, "No apps match", 14, U.SUB, false));
-        else results.addView(grid(c, cells, ZOOM_COLS[zoom()], 6)); // zoom sets how many across
+        else { // zoom sets how many across; rows fit the window (fewer when the Select bar shows)
+            float icon = ZOOM_ICON[zoom()], avail = selecting ? 300 : 346;
+            int rows = Math.max(1, (int) (avail / (icon + 46)));
+            results.addView(new Pager(c, cells, ZOOM_COLS[zoom()], rows, 6), U.lp(U.MATCH, U.WRAP));
+        }
     }
 
     // zoom levels for All apps: icons across and icon size
@@ -595,7 +596,7 @@ final class AppPanels {
             }
             LinearLayout b = U.col(c);
             if (cells.isEmpty()) b.addView(U.text(c, "This folder is empty.", 14, U.SUB, false));
-            else b.addView(grid(c, cells, 6, 6));
+            else b.addView(new Pager(c, cells, 6, 2, 6), U.lp(U.MATCH, U.WRAP)); // pages of 12, slide sideways
             LinearLayout btns = U.row(c);
             btns.addView(U.button(c, "Edit apps", false, () -> editFolder(index)));
             btns.addView(U.gap(c, 10, 1));
