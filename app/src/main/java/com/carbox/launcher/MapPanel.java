@@ -377,6 +377,8 @@ final class MapPanel {
         if (on && bigHolder == null) {
             bigHolder = new FrameLayout(a);
             MapPanel.clip(bigHolder, 16);
+            // a thin card-coloured rim, like the dark cards beside it, so the bright map doesn't look taller than them
+            bigHolder.setForeground(U.outline(0, U.CARD, 2.5f, 16));
             view.removeView(mapLayer);
             bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
             mapLayer.setVisibility(View.VISIBLE);
