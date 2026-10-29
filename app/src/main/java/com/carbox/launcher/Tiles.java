@@ -172,7 +172,7 @@ final class Tiles {
                 String id = o.optString("id");
                 boolean known = false;
                 for (String[] w : Widgets.CATALOG) if (w[0].equals(id)) known = true;
-                if (!known || !widgets.add(id)) { // gone, empty ("none") or a duplicate
+                if (!known || (!widgets.add(id) && !Widgets.multiple(id))) { // gone, empty ("none") or a duplicate
                     changed = true;
                     continue;
                 }

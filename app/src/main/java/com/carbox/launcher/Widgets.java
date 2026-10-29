@@ -73,6 +73,11 @@ final class Widgets {
         }
     }
 
+    /** Widgets that can be on the home screen more than once (each set up separately). */
+    static boolean multiple(String id) {
+        return "contact".equals(id);
+    }
+
     static boolean configurable(String id) {
         return "goto".equals(id) || "quickdial".equals(id) || "contact".equals(id) || "ha".equals(id) || "rest".equals(id) || "safety".equals(id) || "logbook".equals(id);
     }

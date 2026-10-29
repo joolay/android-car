@@ -811,12 +811,14 @@ final class AppPanels {
         U.pad(cell, 5, 5, 5, 6);
         cell.setBackground(sel ? U.outline(0xFF15233A, U.ACCENT, 3, 16) : U.round(U.CARD2, 16));
         cell.addView(Widgets.preview(c, Tiles.widget(w[0])), new LinearLayout.LayoutParams(U.MATCH, 0, 1));
-        TextView nm = U.line(c, w[1], 12, sel ? U.ACCENT_SOFT : U.TEXT, true);
+        Integer cnt = on.get(w[0]);
+        String label = Widgets.multiple(w[0]) && manage ? w[1] + (cnt != null ? " (" + cnt + ")" : "") + " · tap to add" : w[1];
+        TextView nm = U.line(c, label, 12, sel ? U.ACCENT_SOFT : U.TEXT, true);
         nm.setGravity(Gravity.CENTER);
         cell.addView(nm, top(5));
         cell.setOnClickListener(v -> {
-            if (manage) pick(index, w[0], on.containsKey(w[0]));
-            else if (on.containsKey(w[0]) && !w[0].equals(current)) // each widget only once
+            if (manage) pick(index, w[0], on.containsKey(w[0]) && !Widgets.multiple(w[0])); // a contact adds another
+            else if (on.containsKey(w[0]) && !w[0].equals(current) && !Widgets.multiple(w[0])) // each widget only once (contacts can repeat)
                 android.widget.Toast.makeText(c, Widgets.name(w[0]) + " is already on your home screen", android.widget.Toast.LENGTH_SHORT).show();
             else pick(index, w[0], false);
         });
