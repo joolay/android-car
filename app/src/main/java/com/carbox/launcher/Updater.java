@@ -21,6 +21,17 @@ import java.net.URL;
 final class Updater {
     private static final String REPO = "joolay/CarLauncher";
     static final String KEY = "upd_key", AUTO = "upd_auto";
+    /**
+     * TEMPORARY, the owner's own box only: read-only key for this private project, built in so nothing
+     * needs typing. REMOVE before the app goes on the Play Store (and cancel this key on GitHub).
+     */
+    private static final String BUILT_IN_KEY = "REMOVED";
+
+    /** The key typed in Settings, else the built-in one. */
+    static String key() {
+        String k = Store.str(KEY, "").trim();
+        return k.isEmpty() ? BUILT_IN_KEY : k;
+    }
     private static final String ACTION = "com.carbox.launcher.INSTALL_RESULT";
     private static boolean busy, receiver;
     private static String status = "";
@@ -65,7 +76,7 @@ final class Updater {
     /** Look for a newer release; download and install it if there is one. */
     static void check(Context c, boolean byHand) {
         final Context app = c.getApplicationContext();
-        String key = Store.str(KEY, "").trim();
+        String key = key();
         if (key.isEmpty()) {
             say(app, "Updates need your GitHub key: Settings → System → Updates", byHand);
             return;

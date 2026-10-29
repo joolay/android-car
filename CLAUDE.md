@@ -59,6 +59,11 @@ Ticker at the top of the middle column (hidden: map/tiles take its space, tiles 
   `logs/<id>-logs-*.zip` on the crashes branch). To read: run crashes.yml, fetch the branch,
   `git show origin/crashes:logs/<file> > x.zip`, unzip.
 
+## Updates
+- `Updater` checks GitHub releases (start + 6 h), downloads the APK, installs when parked (PackageInstaller,
+  Android confirms). **Temporary built-in read-only key `Updater.BUILT_IN_KEY`** (owner's box only): when the
+  owner says he's publishing to the Play Store, remove it from the code and remind him to delete the token on GitHub.
+
 ## With ADB on the box
 - Crashes: `adb logcat -b crash` or Settings → About → crash reports.
 - BT Phone screens for `BtAuto`: `adb shell uiautomator dump /sdcard/x.xml && adb pull /sdcard/x.xml`

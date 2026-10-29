@@ -206,7 +206,7 @@ final class SettingsPanels {
                             Sheets.close();
                             if (MainActivity.I != null) MainActivity.I.restartBox();
                         }},
-                        {R.drawable.ic_bolt, GREY, "Updates", Store.str(Updater.KEY, "").isEmpty() ? "Needs your GitHub key" : Store.flag(Updater.AUTO, true) ? "Automatic" : "By hand", (Runnable) Updater::settings},
+                        {R.drawable.ic_bolt, GREY, "Updates", Updater.key().isEmpty() ? "Needs your GitHub key" : Store.flag(Updater.AUTO, true) ? "Automatic" : "By hand", (Runnable) Updater::settings},
                         {R.drawable.ic_bolt, GREY, "Logs", Trace.on() ? "Last 3 days kept · tap to send" : "Off", (Runnable) Trace::settings},
                         {R.drawable.ic_shield, GREY, "About", About.version(c), (Runnable) About::show}}};
 
