@@ -435,8 +435,8 @@ public class MainActivity extends Activity {
         SalahCard.hide();
         SpeedCard.hide();
         Alerts.hideNotice();
-        if (drawerOpen && !tiles.editing() && !drawerLocked()) drawer(false); // the map comes back (unless locked open)
-        if (peeking) drawer(false);
+        if (this.drawerOpen && !tiles.editing() && !drawerLocked()) drawer(false); // the map comes back (unless locked open)
+        if (this.peeking) drawer(false);
     };
 
     void resetIdle() {
