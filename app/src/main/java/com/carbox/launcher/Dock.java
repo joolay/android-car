@@ -14,6 +14,15 @@ import java.util.List;
 final class Dock {
     private final Activity a;
     final LinearLayout view;
+
+    /** Without the news ticker the dock gets its space, so everything in it is a size up. */
+    static float scale() {
+        return Store.flag("ticker_on", true) ? 1f : 1.3f;
+    }
+
+    private static float s(float du) {
+        return du * scale();
+    }
     /** Icons in the dock before All apps: 5 to 7 (the dialler counts as one when shown). */
     static int icons() {
         return Math.max(5, Math.min(7, Store.num("dock_icons", 6)));
@@ -64,14 +73,14 @@ final class Dock {
     private void addDialler() {
         FrameLayout dial = new FrameLayout(a);
         dial.setBackground(U.oval(U.GREEN));
-        dial.addView(U.icon(a, R.drawable.ic_call, U.TEXT), U.flpu(22, 22, Gravity.CENTER));
+        dial.addView(U.icon(a, R.drawable.ic_call, U.TEXT), U.flpu(s(22), s(22), Gravity.CENTER));
         dial.setOnClickListener(v -> { // press again to close
             if (PhoneScreen.isShown()) PhoneScreen.hide();
             else PhoneScreen.show(null);
         });
         dial.setContentDescription("Phone");
         U.press(dial);
-        view.addView(dial, U.lpu(42, 42));
+        view.addView(dial, U.lpu(s(42), s(42)));
         spacer();
         divider(); // separates the dialler from the apps
         spacer();
@@ -93,12 +102,12 @@ final class Dock {
             for (int k = 0; k < 2; k++) {
                 View sq = new View(a);
                 sq.setBackground(U.round(colors[r][k], 3.5f));
-                LinearLayout.LayoutParams sl = U.lpu(10, 10);
-                if (k == 1) sl.leftMargin = U.u(3);
+                LinearLayout.LayoutParams sl = U.lpu(s(10), s(10));
+                if (k == 1) sl.leftMargin = U.u(s(3));
                 row.addView(sq, sl);
             }
             LinearLayout.LayoutParams rl = U.lp(U.WRAP, U.WRAP);
-            if (r == 1) rl.topMargin = U.u(3);
+            if (r == 1) rl.topMargin = U.u(s(3));
             mosaic.addView(row, rl);
         }
         all.addView(mosaic, new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.CENTER));
@@ -112,8 +121,8 @@ final class Dock {
             return true;
         });
         U.press(all);
-        LinearLayout.LayoutParams lp = U.lpu(40, 40);
-        lp.leftMargin = U.u(14);
+        LinearLayout.LayoutParams lp = U.lpu(s(40), s(40));
+        lp.leftMargin = U.u(s(14));
         view.addView(all, lp);
     }
 
@@ -121,12 +130,12 @@ final class Dock {
         FrameLayout f = new FrameLayout(a);
         ImageView iv = new ImageView(a);
         iv.setImageDrawable(ap.icon);
-        f.addView(iv, U.flpu(40, 40, Gravity.CENTER));
+        f.addView(iv, U.flpu(s(40), s(40), Gravity.CENTER));
         if (pin) {
             FrameLayout badge = new FrameLayout(a);
             badge.setBackground(U.oval(U.BG));
-            badge.addView(U.icon(a, R.drawable.ic_pin, U.ACCENT), U.flpu(11, 11, Gravity.CENTER));
-            FrameLayout.LayoutParams bl = U.flpu(16, 16, Gravity.TOP | Gravity.END);
+            badge.addView(U.icon(a, R.drawable.ic_pin, U.ACCENT), U.flpu(s(11), s(11), Gravity.CENTER));
+            FrameLayout.LayoutParams bl = U.flpu(s(16), s(16), Gravity.TOP | Gravity.END);
             f.addView(badge, bl);
         }
         f.setOnClickListener(v -> {
@@ -139,13 +148,13 @@ final class Dock {
         });
         f.setContentDescription(ap.label);
         U.press(f);
-        view.addView(f, U.lpu(48, 48));
+        view.addView(f, U.lpu(s(48), s(48)));
     }
 
     private void divider() {
         View d = new View(a);
         d.setBackgroundColor(U.LINE);
-        LinearLayout.LayoutParams lp = U.lpu(1, 30);
+        LinearLayout.LayoutParams lp = U.lpu(s(1), s(30));
         view.addView(d, lp);
     }
 

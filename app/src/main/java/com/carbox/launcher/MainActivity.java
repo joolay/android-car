@@ -131,14 +131,21 @@ public class MainActivity extends Activity {
         tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         LinearLayout tickerRow = U.row(this); // ticker, then "Tiles" + lock while the drawer is open
         tickerRow.addView(tickerSlot, new LinearLayout.LayoutParams(0, U.MATCH, 1));
-        buildChip(tickerRow);
+        boolean tickerOn = Store.flag("ticker_on", true);
+        if (tickerOn) buildChip(tickerRow);
         LinearLayout.LayoutParams tl = U.lpu(U.MATCH, 30);
         tl.topMargin = U.u(8);
         middle.addView(tickerRow, tl);
+        this.tickerRow = tickerRow;
+        tickerRow.setVisibility(tickerOn ? View.VISIBLE : View.GONE); // off: the dock takes its place (still shown while editing tiles)
         dock = new Dock(this);
-        LinearLayout.LayoutParams dl = U.lpu(U.MATCH, 56);
+        LinearLayout dockRow = U.row(this);
+        dockRow.setGravity(Gravity.CENTER_VERTICAL);
+        dockRow.addView(dock.view, new LinearLayout.LayoutParams(0, U.MATCH, 1));
+        if (!tickerOn) buildChip(dockRow); // "Tiles" + lock at the end of the dock instead
+        LinearLayout.LayoutParams dl = U.lpu(U.MATCH, tickerOn ? 56 : 56 + 38);
         dl.topMargin = U.u(8);
-        middle.addView(dock.view, dl);
+        middle.addView(dockRow, dl);
         LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(0, U.MATCH, 1);
         ml.leftMargin = U.u(8);
         ml.rightMargin = U.u(8);
@@ -156,7 +163,10 @@ public class MainActivity extends Activity {
     }
 
     /** Swap the ticker for the edit bar while tiles are being rearranged. */
+    private LinearLayout tickerRow;
+
     void editMode(boolean on) {
+        if (tickerRow != null && !Store.flag("ticker_on", true)) tickerRow.setVisibility(on ? View.VISIBLE : View.GONE);
         tickerSlot.removeAllViews();
         if (on) tickerSlot.addView(Ticker.editBar(this, () -> tiles.setEditing(false)), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         else tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));

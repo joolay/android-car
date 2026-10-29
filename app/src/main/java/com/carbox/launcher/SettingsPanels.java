@@ -933,6 +933,10 @@ final class SettingsPanels {
         open(() -> {
             Context c = c();
             LinearLayout b = U.col(c);
+            b.addView(Sheets.switchRow(0, 0, "Show the news ticker", "Off: the dock gets its space and bigger icons (restarts the home screen)", Store.flag("ticker_on", true), on -> {
+                Store.put("ticker_on", on);
+                if (MainActivity.I != null) MainActivity.I.recreate();
+            }));
             String m = Store.str(Store.TICKER_MODE, "alt");
             b.addView(Sheets.row("Show", segStr(c, Store.TICKER_MODE, "alt", "Alternate", m), segStr(c, Store.TICKER_MODE, "news", "News only", m),
                     segStr(c, Store.TICKER_MODE, "traffic", "Traffic only", m)));
