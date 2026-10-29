@@ -933,6 +933,8 @@ final class SettingsPanels {
                 Store.put("ticker_on", on);
                 if (MainActivity.I != null) MainActivity.I.recreate();
             }));
+            String bp = Ticker.browser();
+            b.addView(Sheets.item("Open stories in", bp != null ? Apps.label(bp) : "Android's default browser", Ticker::browserPicker), top(8));
             String m = Store.str(Store.TICKER_MODE, "alt");
             b.addView(Sheets.row("Show", segStr(c, Store.TICKER_MODE, "alt", "Alternate", m), segStr(c, Store.TICKER_MODE, "news", "News only", m),
                     segStr(c, Store.TICKER_MODE, "traffic", "Traffic only", m)));

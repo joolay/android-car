@@ -456,15 +456,26 @@ final class Ticker {
             b.addView(body, Widgets.top(14));
             if (it.link != null) Net.get(it.link, null, (html, code) -> {
                 String text = html == null ? null : article(html);
-                body.setText(text != null ? text : "The full story opens in Chrome: tap the icon at the top.");
+                String bn = browser() != null ? Apps.label(browser()) : "the browser";
+                body.setText(text != null ? text : "The full story opens in " + bn + ": tap its icon at the top.");
                 body.setTextColor(text != null ? U.TEXT2 : U.SUB);
             });
-            View open = null; // open in Chrome: an icon in the title bar
+            View open = null; // open in the chosen browser (Chrome by default): its icon in the title bar
             if (it.link != null) {
-                open = U.icon(c, R.drawable.ic_open_new, U.ACCENT_SOFT);
-                U.pad(open, 3, 3, 3, 3);
-                open.setContentDescription("Open in Chrome");
+                String bp = browser();
+                android.graphics.drawable.Drawable bi = bp != null ? Apps.iconOf(bp) : null;
+                if (bi != null) {
+                    android.widget.ImageView iv = new android.widget.ImageView(c);
+                    iv.setImageDrawable(bi);
+                    open = iv;
+                } else open = U.icon(c, R.drawable.ic_open_new, U.ACCENT_SOFT);
+                U.pad(open, 2, 2, 2, 2);
+                open.setContentDescription("Open in " + (bp != null ? Apps.label(bp) : "the browser"));
                 open.setOnClickListener(v -> openLink(c, it.link));
+                open.setOnLongClickListener(v -> { // hold: choose the browser
+                    browserPicker();
+                    return true;
+                });
                 U.press(open);
             }
             return Sheets.panel(null, it.source != null ? it.source : "Story", b, 660, 440, open);
@@ -484,10 +495,47 @@ final class Ticker {
         return out.length() >= 300 ? out.toString() : null;
     }
 
+    /** Browsers on the box (apps that open web links). */
+    static List<Apps.App> browsers(Context c) {
+        List<Apps.App> out = new ArrayList<>();
+        android.content.Intent v = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse("https://example.com"));
+        for (android.content.pm.ResolveInfo ri : c.getPackageManager().queryIntentActivities(v, android.content.pm.PackageManager.MATCH_ALL)) {
+            Apps.App a = Apps.byPkg(ri.activityInfo.packageName);
+            if (a != null && !out.contains(a)) out.add(a);
+        }
+        return out;
+    }
+
+    /** The browser stories open in: the one chosen in News settings, else Chrome if it's installed (null = Android's default). */
+    static String browser() {
+        String p = Store.str("browser_pkg", null);
+        if (p != null && Apps.installed(p)) return p;
+        return Apps.installed("com.android.chrome") ? "com.android.chrome" : null;
+    }
+
+    /** Choose the browser for stories. */
+    static void browserPicker() {
+        Sheets.push(() -> {
+            Context c = Sheets.ctx();
+            LinearLayout b = U.col(c);
+            String cur = browser();
+            for (Apps.App a : browsers(c))
+                b.addView(SettingsPanels.appRow(c, a, a.pkg.equals(cur), () -> {
+                    Store.put("browser_pkg", a.pkg);
+                    Sheets.back();
+                    Sheets.refresh();
+                }));
+            if (b.getChildCount() == 0) b.addView(U.text(c, "No browser is installed on this box.", 14, U.SUB, false));
+            return Sheets.panel("Open stories in", b, 520, 400);
+        });
+    }
+
     static void openLink(Context c, String url) {
         android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+        String bp = browser();
         try {
-            c.startActivity(new android.content.Intent(i).setPackage("com.android.chrome"));
+            if (bp == null) throw new Exception("default");
+            c.startActivity(new android.content.Intent(i).setPackage(bp));
         } catch (Exception e) {
             try {
                 c.startActivity(i);
