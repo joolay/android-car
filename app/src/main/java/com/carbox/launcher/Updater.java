@@ -39,7 +39,7 @@ final class Updater {
     private Updater() {
     }
 
-    /** Started from the home screen: first check a minute in, then every 6 hours. */
+    /** Started from the home screen: first check 20 s in (after the splash), then every 6 hours. */
     static void start(Context c) {
         final Context app = c.getApplicationContext();
         U.ui.postDelayed(new Runnable() {
@@ -48,7 +48,7 @@ final class Updater {
                 if (Store.flag(AUTO, true)) check(app, false);
                 U.ui.postDelayed(this, 6 * 3600 * 1000L);
             }
-        }, 60000);
+        }, 20000);
     }
 
     /** "0.27" → {0, 27}. */
@@ -139,10 +139,10 @@ final class Updater {
                     byte[] buf = new byte[65536];
                     for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
                 }
-                status = tag + " downloaded · installs when the car is parked";
+                status = tag + " downloaded · tap Install";
                 Trace.event(app, "Update " + tag + " downloaded");
                 final String t = tag;
-                U.ui.post(() -> installWhenParked(app, apk, t));
+                U.ui.post(() -> ask(app, apk, t));
             } catch (Exception e) {
                 status = "Couldn't check: no connection?";
                 say(app, status, byHand);
@@ -164,13 +164,28 @@ final class Updater {
         U.ui.post(Sheets::refresh);
     }
 
-    /** Never in the middle of a drive: waits until the car has stopped. */
-    private static void installWhenParked(Context c, File apk, String tag) {
-        if (Loc.moving()) {
-            U.ui.postDelayed(() -> installWhenParked(c, apk, tag), 30000);
+    /** Asks on the home screen: Install now or Later (never while driving, on a call or over another page). */
+    private static void ask(Context c, File apk, String tag) {
+        MainActivity a = MainActivity.I;
+        if (a == null || MainActivity.frontAt == 0 || Loc.moving() || Sheets.open() || CallState.state != CallState.NONE) {
+            U.ui.postDelayed(() -> ask(c, apk, tag), 30000);
             return;
         }
-        install(c, apk, tag);
+        Sheets.show(() -> {
+            Context x = Sheets.ctx();
+            android.widget.LinearLayout b = U.col(x);
+            b.addView(U.text(x, "Car Launcher " + tag.replace("v", "").replace("-alpha", "") + " is ready. Install it now?", 17, U.TEXT, true));
+            b.addView(U.text(x, "It takes a few seconds; Android asks you to tap Update, then Car Launcher starts again.", 15, U.TEXT2, false), Widgets.top(8));
+            android.widget.LinearLayout btns = U.row(x);
+            btns.addView(U.button(x, "Install now", true, () -> {
+                Sheets.close();
+                install(c, apk, tag);
+            }));
+            btns.addView(U.gap(x, 10, 1));
+            btns.addView(U.button(x, "Later", false, Sheets::close));
+            b.addView(btns, Widgets.top(18));
+            return Sheets.panel("Update available", b, 560, 300);
+        });
     }
 
     static void install(Context c, File apk, String tag) {
@@ -246,7 +261,7 @@ final class Updater {
                 k[0] = t;
                 Store.put(KEY, t.trim());
             }), Widgets.top(10));
-            b.addView(Sheets.switchRow(0, 0, "Check automatically", "A minute after start, then every 6 hours", Store.flag(AUTO, true),
+            b.addView(Sheets.switchRow(0, 0, "Check automatically", "At every start, then every 6 hours; asks before installing", Store.flag(AUTO, true),
                     v -> Store.put(AUTO, v)), Widgets.top(8));
             long at = Store.lng("upd_checked", 0);
             String st = !status.isEmpty() ? status : at > 0 ? "Last checked " + Ticker.ago(at) : "Not checked yet";
