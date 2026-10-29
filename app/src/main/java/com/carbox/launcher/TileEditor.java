@@ -217,7 +217,7 @@ final class TileEditor {
             performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
             View v = getChildAt(dragIndex);
             v.setTranslationZ(U.uf(12));
-            v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(100).start();
+            v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(U.ms(100)).start();
         }
 
         /** Move the lifted card with the finger and slide the others aside to show where it'll land. */
@@ -238,7 +238,7 @@ final class TileEditor {
                 if (dragIndex < to && i > dragIndex && i <= to) pos = i - 1;
                 else if (dragIndex > to && i >= to && i < dragIndex) pos = i + 1;
                 View w = getChildAt(i);
-                w.animate().translationX((pos / 2 - i / 2) * step).translationY((pos % 2 - i % 2) * rowStep).setDuration(150).start();
+                w.animate().translationX((pos / 2 - i / 2) * step).translationY((pos % 2 - i % 2) * rowStep).setDuration(U.ms(150)).start();
             }
         }
 

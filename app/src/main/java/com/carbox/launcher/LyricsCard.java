@@ -90,7 +90,7 @@ final class LyricsCard {
             s0.setScaleX(t[2]);
             s0.setScaleY(t[3]);
             s0.setAlpha(0.6f);
-            s0.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).alpha(1f).setDuration(340)
+            s0.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).alpha(1f).setDuration(U.ms(340))
                     .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
         });
         forKey = null;
@@ -114,7 +114,7 @@ final class LyricsCard {
         // shrinks back into the Now playing tile
         s0.setPivotX(0);
         s0.setPivotY(0);
-        s0.animate().translationX(t[0]).translationY(t[1]).scaleX(t[2]).scaleY(t[3]).alpha(0.2f).setDuration(280)
+        s0.animate().translationX(t[0]).translationY(t[1]).scaleX(t[2]).scaleY(t[3]).alpha(0.2f).setDuration(U.ms(280))
                 .setInterpolator(new android.view.animation.AccelerateInterpolator(1.4f)).withEndAction(gone).start();
     }
 

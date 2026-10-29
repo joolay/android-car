@@ -765,7 +765,7 @@ final class Tiles {
                 // raise it above the others without changing child order (layout is by index)
                 v.setTranslationZ(U.uf(12));
                 v.setAlpha(1f);
-                v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(100).start();
+                v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(U.ms(100)).start();
                 v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
             }
             getParent().requestDisallowInterceptTouchEvent(true);

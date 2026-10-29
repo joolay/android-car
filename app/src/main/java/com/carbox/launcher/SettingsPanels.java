@@ -69,7 +69,7 @@ final class SettingsPanels {
             if (Store.SPLASH_ON.equals(key) || Alerts.GLOBAL.equals(key)) Sheets.refresh();
         }));
         else r.addView(U.text(c, "›", 15, U.MUTED, false));
-        r.setOnClickListener(v -> open.run()); // tap the name for the full page
+        if (open != null) r.setOnClickListener(v -> open.run()); // tap the name for the full page
         U.press(r);
         return r;
     }
@@ -121,7 +121,8 @@ final class SettingsPanels {
                         {R.drawable.ic_apps, PURPLE, "Dock", Dock.icons() + " icons" + (Dock.dialler() ? " · dialler" : ""), (Runnable) SettingsPanels::dock},
                         {R.drawable.ic_hide, PURPLE, "Hidden from All apps", Apps.hidden().isEmpty() ? "None" : Apps.hidden().size() + " hidden", (Runnable) () -> hiddenApps(false)},
                         {R.drawable.ic_hide, PURPLE, "Hidden from Dock", Apps.dockHidden().isEmpty() ? "None" : Apps.dockHidden().size() + " hidden", (Runnable) () -> hiddenApps(true)},
-                        {R.drawable.ic_sun, PURPLE, "Splash screen", null, (Runnable) SettingsPanels::splash, Store.SPLASH_ON, false}},
+                        {R.drawable.ic_sun, PURPLE, "Splash screen", null, (Runnable) SettingsPanels::splash, Store.SPLASH_ON, false},
+                        {R.drawable.ic_bolt, PURPLE, "Animations", null, null, "anim_on", true}},
                 {{"Driving"},
                         {R.drawable.ic_car, GREEN, "Driving timer", U.dur(Rest.limitMin() * 60000L), (Runnable) Rest::setup, Rest.ON, true},
                         {R.drawable.ic_bell, GREEN, "News and traffic", tickerLabel(), (Runnable) SettingsPanels::news},

@@ -181,7 +181,7 @@ final class NowPlaying {
         Store.put("np_show", showIcon() ? "art" : "icon");
         art.setAlpha(0f);
         update();
-        art.animate().alpha(1f).setDuration(220).start();
+        art.animate().alpha(1f).setDuration(U.ms(220)).start();
     }
 
     private void openMusicApp() {
@@ -337,6 +337,6 @@ final class NowPlaying {
         lyricLines[1].setText(idx >= 0 ? (lyricText.get(idx).isEmpty() ? "♪" : lyricText.get(idx)) : "♪");
         lyricLines[2].setText(idx + 1 < lyricText.size() ? lyricText.get(idx + 1) : "");
         lyricLines[1].setAlpha(0f);
-        lyricLines[1].animate().alpha(1f).setDuration(250).start();
+        lyricLines[1].animate().alpha(1f).setDuration(U.ms(250)).start();
     }
 }

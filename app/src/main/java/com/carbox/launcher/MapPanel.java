@@ -340,7 +340,7 @@ final class MapPanel {
         showMini(true);
         if (mini != null) {
             mini.setAlpha(0f);
-            mini.animate().alpha(1f).setDuration(200).start();
+            mini.animate().alpha(1f).setDuration(U.ms(200)).start();
         }
     }
 
@@ -568,7 +568,7 @@ final class MapPanel {
         recentre.setVisibility(following ? View.GONE : View.VISIBLE);
         // compass needle points north on screen
         boolean hu = headingUp() && following && !Float.isNaN(Loc.bearing);
-        compass.animate().rotation(hu ? -Loc.bearing : 0).setDuration(600).start();
+        compass.animate().rotation(hu ? -Loc.bearing : 0).setDuration(U.ms(600)).start();
         View tb = bigHolder.findViewWithTag("traffic");
         if (tb != null) tb.setBackground(Store.flag("map_traffic", false) ? U.oval(U.ACCENT) : U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 19));
     }

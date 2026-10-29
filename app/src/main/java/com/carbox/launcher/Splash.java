@@ -114,7 +114,7 @@ final class Splash {
         ViewGroup root = a.findViewById(android.R.id.content);
         root.addView(layer, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         layer.setAlpha(0f);
-        layer.animate().alpha(1f).setDuration(300).start();
+        layer.animate().alpha(1f).setDuration(U.ms(300)).start();
         shown = layer;
         int secs = Store.num(Store.SPLASH_SECS, 10);
         startedAt = SystemClock.elapsedRealtime();
@@ -155,7 +155,7 @@ final class Splash {
         U.ui.removeCallbacks(countdown);
         final Runnable after = afterClose;
         afterClose = null;
-        s.animate().alpha(0f).setDuration(250).withEndAction(() -> {
+        s.animate().alpha(0f).setDuration(U.ms(250)).withEndAction(() -> {
             if (s.getParent() != null) ((ViewGroup) s.getParent()).removeView(s);
             if (after != null) after.run();
         }).start();

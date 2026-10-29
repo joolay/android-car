@@ -201,7 +201,7 @@ public class BackButtonService extends AccessibilityService {
         button.animate().cancel();
         if (show) {
             button.setAlpha(button.getAlpha() < 0.05f ? 0f : button.getAlpha());
-            button.animate().alpha(1f).setDuration(150).start();
+            button.animate().alpha(1f).setDuration(U.ms(150)).start();
         } else button.setAlpha(0f);
     }
 
@@ -352,7 +352,7 @@ public class BackButtonService extends AccessibilityService {
         try {
             wm.addView(menu, mlp);
             menu.setAlpha(0f);
-            menu.animate().alpha(1f).setDuration(120).start();
+            menu.animate().alpha(1f).setDuration(U.ms(120)).start();
         } catch (Exception e) {
             menu = null;
         }
@@ -485,7 +485,7 @@ public class BackButtonService extends AccessibilityService {
         Store.put("fb_side", left ? "left" : "right");
         styleTab(left);
         android.animation.ValueAnimator a = android.animation.ValueAnimator.ofInt(lp.x, left ? 0 : sw - bw);
-        a.setDuration(220);
+        a.setDuration(U.ms(220));
         a.setInterpolator(new android.view.animation.OvershootInterpolator(1.4f));
         a.addUpdateListener(v -> {
             lp.x = (int) v.getAnimatedValue();

@@ -530,7 +530,7 @@ public class MainActivity extends Activity {
             v.setScaleX(src.width() / (float) v.getWidth());
             v.setScaleY(src.height() / (float) v.getHeight());
             v.setAlpha(0.7f);
-            v.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).alpha(1f).setDuration(320)
+            v.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).alpha(1f).setDuration(U.ms(320))
                     .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
         });
     }
@@ -614,8 +614,8 @@ public class MainActivity extends Activity {
             tilesChip.setVisibility(View.VISIBLE);
             tilesChip.setAlpha(0f);
             tilesChip.setTranslationX(U.u(40));
-            tilesChip.animate().alpha(1f).translationX(0).setDuration(300).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
-        } else tilesChip.animate().alpha(0f).translationX(U.u(40)).setDuration(220).withEndAction(() -> tilesChip.setVisibility(View.GONE)).start();
+            tilesChip.animate().alpha(1f).translationX(0).setDuration(U.ms(300)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+        } else tilesChip.animate().alpha(0f).translationX(U.u(40)).setDuration(U.ms(220)).withEndAction(() -> tilesChip.setVisibility(View.GONE)).start();
     }
 
     // ---- an alert's tile shown over the map in the first spot, with a highlight border
@@ -660,7 +660,7 @@ public class MainActivity extends Activity {
         alertTile.setScaleX(0.85f);
         alertTile.setScaleY(0.85f);
         alertTile.setAlpha(0f);
-        alertTile.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(260).setInterpolator(new android.view.animation.OvershootInterpolator(1.6f)).start();
+        alertTile.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(U.ms(260)).setInterpolator(new android.view.animation.OvershootInterpolator(1.6f)).start();
         U.ui.post(alertTick);
     }
 
@@ -670,7 +670,7 @@ public class MainActivity extends Activity {
         if (alertTile != null) {
             final View t = alertTile;
             alertTile = null;
-            t.animate().alpha(0f).scaleX(0.9f).scaleY(0.9f).setDuration(200).withEndAction(() -> {
+            t.animate().alpha(0f).scaleX(0.9f).scaleY(0.9f).setDuration(U.ms(200)).withEndAction(() -> {
                 if (t.getParent() != null) ((android.view.ViewGroup) t.getParent()).removeView(t);
             }).start();
         }
@@ -689,8 +689,8 @@ public class MainActivity extends Activity {
         tiles.view.setTranslationX(0);
         big.setTranslationX(0);
         if (tiles.view.getTranslationY() == 0) tiles.view.setTranslationY(h);
-        tiles.view.animate().translationY(h - row).setDuration(340).setInterpolator(ease).start();
-        big.animate().translationY(-row).setDuration(340).setInterpolator(ease).start();
+        tiles.view.animate().translationY(h - row).setDuration(U.ms(340)).setInterpolator(ease).start();
+        big.animate().translationY(-row).setDuration(U.ms(340)).setInterpolator(ease).start();
     }
 
     void drawer(boolean open) {
@@ -708,11 +708,11 @@ public class MainActivity extends Activity {
         if (open) {
             if (Sheets.open()) Sheets.close();
             if (!fromPeek) tiles.view.setTranslationY(h); // from a peek it carries on from where it is
-            tiles.view.animate().translationY(0).setDuration(340).setInterpolator(ease).start();
+            tiles.view.animate().translationY(0).setDuration(U.ms(340)).setInterpolator(ease).start();
             View big = map != null ? map.bigView() : null;
             if (big == null) return;
             float[] t = toSmall(big);
-            big.animate().translationX(t[0]).translationY(t[1]).scaleX(t[2]).scaleY(t[3]).setDuration(360).setInterpolator(ease)
+            big.animate().translationX(t[0]).translationY(t[1]).scaleX(t[2]).scaleY(t[3]).setDuration(U.ms(360)).setInterpolator(ease)
                     .withEndAction(() -> {
                         if (!drawerOpen) return;
                         resetTransform(big);
@@ -720,7 +720,7 @@ public class MainActivity extends Activity {
                     }).start();
         } else {
             if (tiles.editing()) tiles.setEditing(false);
-            tiles.view.animate().translationY(h).setDuration(300).setInterpolator(ease).start();
+            tiles.view.animate().translationY(h).setDuration(U.ms(300)).setInterpolator(ease).start();
             if (map == null) return;
             if (!map.expanded()) map.expand(true);
             View big = map.bigView();
@@ -733,7 +733,7 @@ public class MainActivity extends Activity {
                 big.setTranslationY(t[1]);
                 big.setScaleX(t[2]);
                 big.setScaleY(t[3]);
-                big.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).setDuration(360).setInterpolator(ease).start();
+                big.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).setDuration(U.ms(360)).setInterpolator(ease).start();
             });
         }
     }

@@ -31,7 +31,7 @@ final class LockView extends View {
             return;
         }
         ValueAnimator a = ValueAnimator.ofFloat(open, to);
-        a.setDuration(320);
+        a.setDuration(U.ms(320));
         a.setInterpolator(new OvershootInterpolator(2.2f));
         a.addUpdateListener(v -> {
             open = (float) v.getAnimatedValue();

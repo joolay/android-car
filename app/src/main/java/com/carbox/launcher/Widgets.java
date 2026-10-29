@@ -382,7 +382,7 @@ final class Widgets {
         /** A gentle glow pulse while over the limit. */
         private void pulse() {
             if (!lit) return;
-            box.animate().alpha(0.7f).setDuration(450).withEndAction(() -> box.animate().alpha(1f).setDuration(450).withEndAction(this::pulse).start()).start();
+            box.animate().alpha(0.7f).setDuration(U.ms(450)).withEndAction(() -> box.animate().alpha(1f).setDuration(U.ms(450)).withEndAction(this::pulse).start()).start();
         }
     }
 
