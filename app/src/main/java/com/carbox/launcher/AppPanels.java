@@ -28,6 +28,10 @@ final class AppPanels {
 
     /** An app icon with its name underneath. */
     static View appCell(Context c, Apps.App a, boolean selected, boolean badge) {
+        return appCell(c, a, selected, badge, 52);
+    }
+
+    static View appCell(Context c, Apps.App a, boolean selected, boolean badge, float icon) {
         LinearLayout l = U.col(c);
         l.setGravity(Gravity.CENTER_HORIZONTAL);
         U.pad(l, 2, 8, 2, 6);
@@ -35,7 +39,7 @@ final class AppPanels {
         FrameLayout f = new FrameLayout(c);
         ImageView iv = new ImageView(c);
         iv.setImageDrawable(a.icon);
-        f.addView(iv, U.flpu(52, 52, Gravity.CENTER));
+        f.addView(iv, U.flpu(icon, icon, Gravity.CENTER));
         if (badge) {
             FrameLayout b = new FrameLayout(c);
             b.setBackground(U.oval(U.GREEN));
@@ -48,8 +52,8 @@ final class AppPanels {
             b.addView(U.icon(c, R.drawable.ic_check, U.TEXT), U.flpu(11, 11, Gravity.CENTER));
             f.addView(b, U.flpu(18, 18, Gravity.TOP | Gravity.START));
         }
-        l.addView(f, U.lpu(58, 56));
-        TextView t = U.line(c, a.label, 12, U.TEXT2, false);
+        l.addView(f, U.lpu(icon + 6, icon + 4));
+        TextView t = U.line(c, a.label, icon < 48 ? 11 : 12, U.TEXT2, false);
         t.setGravity(Gravity.CENTER);
         l.addView(t, top(4));
         return l;
@@ -143,6 +147,11 @@ final class AppPanels {
         search.setBackground(null);
         searchBox.addView(search, new LinearLayout.LayoutParams(0, U.WRAP, 1));
         head.addView(searchBox, new LinearLayout.LayoutParams(0, U.u(38), 1));
+        // zoom: − smaller icons (more across), + bigger icons (fewer across); remembered
+        head.addView(U.gap(c, 10, 1));
+        head.addView(zoomBtn(c, R.drawable.ic_minus, "Smaller icons", -1, results), U.lpu(36, 36));
+        head.addView(U.gap(c, 6, 1));
+        head.addView(zoomBtn(c, R.drawable.ic_plus, "Bigger icons", 1, results), U.lpu(36, 36));
         head.addView(U.gap(c, 10, 1));
         head.addView(U.seg(c, selecting ? "Cancel" : "Select", selecting, () -> {
             selecting = !selecting;
@@ -215,7 +224,7 @@ final class AppPanels {
             cells.add(s);
         }
         for (Apps.App a : Apps.search(query)) {
-            View cell = appCell(c, a, selecting && selection.contains(a.key), Actions.isAutostart(a.key));
+            View cell = appCell(c, a, selecting && selection.contains(a.key), Actions.isAutostart(a.key), ZOOM_ICON[zoom()]);
             cell.setOnClickListener(v -> {
                 if (selecting) {
                     if (!selection.remove(a.key)) selection.add(a.key);
@@ -232,7 +241,30 @@ final class AppPanels {
             cells.add(cell);
         }
         if (cells.isEmpty()) results.addView(U.text(c, "No apps match", 14, U.SUB, false));
-        else results.addView(grid(c, cells, 7, 6)); // full screen: 7 across
+        else results.addView(grid(c, cells, ZOOM_COLS[zoom()], 6)); // zoom sets how many across
+    }
+
+    // zoom levels for All apps: icons across and icon size
+    private static final int[] ZOOM_COLS = {9, 7, 5, 4};
+    private static final float[] ZOOM_ICON = {40, 52, 66, 80};
+
+    private static int zoom() {
+        return Math.max(0, Math.min(ZOOM_COLS.length - 1, Store.num("apps_zoom", 1)));
+    }
+
+    private static View zoomBtn(Context c, int icon, String desc, int step, LinearLayout results) {
+        android.widget.FrameLayout b = new android.widget.FrameLayout(c);
+        b.setBackground(U.oval(U.CARD2));
+        b.addView(U.icon(c, icon, U.TEXT), U.flpu(18, 18, Gravity.CENTER));
+        b.setContentDescription(desc);
+        b.setOnClickListener(v -> {
+            int z = Math.max(0, Math.min(ZOOM_COLS.length - 1, zoom() + step));
+            if (z == zoom()) return;
+            Store.put("apps_zoom", z);
+            fillApps(c, results); // keeps the search text and keyboard as they are
+        });
+        U.press(b);
+        return b;
     }
 
     private static void newFolderFromSelection() {
