@@ -194,7 +194,28 @@ public class MainActivity extends Activity {
         tilesClip.setPadding(0, p, 0, p);
     }
 
+    // ---- a tile-area page's title bar sits in the ticker's place while it's open
+    private View title;
+
+    boolean canHoldTitle() {
+        return tickerRow != null && tickerRow.getVisibility() == View.VISIBLE && !tiles.editing();
+    }
+
+    void tickerTitle(View head) {
+        if (tickerSlot == null || tiles.editing()) return;
+        if (head == title) return;
+        title = head;
+        tickerSlot.removeAllViews();
+        if (head != null) {
+            if (head.getParent() != null) ((android.view.ViewGroup) head.getParent()).removeView(head);
+            tickerSlot.addView(head, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            head.setAlpha(0f);
+            head.animate().alpha(1f).setDuration(U.ms(200)).start();
+        } else tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+    }
+
     void editMode(boolean on) {
+        title = null;
         if (tickerRow != null && !Store.flag("ticker_on", true)) {
             tickerRow.setVisibility(on ? View.VISIBLE : View.GONE);
             tilePad(on); // the edit bar takes the padding's place while editing

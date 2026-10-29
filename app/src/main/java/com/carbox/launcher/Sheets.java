@@ -106,7 +106,10 @@ final class Sheets {
         layer = tileLayer;
         for (Runnable r : new ArrayList<>(onClose)) r.run();
         onClose.clear();
-        if (MainActivity.I != null) MainActivity.I.mapAside(false); // and comes back
+        if (MainActivity.I != null) {
+            MainActivity.I.tickerTitle(null); // the ticker comes back
+            MainActivity.I.mapAside(false); // and the map
+        }
     }
 
     /** A panel is open in the tile area. */
@@ -160,6 +163,7 @@ final class Sheets {
             if (!full || (cardPage != null && top() == cardPage)) close();
         });
         layer.addView(scrim, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        if (MainActivity.I != null) MainActivity.I.tickerTitle(null); // the page sets its title there again if it has one
         View page = stack.get(stack.size() - 1).build();
         page.setClickable(true); // swallow taps so they don't close the sheet
         page.setOnTouchListener((v, e) -> {
@@ -233,26 +237,35 @@ final class Sheets {
         U.pad(p, 20, 14, 20, 14);
         p.setLayoutParams(centered(w, h));
 
+        // in the tile area the title bar goes up into the ticker's place, so the page gets the whole tile area
+        boolean up = !full && MainActivity.I != null && MainActivity.I.canHoldTitle();
         LinearLayout head = U.row(ctx);
+        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        float ic = up ? 20 : 24;
         if (stack.size() > 1) {
             View back = U.icon(ctx, R.drawable.ic_back, U.TEXT);
             back.setOnClickListener(v -> back());
-            head.addView(back, U.lpu(24, 24));
-            head.addView(U.gap(ctx, 12, 1));
+            head.addView(back, U.lpu(ic, ic));
+            head.addView(U.gap(ctx, up ? 10 : 12, 1));
         }
-        TextView t = U.line(ctx, title, 20, U.TEXT, true);
+        TextView t = U.line(ctx, title, up ? 15 : 20, U.TEXT, true);
         head.addView(t, new LinearLayout.LayoutParams(0, U.WRAP, 1));
         View x = U.icon(ctx, R.drawable.ic_x, U.SUB);
         x.setOnClickListener(v -> close());
-        head.addView(x, U.lpu(24, 24));
-        p.addView(head, U.lp(U.MATCH, U.WRAP));
+        head.addView(x, U.lpu(ic, ic));
+        if (up) {
+            head.setBackground(U.round(U.CARD, 12));
+            U.pad(head, 10, 0, 10, 0);
+            U.pad(p, 20, 12, 20, 12);
+            MainActivity.I.tickerTitle(head);
+        } else p.addView(head, U.lp(U.MATCH, U.WRAP));
 
         ScrollView sv = new ScrollView(ctx);
         sv.setVerticalScrollBarEnabled(false);
         sv.setOverScrollMode(View.OVER_SCROLL_NEVER);
         sv.addView(body);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(U.MATCH, 0, 1);
-        lp.topMargin = U.u(14);
+        lp.topMargin = up ? 0 : U.u(14);
         p.addView(sv, lp);
         return p;
     }
