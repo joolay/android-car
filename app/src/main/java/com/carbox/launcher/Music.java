@@ -145,7 +145,12 @@ final class Music {
                     quiet = 0;
                 } else if (++quiet >= 2) { // stopped (or not started) for 3 s: play again
                     quiet = 0;
-                    log("Guard: silent, pressing play again");
+                    MediaController mc = MediaListener.controller;
+                    android.media.session.PlaybackState ps = mc == null ? null : mc.getPlaybackState();
+                    android.net.ConnectivityManager cm = (android.net.ConnectivityManager) c.getSystemService(Context.CONNECTIVITY_SERVICE);
+                    boolean net = cm != null && cm.getActiveNetwork() != null;
+                    log("Guard: silent, pressing play again (session: " + (mc == null ? "none" : Apps.label(mc.getPackageName()) + " state " + (ps == null ? "?" : ps.getState()))
+                            + ", internet " + (net ? "yes" : "no") + ")");
                     MediaController m = MediaListener.controller;
                     if (m != null) m.getTransportControls().play();
                     else resume(c);
