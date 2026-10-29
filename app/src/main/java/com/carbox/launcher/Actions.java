@@ -71,6 +71,22 @@ final class Actions {
     private static void tryVoice(Context c, String[][] tries, int k, StringBuilder log) {
         for (int i = k; i < tries.length; i++) {
             String[] t = tries[i];
+            if ("assist".equals(t[0])) { // Android's own "start the assistant" (not an app screen)
+                if (!launchAssist(c)) {
+                    log.append("Android's assistant pop-up: not available\n");
+                    continue;
+                }
+                log.append("Asked Android for the assistant pop-up\n");
+                final int next = i + 1;
+                U.ui.postDelayed(() -> { // the Call helper can see whether the pop-up is on screen
+                    Boolean shown = assistShown();
+                    if (Boolean.FALSE.equals(shown)) {
+                        log.append("  …nothing appeared\n");
+                        tryVoice(c, tries, next, log);
+                    } else assistLog(log.append(shown == null ? "(can't check without the Call helper)" : "It's on screen").toString());
+                }, 1500);
+                return;
+            }
             String name = t[0].substring(t[0].lastIndexOf('.') + 1) + " in " + (t[1] == null ? "the default assistant" : Apps.label(t[1]));
             try {
                 Intent in = new Intent(t[0]).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -93,6 +109,35 @@ final class Actions {
         assistLog(log.append(ok ? "Opened the Gemini app (tap its mic)" : "Couldn't open Gemini").toString());
     }
 
+    /** Start Android's assistant the way the system's own button does (hidden in Android, so asked by name). */
+    private static boolean launchAssist(Context c) {
+        try {
+            Object sm = c.getSystemService(Context.SEARCH_SERVICE);
+            java.lang.reflect.Method m = sm.getClass().getMethod("launchAssist", android.os.Bundle.class);
+            m.invoke(sm, new android.os.Bundle());
+            return true;
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
+    /** Is an assistant (Google / Gemini) on screen? null when it can't be told (no Call helper). */
+    private static Boolean assistShown() {
+        BackButtonService s = BackButtonService.I;
+        if (s == null) return null;
+        try {
+            for (android.view.accessibility.AccessibilityWindowInfo w : s.getWindows()) {
+                android.view.accessibility.AccessibilityNodeInfo r = w.getRoot();
+                if (r == null || r.getPackageName() == null) continue;
+                String p = r.getPackageName().toString();
+                if (p.equals(GEMINI) || p.equals("com.google.android.googlequicksearchbox") || p.contains("assistant")) return true;
+            }
+            return false;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     static void assistant(Context c) {
         if ("external".equals(Store.str(Store.ASSIST, "gemini"))) {
             String pkg = Store.str(Store.ASSIST_PKG, null);
@@ -107,7 +152,9 @@ final class Actions {
         // (the log showed Google's voice screen closing at once) the next one is tried, ending with
         // simply opening the Gemini app
         if (Apps.installed(GEMINI)) {
-            String[][] tries = {{Intent.ACTION_VOICE_COMMAND, GEMINI}, {Intent.ACTION_ASSIST, GEMINI},
+            // first the same thing the box's own voice button does: Android's assistant (the one set as
+            // Digital assistant app in Android settings, e.g. Google / Gemini), as a pop-up
+            String[][] tries = {{"assist", null}, {Intent.ACTION_VOICE_COMMAND, GEMINI}, {Intent.ACTION_ASSIST, GEMINI},
                     {Intent.ACTION_VOICE_COMMAND, "com.google.android.googlequicksearchbox"},
                     {"android.intent.action.VOICE_ASSIST", "com.google.android.googlequicksearchbox"}};
             tryVoice(c, tries, 0, new StringBuilder());
