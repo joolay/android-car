@@ -19,8 +19,8 @@ import java.util.List;
 /** CarPlay-style status rail on the right edge. */
 final class Rail {
     // the clock (top) and the voice button (bottom) are fixed; these sit between them, evenly spaced
-    static final String[] IDS = {"weather", "cell", "wifi", "gps", "hotspot", "tailscale"};
-    static final String[] NAMES = {"Weather", "Mobile signal", "Wi-Fi", "GPS", "Hotspot", "Tailscale"};
+    static final String[] IDS = {"weather", "cell", "wifi", "gps", "hotspot", "tailscale", "data"};
+    static final String[] NAMES = {"Weather", "Mobile signal", "Wi-Fi", "GPS", "Hotspot", "Tailscale", "Data meter"};
 
     private final Context c;
     final LinearLayout view;
@@ -262,6 +262,18 @@ final class Rail {
                     return true;
                 });
                 return wrap(v, 22, false);
+            }
+            case "data": { // live data speed gauge
+                v = new DataMeter(c);
+                v.setOnClickListener(x -> InfoPanels.quick("data"));
+                v.setOnLongClickListener(x -> {
+                    Status.open(c, android.provider.Settings.ACTION_DATA_USAGE_SETTINGS);
+                    return true;
+                });
+                U.press(v);
+                android.widget.FrameLayout f = new android.widget.FrameLayout(c);
+                f.addView(v, new android.widget.FrameLayout.LayoutParams(U.u(46), U.u(40), Gravity.CENTER));
+                return f;
             }
             default:
                 return null;

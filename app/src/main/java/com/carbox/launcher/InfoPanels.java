@@ -535,6 +535,14 @@ final class InfoPanels {
         Boolean on = null;           // null = no toggle
         U.Cb<Boolean> toggle = null;
         switch (id) {
+            case "data":
+                icon = R.drawable.ic_bolt;
+                title = "Data";
+                DataMeter.sample();
+                line1 = "Now ↓ " + DataMeter.rate(DataMeter.down) + "B/s   ↑ " + DataMeter.rate(DataMeter.up) + "B/s";
+                line2 = "Since the box started: ↓ " + DataMeter.size(DataMeter.totalDown()) + " · ↑ " + DataMeter.size(DataMeter.totalUp());
+                hint = "Blue is download, amber upload. Hold the meter for Android's data usage";
+                break;
             case "cell":
                 icon = R.drawable.ic_bolt;
                 title = "Mobile data";
