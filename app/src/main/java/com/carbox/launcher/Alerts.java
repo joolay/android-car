@@ -63,10 +63,10 @@ final class Alerts {
             if (a == null) return;
             if (at > 0) a.tiles.refresh();
             a.tiles.view.toStart();
-            // map is the home view: slide the map part way to show the alert tile at the right;
-            // back to the full map after the usual 15 s without a touch
+            // map is the home view: the alert tile shows over the map in the first spot (highlighted);
+            // it goes after the usual 15 s without a touch, or tap it to open the tiles
             if (MainActivity.mapHome() && a.map.expanded() && !a.drawerOpen) {
-                a.peek();
+                a.alertTile(0);
                 a.resetIdle();
             }
         });

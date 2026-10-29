@@ -437,6 +437,7 @@ public class MainActivity extends Activity {
         Alerts.hideNotice();
         if (this.drawerOpen && !tiles.editing() && !drawerLocked()) drawer(false); // the map comes back (unless locked open)
         if (this.peeking) drawer(false);
+        hideAlertTile();
     };
 
     void resetIdle() {
@@ -546,6 +547,64 @@ public class MainActivity extends Activity {
         } else tilesChip.animate().alpha(0f).translationX(U.u(40)).setDuration(220).withEndAction(() -> tilesChip.setVisibility(View.GONE)).start();
     }
 
+    // ---- an alert's tile shown over the map in the first spot, with a highlight border
+    private FrameLayout alertTile;
+    private Widgets.W alertW;
+    private final Runnable alertTick = new Runnable() {
+        @Override
+        public void run() {
+            if (alertW == null) return;
+            try {
+                alertW.tick();
+            } catch (Exception ignored) {
+            }
+            U.ui.postDelayed(this, 1000);
+        }
+    };
+
+    void alertTile(int index) {
+        hideAlertTile();
+        org.json.JSONObject spec = Tiles.specs().optJSONObject(index);
+        if (spec == null || !"w".equals(spec.optString("t"))) return;
+        try {
+            alertW = Widgets.make(this, index, spec);
+        } catch (Exception e) {
+            return;
+        }
+        if (alertW == null || alertW.v == null) return;
+        float gap = U.u(8), cw = (tileArea.getWidth() - gap * (Tiles.COLS - 1)) / Tiles.COLS, ch = (tileArea.getHeight() - gap) / Tiles.ROWS;
+        alertTile = new FrameLayout(this);
+        alertTile.addView(alertW.v, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        MapPanel.clip(alertTile, 16);
+        View ring = new View(this);
+        ring.setBackground(U.outline(0, U.ACCENT, 3, 16));
+        alertTile.addView(ring, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        alertTile.setElevation(U.uf(8));
+        alertTile.setOnClickListener(v -> { // tap: open the tiles
+            hideAlertTile();
+            drawer(true);
+        });
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Math.round(cw), Math.round(ch), Gravity.TOP | Gravity.START);
+        tileArea.addView(alertTile, tileArea.indexOfChild(sheetHost), lp); // over the map, under panels
+        alertTile.setScaleX(0.85f);
+        alertTile.setScaleY(0.85f);
+        alertTile.setAlpha(0f);
+        alertTile.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(260).setInterpolator(new android.view.animation.OvershootInterpolator(1.6f)).start();
+        U.ui.post(alertTick);
+    }
+
+    void hideAlertTile() {
+        U.ui.removeCallbacks(alertTick);
+        alertW = null;
+        if (alertTile != null) {
+            final View t = alertTile;
+            alertTile = null;
+            t.animate().alpha(0f).scaleX(0.9f).scaleY(0.9f).setDuration(200).withEndAction(() -> {
+                if (t.getParent() != null) ((android.view.ViewGroup) t.getParent()).removeView(t);
+            }).start();
+        }
+    }
+
     /** Alert: slide the map only part way, showing just the first column (the alert tile) at the right. */
     boolean peeking;
 
@@ -571,6 +630,7 @@ public class MainActivity extends Activity {
         }
         boolean fromPeek = peeking;
         peeking = false;
+        if (open) hideAlertTile();
         drawerOpen = open;
         lockButton(open);
         // the tiles rise up out of the news ticker; the map lifts away at the top
