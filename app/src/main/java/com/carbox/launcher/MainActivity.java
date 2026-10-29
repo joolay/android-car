@@ -159,6 +159,11 @@ public class MainActivity extends Activity {
         // right rail
         rail = new Rail(this);
         main.addView(rail.view, U.lpu(72, U.MATCH));
+        // a video's picture-in-picture window keeps off the map, Now playing, ticker, dock and Rail Bar,
+        // so it settles over the tiles (Android 13+)
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            for (View k : new View[]{left, tickerRow, dockRow, rail.view}) k.setPreferKeepClear(true);
+        }
 
         overlay = new FrameLayout(this);
         root.addView(overlay, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));

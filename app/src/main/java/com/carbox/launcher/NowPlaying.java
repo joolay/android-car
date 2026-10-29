@@ -46,6 +46,18 @@ final class NowPlaying {
             "com.plexapp.android", "org.jellyfin.mobile", "com.stremio.one", "com.amazon.avod.thirdpartyclient", "com.disney.disneyplus",
             "com.showmax.app", "com.dstv.now.android", "com.google.android.apps.youtube.kids", "com.vanced.android.youtube"};
 
+    /** Home the way a person presses it (the Call helper can), so video apps go picture-in-picture. */
+    static void pressHome() {
+        if (BackButtonService.I != null && BackButtonService.I.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME)) return;
+        Context x = MainActivity.I;
+        if (x == null) return;
+        try {
+            x.startActivity(new android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME)
+                    .setPackage(x.getPackageName()).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (Exception ignored) {
+        }
+    }
+
     static boolean isVideo(String pkg) {
         for (String v : VIDEO) if (v.equals(pkg)) return true;
         return false;
@@ -141,14 +153,21 @@ final class NowPlaying {
         view.addView(lyricsBtn, bl);
         // video apps: watch it in the tile area, or full screen
         videoBtns = U.row(c);
-        videoBtns.addView(videoBtn(R.drawable.ic_apps, "Show video in the tiles", () -> {
+        // watch in the tiles: the video app comes up and a real Home press sends it into its
+        // picture-in-picture window, which keeps clear of the map, dock and Rail Bar (so over the tiles)
+        View pipBtn = videoBtn(R.drawable.ic_apps, "Watch video over the tiles", () -> {
             MediaController m = MediaListener.controller;
-            MainActivity ma = MainActivity.I;
-            if (m == null || ma == null) return;
-            android.graphics.Rect r = new android.graphics.Rect();
-            ma.tileArea.getGlobalVisibleRect(r);
-            Apps.launchInBounds(c, m.getPackageName(), r);
-        }), U.lpu(30, 30));
+            if (m == null) return;
+            String pkg = m.getPackageName();
+            Apps.launchPkg(c, pkg);
+            U.ui.postDelayed(NowPlaying::pressHome, 1200);
+        });
+        pipBtn.setOnLongClickListener(v -> { // hold: that app's App info (Picture-in-picture is switched on there)
+            MediaController m = MediaListener.controller;
+            if (m != null) Apps.appInfo(c, m.getPackageName());
+            return true;
+        });
+        videoBtns.addView(pipBtn, U.lpu(30, 30));
         LinearLayout.LayoutParams vg = U.lpu(30, 30);
         vg.leftMargin = U.u(6);
         videoBtns.addView(videoBtn(R.drawable.ic_maximize, "Video full screen", () -> {

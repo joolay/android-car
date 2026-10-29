@@ -167,27 +167,6 @@ final class Apps {
         }
     }
 
-    /**
-     * Open an app as a window over a part of the screen (e.g. a video in the tile area). Needs the
-     * box's free-form windows switched on; without them Android opens it full screen instead.
-     */
-    static boolean launchInBounds(Context c, String pkg, android.graphics.Rect bounds) {
-        Intent i = c.getPackageManager().getLaunchIntentForPackage(pkg);
-        if (i == null) return false;
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
-        android.app.ActivityOptions o = android.app.ActivityOptions.makeBasic().setLaunchBounds(bounds);
-        try { // free-form window mode (5); hidden on some builds, so asked for by name
-            android.app.ActivityOptions.class.getMethod("setLaunchWindowingMode", int.class).invoke(o, 5);
-        } catch (Exception ignored) {
-        }
-        try {
-            c.startActivity(i, o.toBundle());
-            return true;
-        } catch (Exception e) {
-            return launchPkg(c, pkg);
-        }
-    }
-
     static boolean launchPkg(Context c, String pkg) {
         if (pkg == null) return false;
         App a = byPkg(pkg);
