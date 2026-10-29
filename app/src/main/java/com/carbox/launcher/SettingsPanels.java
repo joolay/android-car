@@ -187,7 +187,10 @@ final class SettingsPanels {
                 U.seg(c, "external".equals(as) && ext != null ? "External · " + Apps.label(ext) + " ›" : "External ›", "external".equals(as), SettingsPanels::assistantPicker)));
 
             b.addView(U.text(c, "Tip: hold the voice button on the Rail Bar to pick any installed assistant for one go.", 12, U.SUB, false), top(10));
-            return Sheets.panel("Assistant", b, 560, 260);
+            String al = Store.str("assist_log", "");
+            b.addView(Sheets.section("Last time the voice button was pressed"));
+            b.addView(U.text(c, al.isEmpty() ? "Not pressed yet." : al, 11, U.SUB, false));
+            return Sheets.panel("Assistant", b, 560, 340);
         });
     }
 

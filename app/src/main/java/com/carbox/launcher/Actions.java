@@ -62,10 +62,18 @@ final class Actions {
 
     // ------------------------------------------------------------------ assistant
 
+    /** What the voice button did last (shown in Settings → Assistant, to see why it didn't work). */
+    static void assistLog(String s) {
+        Store.put("assist_log", new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(new java.util.Date()) + "\n" + s);
+    }
+
     static void assistant(Context c) {
         if ("external".equals(Store.str(Store.ASSIST, "gemini"))) {
             String pkg = Store.str(Store.ASSIST_PKG, null);
-            if (pkg != null && Apps.launchPkg(c, pkg)) return;
+            if (pkg != null && Apps.launchPkg(c, pkg)) {
+                assistLog("Set to External: opened " + Apps.label(pkg) + " (choose Gemini in Settings → Assistant for Gemini)");
+                return;
+            }
             SettingsPanels.assistantPicker();
             return;
         }
@@ -75,15 +83,22 @@ final class Actions {
         if (Apps.installed(GEMINI)) {
             String[][] tries = {{Intent.ACTION_VOICE_COMMAND, GEMINI}, {Intent.ACTION_ASSIST, GEMINI},
                     {Intent.ACTION_VOICE_COMMAND, "com.google.android.googlequicksearchbox"}};
+            StringBuilder log = new StringBuilder();
             for (String[] t : tries) {
                 try {
                     c.startActivity(new Intent(t[0]).setPackage(t[1]).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                    assistLog(log.append("Opened: ").append(t[0].substring(t[0].lastIndexOf('.') + 1)).append(" in ").append(Apps.label(t[1])).toString());
                     return;
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.append(t[0].substring(t[0].lastIndexOf('.') + 1)).append(" in ").append(Apps.label(t[1])).append(": not available\n");
                 }
             }
-            if (Apps.launchPkg(c, GEMINI)) return;
-        }
+            if (Apps.launchPkg(c, GEMINI)) {
+                assistLog(log.append("Opened the Gemini app").toString());
+                return;
+            }
+            assistLog(log.append("Couldn't open Gemini").toString());
+        } else assistLog("Gemini isn't installed on this box: tried the box's own assistant");
         // no Gemini: the box's default assistant, listening straight away
         for (String action : new String[]{Intent.ACTION_VOICE_COMMAND, Intent.ACTION_ASSIST, RecognizerIntent.ACTION_VOICE_SEARCH_HANDS_FREE}) {
             try {
