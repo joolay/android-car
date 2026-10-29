@@ -20,8 +20,10 @@ final class Dock {
         return Store.flag("ticker_on", true) ? 1f : 1.12f; // a touch bigger in the taller dock
     }
 
+    private static float fit = 1f; // shrinks everything a little when the full dock wouldn't fit its width
+
     private static float s(float du) {
-        return du * scale();
+        return du * scale() * fit;
     }
     /** Icons in the dock before All apps: 5 to 8 (the dialler counts as one when shown). */
     static int icons() {
@@ -36,8 +38,12 @@ final class Dock {
         this.a = a;
         view = U.row(a);
         view.setBackground(U.round(U.CARD, 16));
-        U.pad(view, 14, 0, 14, 0);
+        U.pad(view, 10, 0, 10, 0);
         Apps.listen(this::render);
+        // re-fit whenever the dock's width changes (the lock comes and goes beside it)
+        view.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            if (r - l != or - ol) v.post(this::render);
+        });
     }
 
     void render() {
@@ -51,6 +57,13 @@ final class Dock {
         while (pinned.size() > SLOTS) pinned.remove(pinned.size() - 1);
         int left = Math.max(0, SLOTS - pinned.size());
         List<Apps.App> recent = Apps.recents(left);
+        // everything at full size: padding, dialler, icons, dividers, All apps; if that's wider than the
+        // dock, it all shrinks together so All apps is never cut off
+        int apps = pinned.size() + recent.size();
+        float need = 20 + (dialler() ? 42 + 1 : 0) + apps * 48 + (!pinned.isEmpty() && !recent.isEmpty() ? 1 : 0) + 1 + 14 + 40 + 6;
+        need = U.uf(need * scale());
+        int avail = view.getWidth();
+        fit = avail > 0 ? Math.min(1f, avail / need) : 1f;
         // icons share the width evenly, so 6 icons spread out instead of bunching on the left
         spacer();
         // the dialler first (can be switched off in Settings → Dock)
