@@ -64,12 +64,25 @@ final class Music {
     // ------------------------------------------------------------------ start of drive
 
     /** Called first thing when the launcher starts (before the splash), once per car start. */
+    // ---- what happened at the last car start (shown in Music settings, to see why music didn't start)
+    static void log(String what) {
+        java.util.List<String> l = new java.util.ArrayList<>(Store.list("music_log"));
+        l.add(new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(new java.util.Date()) + "  " + what);
+        while (l.size() > 14) l.remove(0);
+        Store.putList("music_log", l);
+    }
+
     static void atStart(MainActivity a) {
         if (!Store.flag(Store.MUSIC_AUTOPLAY, false)) return;
         long bootAt = System.currentTimeMillis() - SystemClock.elapsedRealtime();
         if (Math.abs(Store.lng("music_boot", 0) - bootAt) < 60000) return;
         Store.put("music_boot", bootAt);
-        if (musicActive(a)) return; // something is already playing (e.g. the phone over Bluetooth)
+        Store.put("music_log", "[]");
+        log("Car start (box on for " + SystemClock.elapsedRealtime() / 1000 + " s). App: " + label() + ", start with: " + startWith());
+        if (musicActive(a)) {
+            log("Something is already playing: left alone");
+            return; // something is already playing (e.g. the phone over Bluetooth)
+        }
         guard(a);
         // the chosen playlist (e.g. Liked Songs) comes first when set to start with it
         if ("playlist".equals(startWith())) {
@@ -107,6 +120,7 @@ final class Music {
                     quiet = 0;
                 } else if (++quiet >= 2) { // stopped (or not started) for 3 s: play again
                     quiet = 0;
+                    log("Guard: silent, pressing play again");
                     MediaController m = MediaListener.controller;
                     if (m != null) m.getTransportControls().play();
                     else resume(c);
@@ -138,9 +152,11 @@ final class Music {
         String p = pkg();
         MediaController m = MediaListener.controller;
         if (m != null && (p == null || p.equals(m.getPackageName()))) {
+            log("Play pressed on " + Apps.label(m.getPackageName()) + "'s session");
             m.getTransportControls().play();
             return;
         }
+        log(m == null ? "No music session yet: sent a play button to " + (p == null ? "the last player" : Apps.label(p)) : "Session is " + Apps.label(m.getPackageName()) + ", not the chosen app: play button sent");
         if (p == null) {
             AudioManager am = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
             if (am != null) {
@@ -200,10 +216,12 @@ final class Music {
         android.media.session.MediaController m = MediaListener.controllerFor(target);
         if (m != null) {
             try {
+                log("Asked " + Apps.label(target) + " to play " + (uri != null ? uri : "\"" + q + "\"") + " (after " + tries * 0.4 + " s)");
                 if (uri != null) m.getTransportControls().playFromUri(Uri.parse(uri), null);
                 else m.getTransportControls().playFromSearch(q, null);
                 // check it took: if nothing plays within a few seconds, fall back to opening the app
                 U.ui.postDelayed(() -> {
+                    log(musicActive(c) ? "Music is playing" : "Still silent after 5 s: opening " + Apps.label(target));
                     if (!musicActive(c)) playByOpening(c, q, pkg(), comeBack);
                 }, 5000);
                 return true;
@@ -212,9 +230,14 @@ final class Music {
             }
         }
         if (tries == 0) {
-            if (!Apps.installed(target)) return false;
+            if (!Apps.installed(target)) {
+                log(target + " isn't installed");
+                return false;
+            }
+            log("Waking " + Apps.label(target) + " (no music session yet)");
             mediaButton(c, target); // wakes the app (it may start its last song for a moment)
         }
+        if (tries == 19) log(Apps.label(target) + " never showed a music session (is notification access on?)");
         if (tries >= 20) return false; // checks every 0.4 s for up to 8 s
         U.ui.postDelayed(() -> {
             if (!viaSession(c, target, q, uri, comeBack, tries + 1) && tries + 1 >= 20) playByOpening(c, q, pkg(), comeBack);

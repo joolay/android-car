@@ -416,6 +416,11 @@ final class SettingsPanels {
             }));
             b.addView(pr, top(10));
 
+            java.util.List<String> ml = Store.list("music_log");
+            if (!ml.isEmpty()) {
+                b.addView(Sheets.section("Last car start"));
+                b.addView(U.text(c, String.join("\n", ml), 11, U.SUB, false));
+            }
             String eq = EqView.style();
             b.addView(Sheets.row("Music animation", U.seg(c, "Equaliser", "bars".equals(eq), () -> { Store.put("eq_style", "bars"); Sheets.refresh(); }),
                     U.seg(c, "Wave", "wave".equals(eq), () -> { Store.put("eq_style", "wave"); Sheets.refresh(); }),

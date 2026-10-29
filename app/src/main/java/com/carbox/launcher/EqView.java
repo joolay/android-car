@@ -32,17 +32,34 @@ final class EqView extends View {
         peak = new float[this.bars];
     }
 
+    private boolean using; // holding the shared visualizer
+
+    // the live sound is only listened to while the animation is actually on screen and music is
+    // playing, never at start-up (so it can't get in the way of the music app starting)
+    private void use(boolean on) {
+        if (on == using) return;
+        using = on;
+        if (on) start(getContext());
+        else stop();
+    }
+
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        start(getContext());
         postInvalidateOnAnimation();
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-        stop();
+        use(false);
+    }
+
+    @Override
+    public void onVisibilityAggregated(boolean visible) {
+        super.onVisibilityAggregated(visible);
+        if (!visible) use(false);
+        else postInvalidateOnAnimation();
     }
 
     private static synchronized void start(Context c) {
@@ -97,6 +114,7 @@ final class EqView extends View {
         float w = getWidth(), h = getHeight();
         if (w <= 0 || h <= 0) return;
         boolean playing = MediaListener.playing();
+        use(playing && isShown() && android.os.SystemClock.elapsedRealtime() > 60000); // not in the first minute after boot
         boolean real = System.currentTimeMillis() - liveAt < 500;
         phase += 0.09f;
         for (int i = 0; i < bars; i++) {
@@ -119,6 +137,7 @@ final class EqView extends View {
             drawPulse(cv, w, h);
         } else drawBars(cv, w, h);
         if (isShown()) postInvalidateOnAnimation();
+        else use(false);
     }
 
     /** "bars" (equaliser), "wave" (flowing wave) or "pulse" (rings that beat with the music). */
