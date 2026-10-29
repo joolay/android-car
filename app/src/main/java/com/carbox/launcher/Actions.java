@@ -69,7 +69,22 @@ final class Actions {
             SettingsPanels.assistantPicker();
             return;
         }
-        // Gemini / default assistant: start listening straight away
+        // Gemini first, asked by name: the plain voice intents were being caught by the box's own
+        // voice app instead. Gemini's voice overlay, then Google's (Gemini when it has replaced the
+        // Assistant), then just open the Gemini app.
+        if (Apps.installed(GEMINI)) {
+            String[][] tries = {{Intent.ACTION_VOICE_COMMAND, GEMINI}, {Intent.ACTION_ASSIST, GEMINI},
+                    {Intent.ACTION_VOICE_COMMAND, "com.google.android.googlequicksearchbox"}};
+            for (String[] t : tries) {
+                try {
+                    c.startActivity(new Intent(t[0]).setPackage(t[1]).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                    return;
+                } catch (Exception ignored) {
+                }
+            }
+            if (Apps.launchPkg(c, GEMINI)) return;
+        }
+        // no Gemini: the box's default assistant, listening straight away
         for (String action : new String[]{Intent.ACTION_VOICE_COMMAND, Intent.ACTION_ASSIST, RecognizerIntent.ACTION_VOICE_SEARCH_HANDS_FREE}) {
             try {
                 c.startActivity(new Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
