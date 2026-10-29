@@ -846,12 +846,12 @@ final class Widgets {
             LinearLayout.LayoutParams hl = U.weight(1, false);
             hl.topMargin = U.u(10);
             View home = place(R.drawable.ic_home, "Home", "home");
-            home.setMinimumHeight(U.u(52));
+            home.setMinimumHeight(U.u(tl ? 52 : 40));
             l.addView(home, hl);
             LinearLayout.LayoutParams wl = U.weight(1, false);
             wl.topMargin = U.u(8);
             View work = place(R.drawable.ic_work, "Work", "work");
-            work.setMinimumHeight(U.u(52));
+            work.setMinimumHeight(U.u(tl ? 52 : 40));
             l.addView(work, wl);
             v = l;
         }
@@ -860,12 +860,13 @@ final class Widgets {
             LinearLayout b = U.row(c);
             b.setBackground(U.round(U.CARD2, 12));
             b.setGravity(Gravity.CENTER_VERTICAL);
-            U.pad(b, 14, 0, 10, 0);
-            b.addView(U.icon(c, icon, U.ACCENT_SOFT), U.lpu(28, 28));
-            TextView t = U.line(c, name, 18, U.TEXT, true);
-            LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-            tl.leftMargin = U.u(12);
-            b.addView(t, tl);
+            // big in the Top Left Widget; in a tile (narrower) smaller so the name isn't cut off
+            U.pad(b, tl ? 14 : 9, 0, tl ? 10 : 6, 0);
+            b.addView(U.icon(c, icon, U.ACCENT_SOFT), U.lpu(tl ? 28 : 22, tl ? 28 : 22));
+            TextView t = U.line(c, name, tl ? 18 : 15, U.TEXT, true);
+            LinearLayout.LayoutParams nl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
+            nl.leftMargin = U.u(tl ? 12 : 8);
+            b.addView(t, nl);
             b.setOnClickListener(x -> {
                 String a = cfg.optString(key, "");
                 if (a.isEmpty()) gotoSetup(index);
