@@ -49,7 +49,7 @@ Ticker at the top of the middle column (hidden: map/tiles take its space, tiles 
 
 ## Crash reports online
 - The app sends crash reports (About.sendPending, switch in Settings → About) to ntfy.sh topic
-  `carlauncher-crash-4d6dd33614e4914e`. `.github/workflows/crashes.yml` (every 4 h, or run it by hand)
+  `carlauncher-crash-4d6dd33614e4914e`. `.github/workflows/crashes.yml` (hourly, or run it by hand)
   copies them into branch `crashes`, file `crashes.jsonl` (id, time, title, message).
 - To read them: `gh workflow run crashes.yml -R joolay/CarLauncher`, wait for it, then
   `git fetch origin crashes && git show origin/crashes:crashes.jsonl`.
