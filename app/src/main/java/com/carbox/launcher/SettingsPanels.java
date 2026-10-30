@@ -336,15 +336,9 @@ final class SettingsPanels {
                     if (MainActivity.I != null) MainActivity.I.pickWallpaperImage();
                 })));
         b.addView(U.hr(c));
-        b.addView(Sheets.switchRow(0, 0, "Glass look", "Dock, Rail Bar, Now playing, left widgets and tiles see-through, like iOS (best with a wallpaper)",
-                Glass.on(), on -> {
-                    Store.put(Glass.KEY, on);
-                    // glass over plain black shows nothing: bring in the Road wallpaper
-                    if (on && "black".equals(Store.str(Store.WALL, "black"))) Store.put(Store.WALL, "road");
-                    if (MainActivity.I != null) MainActivity.I.applyWallpaper(); // also redraws the cards
-                    else Glass.refresh();
-                    Sheets.refresh();
-                }));
+        boolean glass = Glass.on();
+        b.addView(Sheets.row("Theme", U.seg(c, "Modern", !glass, () -> theme(false)), U.seg(c, "Glass", glass, () -> theme(true))));
+        b.addView(U.text(c, "Glass: the dock, Rail Bar, Now playing, left widgets and tiles see-through, like iOS (best with a wallpaper)", 12, U.SUB, false), top(4));
 
             return Sheets.panel("Wallpaper", b, 600, 330);
         });
@@ -1712,6 +1706,16 @@ final class SettingsPanels {
     private static void eqStyle(String st) {
         Store.put("eq_style", st);
         if (NowPlaying.I != null) NowPlaying.I.update();
+        Sheets.refresh();
+    }
+
+    /** Modern (solid cards) or Glass (see-through cards). */
+    private static void theme(boolean glass) {
+        Store.put(Glass.KEY, glass);
+        // glass over plain black shows nothing: bring in the Road wallpaper
+        if (glass && "black".equals(Store.str(Store.WALL, "black"))) Store.put(Store.WALL, "road");
+        if (MainActivity.I != null) MainActivity.I.applyWallpaper(); // also redraws the cards
+        else Glass.refresh();
         Sheets.refresh();
     }
 }

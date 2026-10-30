@@ -15,7 +15,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 /**
- * Optional iOS-style glass look (Settings → Wallpaper → Glass look) for the dock, Rail Bar, Now playing,
+ * The Glass theme (Settings → Wallpaper → Theme; the other is Modern): iOS-style glass for the dock, Rail Bar, Now playing,
  * the left widgets and the tiles: each card shows a blurred copy of the wallpaper behind it, a light
  * tint and a hairline edge. Off: the usual solid card. Also draws the "Road" wallpaper.
  */
