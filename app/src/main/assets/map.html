@@ -20,6 +20,7 @@ html,body{margin:0;height:100%;width:100%;background:#171c24;overflow:hidden}
 .me .a{position:absolute;left:4px;top:-9px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid #3d8bfd;display:none}
 .gm-style-cc,.gmnoprint a,.gm-style a[href^="https://maps.google.com/maps"]{opacity:.55}
 </style></head><body><div id="m"></div>
+<script src="gtraffic.js"></script>
 <script>
 // Map engines: 'osm' (Leaflet + OpenStreetMap tiles), 'ofm' (MapLibre + OpenFreeMap), 'pmtiles'
 // (MapLibre + an offline .pmtiles file served by the app) and 'google' (your own API key).
@@ -76,7 +77,10 @@ function setInteractive(b){
 }
 function zoomBy(d){ if(map) map.setZoom(map.getZoom()+d); if(gl) gl.easeTo({zoom:gl.getZoom()+d,duration:300}); if(gmap) gmap.setZoom(gmap.getZoom()+d); }
 var traffic=null, trafficOn=false;
-function setTraffic(b){ trafficOn=!!b; if(!gmap) return; if(!traffic) traffic=new google.maps.TrafficLayer(); traffic.setMap(trafficOn?gmap:null); }
+// traffic: the official Google layer on the Google (API key) map; Google's tiles (gtraffic.js) on the others
+function setTraffic(b){ trafficOn=!!b;
+  if(mode!=='google'&&window.GTraffic) GTraffic.set(trafficOn);
+  if(!gmap) return; if(!traffic) traffic=new google.maps.TrafficLayer(); traffic.setMap(trafficOn?gmap:null); }
 // tell Android whether the map follows you, and a scale bar length (px) with its label
 function state(){
   try{

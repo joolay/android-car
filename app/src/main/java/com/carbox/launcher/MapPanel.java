@@ -61,7 +61,7 @@ final class MapPanel {
                     pageReady = true;
                     String key = Store.str(Store.MAP_KEY, "").replace("'", "");
                     shownDark = darkNow();
-                    web.evaluateJavascript("setZoomPref(" + Store.str("map_zoom", "15") + ");setDark(" + shownDark + ");setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setTraffic(" + Store.flag("map_traffic", false) + ")", null);
+                    web.evaluateJavascript(GoogleTraffic.setupJs() + "setZoomPref(" + Store.str("map_zoom", "15") + ");setDark(" + shownDark + ");setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setTraffic(" + GoogleTraffic.on() + ")", null);
                     push();
                 }
             });
@@ -88,6 +88,17 @@ final class MapPanel {
             }, "Android");
             web.loadUrl("file:///android_asset/map.html");
             mapLayer.addView(web, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            if (GoogleTraffic.available()) { // traffic on/off on the small map too (the big map has its own)
+                smallTraffic = U.icon(c, R.drawable.ic_traffic, U.TEXT);
+                U.pad(smallTraffic, 6, 6, 6, 6);
+                smallTraffic.setElevation(U.uf(3));
+                smallTraffic.setOnClickListener(v -> toggleTraffic());
+                U.press(smallTraffic);
+                FrameLayout.LayoutParams tl = U.flpu(30, 30, Gravity.TOP | Gravity.END);
+                tl.setMargins(0, U.u(8), U.u(8), 0);
+                mapLayer.addView(smallTraffic, tl);
+                trafficLook();
+            }
         } catch (Throwable t) {
             web = null; // no WebView on this box
         }
@@ -425,6 +436,7 @@ final class MapPanel {
             bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
             mapLayer.setVisibility(View.VISIBLE);
             bigHolder.addView(controls(a), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            trafficLook(); // the big map has its own traffic button
             pill(true);
             js("setInteractive(true)");
             U.ui.post(controlTick);
@@ -438,6 +450,7 @@ final class MapPanel {
             ((android.view.ViewGroup) bigHolder.getParent()).removeView(bigHolder);
             bigHolder = null;
             view.addView(mapLayer, 0, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            trafficLook();
         }
     }
 
@@ -449,6 +462,24 @@ final class MapPanel {
     private TextView street, limit, spd, scaleLbl;
     private View recentre, scaleBar;
     private ImageView compass;
+
+    private View smallTraffic;
+
+    /** Live traffic on/off (official Google layer on the Google map, Google's tiles on the others). */
+    private void toggleTraffic() {
+        boolean on = !Store.flag("map_traffic", false);
+        Store.put("map_traffic", on);
+        js("setTraffic(" + on + ")");
+        trafficLook();
+        updateControls();
+    }
+
+    private void trafficLook() {
+        if (smallTraffic == null) return;
+        boolean on = Store.flag("map_traffic", false);
+        smallTraffic.setBackground(on ? U.oval(U.ACCENT) : U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 15));
+        smallTraffic.setVisibility(bigHolder == null ? View.VISIBLE : View.GONE);
+    }
 
     private void js(String code) {
         if (web != null && pageReady) web.evaluateJavascript(code, null);
@@ -514,13 +545,8 @@ final class MapPanel {
         dbl.topMargin = U.u(8);
         col.addView(db, dbl);
         styleDay();
-        if (google()) {
-            View tb = round(a, R.drawable.ic_traffic, true, () -> {
-                boolean on = !Store.flag("map_traffic", false);
-                Store.put("map_traffic", on);
-                js("setTraffic(" + on + ")");
-                updateControls();
-            });
+        if (GoogleTraffic.available()) {
+            View tb = round(a, R.drawable.ic_traffic, true, this::toggleTraffic);
             tb.setTag("traffic");
             LinearLayout.LayoutParams tl = U.lpu(48, 48);
             tl.topMargin = U.u(8);
