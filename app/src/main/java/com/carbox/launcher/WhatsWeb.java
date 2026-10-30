@@ -110,6 +110,11 @@ final class WhatsWeb {
         return m.find() ? Integer.parseInt(m.group(1)) : 0;
     }
 
+    /** WhatsApp is on screen (so it isn't closed for inactivity). */
+    static boolean isOpen() {
+        return web != null && web.isAttachedToWindow() && web.isShown();
+    }
+
     /** Open it in the tile area (or full screen, the last way it was used). */
     static void open() {
         if (full) Sheets.showFull(WhatsWeb::page);
