@@ -89,6 +89,7 @@ final class MusicFolder {
         LinearLayout.LayoutParams dl = U.lp(U.MATCH, U.u(10));
         dl.topMargin = U.u(2);
         box.addView(dots, dl);
+        view.setBackground(Glass.card(U.CARD, 16)); // solid, so a song playing underneath doesn't show through
         view.addView(box, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
         view.setOnTouchListener((v, e) -> { // editing: a tap on an empty spot finishes
             if (!editing) return false;
@@ -114,7 +115,23 @@ final class MusicFolder {
 
     /** Pages of 4: the apps, then + (on the last page, or a page of its own when that one is full). */
     private int pages(int n) {
-        return n / 4 + 1;
+        return editing ? n / 4 + 1 : Math.max(1, (n + 3) / 4); // a page of just + only while editing
+    }
+
+    /** Back to the first page (when the folder is brought up over a playing song). */
+    void first() {
+        page = 0;
+        render();
+    }
+
+    /** There's another page after this one (apps on it, or + while editing). */
+    boolean hasNext() {
+        return page + 1 < pages(apps(c).size());
+    }
+
+    /** Show the next page (no wrap-around). */
+    void next() {
+        if (hasNext()) page(1);
     }
 
     /** Swipe the tile: the next (dir 1) or previous (dir -1) page of apps slides in. */
@@ -243,6 +260,7 @@ final class MusicFolder {
                 return;
             }
             if (Sheets.open()) Sheets.close();
+            if (NowPlaying.I != null) NowPlaying.I.closeFolder(); // opened from over a song: back to the song
             Apps.launchPkg(c, pkg);
         });
         f.setOnLongClickListener(v -> { // hold: take it out of the folder (big grid), or edit mode (tile)
@@ -269,10 +287,10 @@ final class MusicFolder {
             FrameLayout minus = new FrameLayout(c);
             minus.setBackground(U.oval(U.RED));
             minus.setElevation(U.uf(2));
-            minus.addView(U.icon(c, R.drawable.ic_minus, U.TEXT), U.flpu(12, 12, Gravity.CENTER));
+            minus.addView(U.icon(c, R.drawable.ic_minus, U.TEXT), U.flpu(17, 17, Gravity.CENTER));
             minus.setContentDescription("Remove " + Apps.label(pkg));
             minus.setOnClickListener(v -> remove(c, pkg));
-            final int b = U.u(20), pad = U.u(6);
+            final int b = U.u(28), pad = U.u(6);
             f.addView(minus, new FrameLayout.LayoutParams(b, b, Gravity.TOP | Gravity.START));
             f.addOnLayoutChangeListener((v, l, t, r, bo, ol, ot, or, ob) -> { // follow the drawn icon's corner
                 int w = r - l, h = bo - t, size = Math.min(w, h) - 2 * pad;

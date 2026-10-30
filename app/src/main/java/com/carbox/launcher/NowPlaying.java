@@ -316,11 +316,40 @@ final class NowPlaying {
         return "icon".equals(Store.str("np_show", "art"));
     }
 
+    // a song loaded: swipe 1 album art ⇄ animation, swipe 2 the music folder, swipe 3 its second page
+    // (only if apps are there), then back to the song
+    private boolean folderOver, swappedOnce;
+
+    /** The folder brought up over a song goes away (an app was opened from it). */
+    void closeFolder() {
+        if (!folderOver) return;
+        folderOver = false;
+        swappedOnce = false;
+        update();
+    }
+
     private void swapArt() {
-        if (folder != null && folder.view.getVisibility() == View.VISIBLE) { // the music folder: next page of apps
+        if (folder != null && folderOver) {
+            if (folder.hasNext()) folder.next();
+            else {
+                folderOver = false;
+                swappedOnce = false;
+                folder.endEdit();
+                update();
+            }
+            return;
+        }
+        if (folder != null && folder.view.getVisibility() == View.VISIBLE) { // nothing playing: the music folder's pages
             folder.page(((SwipeBox) view).dir);
             return;
         }
+        if (swappedOnce && folder != null) { // second swipe: the folder over the song
+            folderOver = true;
+            folder.first();
+            update();
+            return;
+        }
+        swappedOnce = true;
         Store.put("np_show", showIcon() ? "art" : "icon");
         art.setAlpha(0f);
         update();
@@ -395,8 +424,11 @@ final class NowPlaying {
         }
         empty.setVisibility(View.GONE);
         if (folder != null) {
-            folder.endEdit(); // music started: edit mode over
-            folder.view.setVisibility(View.GONE);
+            if (folderOver) folder.view.setVisibility(View.VISIBLE); // swiped to the folder over the song
+            else {
+                folder.endEdit(); // music started: edit mode over
+                folder.view.setVisibility(View.GONE);
+            }
         }
         if (videoBtns != null) videoBtns.setVisibility(isVideo(m.getPackageName()) ? View.VISIBLE : View.GONE);
         content.setVisibility(View.VISIBLE);
