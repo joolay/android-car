@@ -60,7 +60,7 @@ final class Dock {
         // everything at full size: padding, dialler, icons, All apps; if that's wider than the
         // dock, it all shrinks together so All apps is never cut off
         int apps = pinned.size() + recent.size();
-        float need = 20 + (dialler() ? 42 : 0) + apps * 48 + 14 + 40 + 6;
+        float need = 20 + (dialler() ? 42 : 0) + apps * 48 + 14 + 48 + 6;
         need = U.uf(need * scale());
         int avail = view.getWidth();
         fit = avail > 0 ? Math.min(1f, avail / need) : 1f;
@@ -101,24 +101,14 @@ final class Dock {
 
     private void allApps() {
         FrameLayout all = new FrameLayout(a);
-        // All apps: a little mosaic of four coloured squares on a dark tile
-        all.setBackground(U.round(U.CARD2, 10));
-        LinearLayout mosaic = U.col(a);
-        int[][] colors = {{U.ACCENT, U.GREEN}, {U.AMBER, U.RED}};
-        for (int r = 0; r < 2; r++) {
-            LinearLayout row = U.row(a);
-            for (int k = 0; k < 2; k++) {
-                View sq = new View(a);
-                sq.setBackground(U.round(colors[r][k], 3.5f));
-                LinearLayout.LayoutParams sl = U.lpu(s(10), s(10));
-                if (k == 1) sl.leftMargin = U.u(s(3));
-                row.addView(sq, sl);
-            }
-            LinearLayout.LayoutParams rl = U.lp(U.WRAP, U.WRAP);
-            if (r == 1) rl.topMargin = U.u(s(3));
-            mosaic.addView(row, rl);
+        // All apps: Car Launcher's own icon, the same size as the app icons beside it
+        ImageView icon = new ImageView(a);
+        try {
+            icon.setImageDrawable(a.getPackageManager().getApplicationIcon(a.getPackageName()));
+        } catch (Exception e) {
+            icon.setImageResource(R.mipmap.ic_launcher);
         }
-        all.addView(mosaic, new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.CENTER));
+        all.addView(icon, U.flpu(s(40), s(40), Gravity.CENTER));
         all.setContentDescription("All apps");
         all.setOnClickListener(v -> { // tap: the tiles slide in (map home view), else the widget chooser
             if (MainActivity.I != null && MainActivity.mapHome()) MainActivity.I.toggleDrawer();
@@ -129,7 +119,7 @@ final class Dock {
             return true;
         });
         U.press(all);
-        LinearLayout.LayoutParams lp = U.lpu(s(40), s(40));
+        LinearLayout.LayoutParams lp = U.lpu(s(48), s(48));
         view.addView(all, lp);
     }
 
