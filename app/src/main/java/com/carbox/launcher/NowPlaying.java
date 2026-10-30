@@ -38,7 +38,6 @@ final class NowPlaying {
     static NowPlaying I;
     private View lyricsBtn;
     private EqView eq;
-    private View eqBtn;
     private MusicFolder folder;
     private LinearLayout videoBtns;
     /** Apps whose "now playing" is a video. */
@@ -105,6 +104,17 @@ final class NowPlaying {
         return idx;
     }
 
+    private View progress, progressBar;
+    private long durationMs;
+    private final Runnable progressTick = new Runnable() {
+        @Override
+        public void run() {
+            if (durationMs <= 0 || MediaListener.controller == null) return;
+            progress.setScaleX(Math.max(0f, Math.min(1f, MediaListener.position() / (float) durationMs)));
+            U.ui.postDelayed(this, 500);
+        }
+    };
+
     NowPlaying(Context c) {
         this.c = c;
         I = this;
@@ -144,13 +154,13 @@ final class NowPlaying {
         // ♪ Lyrics button: only when this song has lyrics; opens them in the tile area
         lyricsBtn = U.icon(c, R.drawable.ic_lyrics, U.ACCENT_SOFT);
         lyricsBtn.setBackground(U.outline(0xBF0B0E13, U.ACCENT_SOFT, 1.5f, 15));
-        U.pad(lyricsBtn, 7, 7, 7, 7);
+        U.pad(lyricsBtn, 9, 9, 9, 9);
         lyricsBtn.setContentDescription("Lyrics");
         lyricsBtn.setVisibility(View.GONE);
         lyricsBtn.setOnClickListener(v -> LyricsCard.toggle());
         U.press(lyricsBtn);
-        FrameLayout.LayoutParams bl = U.flpu(30, 30, Gravity.TOP | Gravity.END);
-        bl.setMargins(0, U.u(8), U.u(8), 0);
+        FrameLayout.LayoutParams bl = U.flpu(40, 40, Gravity.TOP | Gravity.END);
+        bl.setMargins(0, U.u(10), U.u(10), 0); // same corner spot and size as the map's traffic button
         view.addView(lyricsBtn, bl);
         // video apps: watch it in the tile area, or full screen
         videoBtns = U.row(c);
@@ -177,31 +187,15 @@ final class NowPlaying {
         }), vg);
         videoBtns.setVisibility(View.GONE);
         FrameLayout.LayoutParams vl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.END);
-        vl.setMargins(0, U.u(8), U.u(46), 0); // left of the Lyrics button, clear of the app icon
+        vl.setMargins(0, U.u(15), U.u(58), 0); // left of the Lyrics button, clear of the app icon
         view.addView(videoBtns, vl);
         // live equaliser where the album art would be, when the art is hidden (app icon view)
         eq = new EqView(c, 18, 0x993D8BFD);
         eq.setVisibility(View.GONE);
         FrameLayout.LayoutParams el = new FrameLayout.LayoutParams(U.MATCH, U.u(70), Gravity.TOP);
-        el.setMargins(U.u(14), U.u(54), U.u(46), 0);
+        el.setMargins(U.u(14), U.u(54), U.u(14), 0); // centred across the tile
         view.addView(eq, view.indexOfChild(lyricsBtn), el);
-        // on its right: change the animation (Equaliser → Wave → Pulse)
-        eqBtn = U.icon(c, R.drawable.ic_swap, U.TEXT2);
-        eqBtn.setBackground(U.oval(0x66000000));
-        U.pad(eqBtn, 7, 7, 7, 7);
-        eqBtn.setContentDescription("Change the music animation");
-        eqBtn.setOnClickListener(v -> {
-            String st = EqView.style();
-            String nx = "bars".equals(st) ? "wave" : "wave".equals(st) ? "pulse" : "bars";
-            Store.put("eq_style", nx);
-            android.widget.Toast.makeText(c, "bars".equals(nx) ? "Equaliser" : "wave".equals(nx) ? "Wave" : "Pulse", android.widget.Toast.LENGTH_SHORT).show();
-            eq.invalidate();
-        });
-        U.press(eqBtn);
-        eqBtn.setVisibility(View.GONE);
-        FrameLayout.LayoutParams ebl = U.flpu(30, 30, Gravity.TOP | Gravity.END);
-        ebl.setMargins(0, U.u(74), U.u(10), 0);
-        view.addView(eqBtn, ebl);
+        // the animation itself is chosen in Music settings (hold Now playing)
 
 
         content = U.col(c);
@@ -213,6 +207,18 @@ final class NowPlaying {
         LinearLayout.LayoutParams al = U.lp(U.MATCH, U.WRAP);
         al.topMargin = U.u(2);
         content.addView(artist, al);
+        // how far into the song: a thin bar under the artist
+        FrameLayout bar = new FrameLayout(c);
+        bar.setBackground(U.round(0x33FFFFFF, 2));
+        progress = new View(c);
+        progress.setBackground(U.round(U.TEXT, 2));
+        progress.setPivotX(0);
+        progress.setScaleX(0);
+        bar.addView(progress, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        LinearLayout.LayoutParams brl = U.lp(U.MATCH, U.u(3));
+        brl.topMargin = U.u(7);
+        content.addView(bar, brl);
+        progressBar = bar;
         LinearLayout ctl = U.row(c);
         ctl.setGravity(Gravity.CENTER);
         View prev = U.icon(c, R.drawable.ic_prev, U.TEXT);
@@ -322,7 +328,6 @@ final class NowPlaying {
         if (md == null) {
             art.setImageDrawable(null);
             if (eq != null) eq.setVisibility(View.GONE);
-            if (eqBtn != null) eqBtn.setVisibility(View.GONE);
             content.setVisibility(View.INVISIBLE);
             lyricBox.setVisibility(View.GONE);
             boolean access = MediaListener.hasAccess(c);
@@ -349,9 +354,9 @@ final class NowPlaying {
         if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_ART);
         if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
         android.graphics.drawable.Drawable appIcon = Apps.iconOf(m.getPackageName());
-        if (eq != null) eq.setVisibility(showIcon() || bm == null ? View.VISIBLE : View.GONE);
-        if (eqBtn != null && eq != null) eqBtn.setVisibility(eq.getVisibility());
-        if (showIcon() && appIcon != null) { // the music app's icon, centred
+        boolean iconView = showIcon() && !(LyricsCard.isShown() && bm != null); // lyrics open: the album art
+        if (eq != null) eq.setVisibility(iconView || bm == null ? View.VISIBLE : View.GONE);
+        if (iconView && appIcon != null) { // the music app's icon, centred
             art.setImageDrawable(appIcon);
             art.setScaleType(ImageView.ScaleType.FIT_CENTER);
             // small, top left, with the live equaliser beside and below it
@@ -366,6 +371,10 @@ final class NowPlaying {
                 art.setScaleType(ImageView.ScaleType.CENTER);
             }
         }
+        durationMs = md.getLong(MediaMetadata.METADATA_KEY_DURATION);
+        progressBar.setVisibility(durationMs > 0 ? View.VISIBLE : View.INVISIBLE);
+        U.ui.removeCallbacks(progressTick);
+        if (durationMs > 0) U.ui.post(progressTick);
         String t = md.getString(MediaMetadata.METADATA_KEY_TITLE);
         String a = md.getString(MediaMetadata.METADATA_KEY_ARTIST);
         if (a == null) a = md.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);

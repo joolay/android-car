@@ -29,6 +29,8 @@ final class LyricsCard {
     private LyricsCard() {
     }
 
+    private static long changedAt; // when the song changed and its lyrics weren't there yet
+
     static boolean isShown() {
         return shown != null;
     }
@@ -51,11 +53,6 @@ final class LyricsCard {
         FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(U.MATCH, U.WRAP, Gravity.TOP);
         hl.setMargins(U.u(18), U.u(12), U.u(48), 0);
         shown.addView(head, hl);
-        // live equaliser behind the words
-        EqView eq = new EqView(a, 28, 0x2E3D8BFD);
-        FrameLayout.LayoutParams eqL = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, U.u(160), Gravity.BOTTOM);
-        eqL.setMargins(U.u(12), 0, U.u(12), U.u(8));
-        shown.addView(eq, eqL);
         sv = new ScrollView(a);
         sv.setVerticalScrollBarEnabled(false);
         sv.setVerticalFadingEdgeEnabled(true);
@@ -95,7 +92,9 @@ final class LyricsCard {
                     .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
         });
         forKey = null;
+        changedAt = 0;
         U.ui.post(tick);
+        np.update(); // Now playing shows the album art while the lyrics are open
     }
 
     static void hide() {
@@ -104,6 +103,7 @@ final class LyricsCard {
         shown = null;
         views.clear();
         if (MainActivity.I != null) MainActivity.I.mapAside(false);
+        if (NowPlaying.I != null) NowPlaying.I.update();
         if (s0 == null || s0.getParent() == null) return;
         float[] t = fromNowPlaying(s0);
         Runnable gone = () -> {
@@ -135,10 +135,19 @@ final class LyricsCard {
         public void run() {
             if (shown == null) return;
             NowPlaying np = NowPlaying.I;
-            // the song has finished (another one, or none, is up): minimise again
+            // another song: stay open if it has lyrics too (they may take a few seconds to load), else minimise
             if (forKey != null && !"none".equals(forKey) && (np == null || !np.lyricKey().equals(forKey))) {
-                hide();
-                return;
+                if (np != null && np.lyricCount() > 0) changedAt = 0; // the new song's lyrics: rebuilt below
+                else {
+                    long now = System.currentTimeMillis();
+                    if (changedAt == 0) changedAt = now;
+                    if (np == null || now - changedAt > 8000) {
+                        hide();
+                        return;
+                    }
+                    U.ui.postDelayed(this, 250);
+                    return;
+                }
             }
             if (np == null || np.lyricCount() == 0) { // song without lyrics: say so, keep waiting
                 if (forKey == null || !forKey.equals("none")) {

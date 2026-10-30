@@ -90,12 +90,12 @@ final class MapPanel {
             mapLayer.addView(web, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
             if (GoogleTraffic.available()) { // traffic on/off on the small map too (the big map has its own)
                 smallTraffic = U.icon(c, R.drawable.ic_traffic, U.TEXT);
-                U.pad(smallTraffic, 6, 6, 6, 6);
+                U.pad(smallTraffic, 9, 9, 9, 9);
                 smallTraffic.setElevation(U.uf(3));
                 smallTraffic.setOnClickListener(v -> toggleTraffic());
                 U.press(smallTraffic);
-                FrameLayout.LayoutParams tl = U.flpu(30, 30, Gravity.TOP | Gravity.END);
-                tl.setMargins(0, U.u(8), U.u(8), 0);
+                FrameLayout.LayoutParams tl = U.flpu(40, 40, Gravity.TOP | Gravity.END);
+                tl.setMargins(0, U.u(10), U.u(10), 0); // same corner spot and size as Now playing's Lyrics button
                 mapLayer.addView(smallTraffic, tl);
                 trafficLook();
             }
@@ -338,6 +338,10 @@ final class MapPanel {
 
     /** Tap on the map: it fills the 2×4 grid and the small panel shows the Go to or Speed tile. */
     void expand(boolean on) {
+        if (on && LyricsCard.isShown()) { // lyrics open: a tap on the map minimises them (the map comes back)
+            LyricsCard.hide();
+            return;
+        }
         MainActivity m = MainActivity.I;
         if (on && m != null && m.drawerOpen) { // tiles are up: tapping the small map brings the big map back
             m.drawer(false);
@@ -477,7 +481,7 @@ final class MapPanel {
     private void trafficLook() {
         if (smallTraffic == null) return;
         boolean on = Store.flag("map_traffic", false);
-        smallTraffic.setBackground(on ? U.oval(U.ACCENT) : U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 15));
+        smallTraffic.setBackground(on ? U.oval(U.ACCENT) : U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 20));
         smallTraffic.setVisibility(bigHolder == null ? View.VISIBLE : View.GONE);
     }
 

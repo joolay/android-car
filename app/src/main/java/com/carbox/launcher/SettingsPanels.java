@@ -505,6 +505,9 @@ final class SettingsPanels {
             app.setOnClickListener(v -> musicAppPicker());
             b.addView(app);
             b.addView(Sheets.item("Bottom Left Widget", Widgets.name(TopLeft.bottom()) + " · change it", () -> TopLeft.chooser(true)));
+            String st = EqView.style(); // the animation on Now playing (and where the art would be)
+            b.addView(Sheets.row("Animation", U.seg(c, "Equaliser", "bars".equals(st), () -> eqStyle("bars")),
+                    U.seg(c, "Wave", "wave".equals(st), () -> eqStyle("wave")), U.seg(c, "Pulse", "pulse".equals(st), () -> eqStyle("pulse"))), top(8));
             b.addView(U.hr(c));
             b.addView(Sheets.switchRow(0, 0, "Play music when the car starts", "Starts straight away, before the splash screen",
                     Store.flag(Store.MUSIC_AUTOPLAY, false), on -> Store.put(Store.MUSIC_AUTOPLAY, on)));
@@ -1689,5 +1692,11 @@ final class SettingsPanels {
             if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_MOVE) cb.on(Color.HSVToColor(hsv));
             return true;
         }
+    }
+
+    private static void eqStyle(String st) {
+        Store.put("eq_style", st);
+        if (NowPlaying.I != null) NowPlaying.I.update();
+        Sheets.refresh();
     }
 }
