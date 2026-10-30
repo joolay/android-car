@@ -56,7 +56,7 @@ final class Rail {
         this.c = c;
         view = U.col(c);
         view.setGravity(Gravity.CENTER_HORIZONTAL);
-        view.setBackground(U.round(U.CARD, 16));
+        view.setBackground(Glass.card(U.CARD, 16));
         U.pad(view, 0, 14, 0, 12);
 
         // fixed: clock and date at the top

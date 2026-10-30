@@ -29,7 +29,8 @@ public class MainActivity extends Activity {
     static MainActivity I;
     static final int REQ_WALLPAPER = 41;
 
-    private FrameLayout root, overlay;
+    FrameLayout root;
+    private FrameLayout overlay;
     FrameLayout tileArea, sheetHost;
     private LinearLayout middle;
     private FrameLayout tickerSlot;
@@ -306,7 +307,12 @@ public class MainActivity extends Activity {
                 root.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
                         new CenterCrop(d), new ColorDrawable(0x66000000)}));
             } else root.setBackground(new ColorDrawable(0xFF000000));
+        } else if ("road".equals(mode)) { // a long tarred road to the horizon, drawn for this screen
+            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+            BitmapDrawable d = new BitmapDrawable(getResources(), Glass.road(Math.max(dm.widthPixels, dm.heightPixels), Math.min(dm.widthPixels, dm.heightPixels)));
+            root.setBackground(new CenterCrop(d));
         } else root.setBackground(new ColorDrawable(0xFF000000));
+        Glass.refresh(); // glass cards show the new wallpaper
     }
 
     /** Draws a bitmap like ImageView's centerCrop. */

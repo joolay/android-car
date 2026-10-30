@@ -37,7 +37,7 @@ final class Dock {
     Dock(Activity a) {
         this.a = a;
         view = U.row(a);
-        view.setBackground(U.round(U.CARD, 16));
+        view.setBackground(Glass.card(U.CARD, 16));
         U.pad(view, 10, 0, 10, 0);
         Apps.listen(this::render);
         // re-fit whenever the dock's width changes (the lock comes and goes beside it)

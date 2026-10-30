@@ -121,7 +121,7 @@ final class TopLeft {
         Sheets.showFull(() -> {
             Context c = Sheets.ctx();
             LinearLayout card = U.col(c);
-            card.setBackground(U.round(U.CARD, 18));
+            card.setBackground(Glass.card(U.CARD, 18));
             U.pad(card, 20, 14, 20, 14);
             card.setLayoutParams(Sheets.centered(784, 464));
             LinearLayout head = U.row(c);
@@ -224,7 +224,7 @@ final class TopLeft {
     private static View musicPreview(Context c) {
         LinearLayout l = U.col(c);
         l.setGravity(Gravity.CENTER);
-        l.setBackground(U.round(U.CARD, 14));
+        l.setBackground(Glass.card(U.CARD, 14));
         l.addView(U.icon(c, R.drawable.ic_music, U.ACCENT_SOFT), U.lpu(40, 40));
         TextView t = U.line(c, "Now playing", 13, U.TEXT, true);
         t.setGravity(Gravity.CENTER);

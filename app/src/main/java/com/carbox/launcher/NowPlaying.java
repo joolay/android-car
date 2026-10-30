@@ -126,7 +126,7 @@ final class NowPlaying {
         this.c = c;
         I = this;
         view = new SwipeBox(c, this::swapArt); // swipe: album art ⇄ the music app's icon
-        view.setBackground(U.round(U.CARD, 16));
+        view.setBackground(Glass.card(U.CARD, 16));
         MapPanel.clip(view, 16);
 
         art = new ImageView(c);

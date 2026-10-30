@@ -327,11 +327,26 @@ final class SettingsPanels {
                     if (MainActivity.I != null) MainActivity.I.applyWallpaper();
                     Sheets.refresh();
                 }), colour,
+                U.seg(c, "Road", "road".equals(w), () -> {
+                    Store.put(Store.WALL, "road");
+                    if (MainActivity.I != null) MainActivity.I.applyWallpaper();
+                    Sheets.refresh();
+                }),
                 U.seg(c, "image".equals(w) ? "Image ✓" : "Image…", "image".equals(w), () -> {
                     if (MainActivity.I != null) MainActivity.I.pickWallpaperImage();
                 })));
+        b.addView(U.hr(c));
+        b.addView(Sheets.switchRow(0, 0, "Glass look", "Dock, Rail Bar, Now playing, left widgets and tiles see-through, like iOS (best with a wallpaper)",
+                Glass.on(), on -> {
+                    Store.put(Glass.KEY, on);
+                    // glass over plain black shows nothing: bring in the Road wallpaper
+                    if (on && "black".equals(Store.str(Store.WALL, "black"))) Store.put(Store.WALL, "road");
+                    if (MainActivity.I != null) MainActivity.I.applyWallpaper(); // also redraws the cards
+                    else Glass.refresh();
+                    Sheets.refresh();
+                }));
 
-            return Sheets.panel("Wallpaper", b, 560, 240);
+            return Sheets.panel("Wallpaper", b, 600, 330);
         });
     }
 

@@ -114,7 +114,7 @@ final class Store {
     static final String NAV_PKG = "nav_pkg";
     static final String ASSIST = "assist";             // gemini | external
     static final String ASSIST_PKG = "assist_pkg";
-    static final String WALL = "wall";                 // black | color | image
+    static final String WALL = "wall";                 // black | color | image | road
     static final String WALL_COLOR = "wall_color";
     static final String CALLS = "calls";               // box | bt | connect
     static final String CALLS_BT_PKG = "calls_bt_pkg";
