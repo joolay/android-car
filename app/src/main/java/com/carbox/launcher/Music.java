@@ -297,8 +297,13 @@ final class Music {
                 else m.getTransportControls().playFromSearch(q, null);
                 // check it took: if nothing plays within a few seconds, fall back to opening the app
                 U.ui.postDelayed(() -> {
-                    log(musicActive(c) ? "Music is playing" : "Still silent after 5 s: opening " + Apps.label(target));
-                    if (!musicActive(c)) playByOpening(c, q, pkg(), comeBack);
+                    if (musicActive(c)) log("Music is playing");
+                    else if (android.os.SystemClock.elapsedRealtime() - openedAt < 60000) // opened at the car start already:
+                        log("Still silent after 5 s: leaving it to the guard (no second jump into " + Apps.label(target) + ")");
+                    else {
+                        log("Still silent after 5 s: opening " + Apps.label(target));
+                        playByOpening(c, q, pkg(), comeBack);
+                    }
                 }, 5000);
                 return true;
             } catch (Exception e) {
@@ -354,8 +359,12 @@ final class Music {
     }
 
     /** Open the default music app (used when nothing is playing). */
+    static long openedAt; // when the music app was last brought up (car start)
+
     static boolean open(Context c) {
         String p = pkg();
-        return p != null && Apps.launchPkg(c, p);
+        boolean ok = p != null && Apps.launchPkg(c, p);
+        if (ok) openedAt = android.os.SystemClock.elapsedRealtime();
+        return ok;
     }
 }
