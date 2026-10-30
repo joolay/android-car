@@ -926,17 +926,23 @@ public class MainActivity extends Activity {
 
     // ---- the big map steps aside (into the small map panel) while lyrics, a dialler or a panel use the tile area
     private boolean mapAside;
+    private long createdAt = android.os.SystemClock.elapsedRealtime();
 
     void mapAside(boolean on) {
-        if (!Store.flag("map_steps_aside", false)) return; // panels, lyrics and the dialler float over the big map
         if (map == null || !mapHome() || drawerOpen) {
             if (!on) mapAside = false;
             return;
         }
         View big = map.bigView();
+        // the first 30 s after start (splash, prayer card...): no shrink and grow, the map simply waits
+        boolean quiet = android.os.SystemClock.elapsedRealtime() - createdAt < 30000;
         if (on) {
             if (mapAside || !map.expanded() || big == null) return;
             mapAside = true;
+            if (quiet) {
+                map.expand(false);
+                return;
+            }
             morph(big, true, () -> {
                 if (mapAside) map.expand(false);
             });
@@ -946,7 +952,8 @@ public class MainActivity extends Activity {
                 if (!mapAside || drawerOpen) return;
                 if (Sheets.inTiles() || LyricsCard.isShown() || PhoneScreen.isShown()) return; // something still there
                 mapAside = false;
-                growMap();
+                if (quiet) map.expand(true); // already open, no grow animation
+                else growMap();
             });
         }
     }
