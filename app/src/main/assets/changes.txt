@@ -1,3 +1,4 @@
+0.33: Glass theme (Settings → Wallpaper → Theme); Road wallpaper; App icon with a blue border, also on the All apps button
 0.32: Drag the dot on the progress bar; WhatsApp stays open; Traffic on by default; Weather and calendar open over the grid
 0.31: Tap the map to minimise lyrics; Progress bar on Now playing; Lyrics stay open for the next song; Bigger Lyrics and traffic buttons; Animation choice moved to Music settings; Equaliser centred; Album art while lyrics are open
 0.30: Live traffic button on the map; Music folder edit mode (hold, drag, remove); Dock without dividers; Zoom moves up while panning, smoother panning; No second Spotify jump at start; Lock hides after 2 s; Logs sent at start, under 10 MB
