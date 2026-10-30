@@ -41,7 +41,7 @@ final class InfoPanels {
 
     static void calendar() {
         month[0] = 0;
-        Sheets.show(InfoPanels::calendarPage);
+        Sheets.showCard(InfoPanels::calendarPage, true); // a quick card over the grid
     }
 
     private static View calendarPage() {
@@ -278,7 +278,7 @@ final class InfoPanels {
 
     static void weather(int tab) {
         weatherTab = tab;
-        Sheets.show(InfoPanels::weatherPage);
+        Sheets.showCard(InfoPanels::weatherPage, true); // a quick card over the grid
         Weather.maybeFetch();
     }
 

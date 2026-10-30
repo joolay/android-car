@@ -204,10 +204,33 @@ final class Sheets {
         if (!full && MainActivity.I != null) MainActivity.I.mapAside(true); // the big map steps aside for the panel
         grow = false;
         slide = false;
+        if (cardOverTiles && cardPage != null && top() == cardPage) fitTiles(); // a refreshed card keeps its place
+    }
+
+    private static boolean cardOverTiles;
+
+    /** The card on top covers exactly the tile area. */
+    private static void fitTiles() {
+        if (!cardOverTiles || layer == null || layer.getChildCount() < 2 || MainActivity.I == null) return;
+        View card = layer.getChildAt(layer.getChildCount() - 1);
+        View ta = MainActivity.I.tileArea;
+        int[] a = new int[2], o = new int[2];
+        ta.getLocationOnScreen(a);
+        layer.getLocationOnScreen(o);
+        if (ta.getWidth() == 0) return;
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ta.getWidth(), ta.getHeight(), Gravity.TOP | Gravity.START);
+        lp.leftMargin = a[0] - o[0];
+        lp.topMargin = a[1] - o[1];
+        card.setLayoutParams(lp);
     }
 
     /** Lighter scrim for small anchored cards. */
     static void showCard(Page p) {
+        showCard(p, false);
+    }
+
+    /** overTiles: the card covers exactly the tile area (on top of the grid or big map), nothing moves. */
+    static void showCard(Page p, boolean overTiles) {
         stack.clear();
         stack.add(p);
         modes.clear();
@@ -215,6 +238,8 @@ final class Sheets {
         scrimColor = 0x59000000;
         full = true; // rail pop-ups sit next to the rail, over the whole screen, as before
         render();
+        cardOverTiles = overTiles;
+        fitTiles();
         // pop out of the Rail Bar icon that was tapped
         if (layer != null && layer.getChildCount() > 1 && MainActivity.I != null) MainActivity.I.popFromRail(layer.getChildAt(layer.getChildCount() - 1));
         // close by themselves after the set time (Settings → Rail Bar); a touch restarts it
