@@ -104,6 +104,7 @@ final class NowPlaying {
         return idx;
     }
 
+    private ImageView appBadge;
     private View progress, progressBar, dot;
     private boolean dragging;
 
@@ -158,6 +159,14 @@ final class NowPlaying {
         FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams(U.MATCH, U.u(110), Gravity.TOP);
         view.addView(lyricBox, ll);
 
+        // which app is playing: its icon on the album art's top-left corner
+        appBadge = new ImageView(c);
+        appBadge.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        appBadge.setElevation(U.uf(3));
+        appBadge.setVisibility(View.GONE);
+        FrameLayout.LayoutParams abl = U.flpu(34, 34, Gravity.TOP | Gravity.START);
+        abl.setMargins(U.u(10), U.u(10), 0, 0);
+        view.addView(appBadge, abl);
         // ♪ Lyrics button: only when this song has lyrics; opens them in the tile area
         lyricsBtn = U.icon(c, R.drawable.ic_lyrics, U.ACCENT_SOFT);
         lyricsBtn.setBackground(U.outline(0xBF0B0E13, U.ACCENT_SOFT, 1.5f, 15));
@@ -368,6 +377,7 @@ final class NowPlaying {
         if (md == null) {
             art.setImageDrawable(null);
             if (eq != null) eq.setVisibility(View.GONE);
+            if (appBadge != null) appBadge.setVisibility(View.GONE);
             content.setVisibility(View.INVISIBLE);
             lyricBox.setVisibility(View.GONE);
             boolean access = MediaListener.hasAccess(c);
@@ -396,6 +406,8 @@ final class NowPlaying {
         android.graphics.drawable.Drawable appIcon = Apps.iconOf(m.getPackageName());
         boolean iconView = showIcon() && !(LyricsCard.isShown() && bm != null); // lyrics open: the album art
         if (eq != null) eq.setVisibility(iconView || bm == null ? View.VISIBLE : View.GONE);
+        appBadge.setImageDrawable(appIcon);
+        appBadge.setVisibility(!(iconView && appIcon != null) && appIcon != null ? View.VISIBLE : View.GONE); // album art: app icon on its corner
         if (iconView && appIcon != null) { // the music app's icon, centred
             art.setImageDrawable(appIcon);
             art.setScaleType(ImageView.ScaleType.FIT_CENTER);
