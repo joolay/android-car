@@ -471,7 +471,7 @@ final class MapPanel {
 
     /** Live traffic on/off (official Google layer on the Google map, Google's tiles on the others). */
     private void toggleTraffic() {
-        boolean on = !Store.flag("map_traffic", false);
+        boolean on = !Store.flag("map_traffic", true);
         Store.put("map_traffic", on);
         js("setTraffic(" + on + ")");
         trafficLook();
@@ -480,7 +480,7 @@ final class MapPanel {
 
     private void trafficLook() {
         if (smallTraffic == null) return;
-        boolean on = Store.flag("map_traffic", false);
+        boolean on = Store.flag("map_traffic", true);
         smallTraffic.setBackground(on ? U.oval(U.ACCENT) : U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 20));
         smallTraffic.setVisibility(bigHolder == null ? View.VISIBLE : View.GONE);
     }
@@ -661,7 +661,7 @@ final class MapPanel {
         boolean hu = headingUp() && following && !Float.isNaN(Loc.bearing);
         compass.animate().rotation(hu ? -Loc.bearing : 0).setDuration(U.ms(600)).start();
         View tb = bigHolder.findViewWithTag("traffic");
-        if (tb != null) tb.setBackground(Store.flag("map_traffic", false) ? U.oval(U.ACCENT) : U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 19));
+        if (tb != null) tb.setBackground(Store.flag("map_traffic", true) ? U.oval(U.ACCENT) : U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 19));
     }
 
     private void updateNav() {

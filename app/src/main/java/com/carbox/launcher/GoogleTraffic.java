@@ -19,7 +19,11 @@ final class GoogleTraffic {
     }
 
     static boolean on() {
-        return available() && Store.flag("map_traffic", false);
+        if (!Store.flag("map_traffic_on_default", false)) { // traffic on by default: switched on once for everyone
+            Store.put("map_traffic_on_default", true);
+            Store.put("map_traffic", true);
+        }
+        return available() && Store.flag("map_traffic", true);
     }
 
     /** Page set-up call: lets gtraffic.js run (or not) on this map. */
