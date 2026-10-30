@@ -818,6 +818,8 @@ public class MainActivity extends Activity {
             Store.put("drawer_lock", !drawerLocked());
             lock.set(drawerLocked(), true);
             resetIdle();
+            U.ui.removeCallbacks(lockAway); // pressed: it goes 2 s later
+            U.ui.postDelayed(lockAway, 2000);
         });
         LinearLayout.LayoutParams ll = U.lpu(30, 30);
         ll.leftMargin = U.u(8);
