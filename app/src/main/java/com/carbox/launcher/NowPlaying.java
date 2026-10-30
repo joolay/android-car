@@ -104,13 +104,20 @@ final class NowPlaying {
         return idx;
     }
 
-    private View progress, progressBar;
+    private View progress, progressBar, dot;
+    private boolean dragging;
+
+    private void showProgress(float f) {
+        f = Math.max(0f, Math.min(1f, f));
+        progress.setScaleX(f);
+        dot.setTranslationX(f * Math.max(0, progressBar.getWidth() - dot.getWidth()));
+    }
     private long durationMs;
     private final Runnable progressTick = new Runnable() {
         @Override
         public void run() {
             if (durationMs <= 0 || MediaListener.controller == null) return;
-            progress.setScaleX(Math.max(0f, Math.min(1f, MediaListener.position() / (float) durationMs)));
+            if (!dragging) showProgress(MediaListener.position() / (float) durationMs);
             U.ui.postDelayed(this, 500);
         }
     };
@@ -207,16 +214,49 @@ final class NowPlaying {
         LinearLayout.LayoutParams al = U.lp(U.MATCH, U.WRAP);
         al.topMargin = U.u(2);
         content.addView(artist, al);
-        // how far into the song: a thin bar under the artist
+        // how far into the song: a thin bar with a dot under the artist; drag the dot (or tap the bar) to jump
         FrameLayout bar = new FrameLayout(c);
-        bar.setBackground(U.round(0x33FFFFFF, 2));
+        View track = new View(c);
+        track.setBackground(U.round(0x33FFFFFF, 2));
+        bar.addView(track, new FrameLayout.LayoutParams(U.MATCH, U.u(3), Gravity.CENTER_VERTICAL));
         progress = new View(c);
         progress.setBackground(U.round(U.TEXT, 2));
         progress.setPivotX(0);
         progress.setScaleX(0);
-        bar.addView(progress, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        LinearLayout.LayoutParams brl = U.lp(U.MATCH, U.u(3));
-        brl.topMargin = U.u(7);
+        bar.addView(progress, new FrameLayout.LayoutParams(U.MATCH, U.u(3), Gravity.CENTER_VERTICAL));
+        dot = new View(c);
+        dot.setBackground(U.oval(U.TEXT));
+        dot.setElevation(U.uf(2));
+        bar.addView(dot, U.flpu(12, 12, Gravity.CENTER_VERTICAL | Gravity.START));
+        bar.setOnTouchListener((v, e) -> {
+            if (durationMs <= 0) return false;
+            float f = Math.max(0f, Math.min(1f, (e.getX() - U.u(6)) / Math.max(1f, v.getWidth() - U.u(12))));
+            switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    v.getParent().requestDisallowInterceptTouchEvent(true); // a drag here isn't a swipe of the tile
+                    dragging = true;
+                    dot.animate().scaleX(1.4f).scaleY(1.4f).setDuration(U.ms(120)).start();
+                    showProgress(f);
+                    return true;
+                case android.view.MotionEvent.ACTION_MOVE:
+                    showProgress(f);
+                    return true;
+                case android.view.MotionEvent.ACTION_UP:
+                    MediaController m = MediaListener.controller;
+                    if (m != null) try {
+                        m.getTransportControls().seekTo((long) (f * durationMs));
+                    } catch (Exception ignored) {
+                    }
+                    // fall through
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    dragging = false;
+                    dot.animate().scaleX(1f).scaleY(1f).setDuration(U.ms(120)).start();
+                    return true;
+            }
+            return false;
+        });
+        LinearLayout.LayoutParams brl = U.lp(U.MATCH, U.u(18)); // taller than it looks, easy to grab
+        brl.topMargin = U.u(2);
         content.addView(bar, brl);
         progressBar = bar;
         LinearLayout ctl = U.row(c);
@@ -237,7 +277,7 @@ final class NowPlaying {
         next.setOnClickListener(v -> transport(2));
         ctl.addView(next, U.lpu(36, 36));
         LinearLayout.LayoutParams cl = U.lp(U.MATCH, U.WRAP);
-        cl.topMargin = U.u(8);
+        cl.topMargin = U.u(2);
         content.addView(ctl, cl);
         view.addView(content, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
 
