@@ -62,7 +62,10 @@ function centre(){
 }
 // exploring by finger: north up again until you tap the locate button (or 30 s pass)
 var backT=null;
-function explore(){ follow=false; if(headUp) turn(0,true); state(); clearTimeout(backT); backT=setTimeout(recenter,30000); }
+function explore(){ follow=false;
+  // vector map: turning north while the finger drags fought the drag (jerky); turn once it settles
+  if(headUp){ if(gl) gl.once('moveend',function(){ if(!follow) turn(0,true); }); else turn(0,true); }
+  state(); clearTimeout(backT); backT=setTimeout(recenter,30000); }
 function recenter(){ clearTimeout(backT); follow=true; centre(); if(headUp&&pending&&pending[2]>=0) turn(pending[2]); state(); }
 // the small map is a picture only (no dragging or zooming); the big one is a normal map
 var inter=false;
@@ -164,7 +167,7 @@ function initGl(){
   var darkOfm=mode==='ofm'&&(opt==='dark'||!opt);
   document.getElementById('m').className=darkOfm?'gl dark':'gl'; // dark: only the map picture is turned dark, not your arrow
   glOn=false;
-  gl=new maplibregl.Map({container:'m',style:style,center:[0,0],zoom:2,attributionControl:{compact:false},pitchWithRotate:false,fadeDuration:0});
+  gl=new maplibregl.Map({container:'m',style:style,center:[0,0],zoom:2,attributionControl:{compact:false},pitchWithRotate:false,fadeDuration:0,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),refreshExpiredTiles:false});
   var el=document.createElement('div'); el.innerHTML='<div class="me"><div class="a" id="arr"></div><div class="d"></div></div>';
   glMe=new maplibregl.Marker({element:el.firstChild,rotationAlignment:'map'});
   gl.on('dragstart',explore);

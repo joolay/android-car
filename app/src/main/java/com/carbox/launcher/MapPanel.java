@@ -460,7 +460,7 @@ final class MapPanel {
     private int scaleW;
     private String scaleText = "";
     private TextView street, limit, spd, scaleLbl;
-    private View recentre, scaleBar;
+    private View recentre, scaleBar, zoomBox;
     private ImageView compass;
 
     private View smallTraffic;
@@ -572,8 +572,9 @@ final class MapPanel {
         zoom.addView(sep, sl);
         zoom.addView(zout, U.lpu(48, 48));
         FrameLayout.LayoutParams zl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.BOTTOM | Gravity.END);
-        zl.setMargins(0, 0, U.u(10), U.u(58));
+        zl.setMargins(0, 0, U.u(10), U.u(12)); // moves up above the locate button while you pan (updateControls)
         o.addView(zoom, zl);
+        zoomBox = zoom;
         // back to my location (only once you've moved the map)
         recentre = round(a, R.drawable.ic_myloc, true, () -> js("recenter()"));
         recentre.setBackground(U.oval(U.ACCENT));
@@ -650,6 +651,8 @@ final class MapPanel {
             scaleLbl.setText(scaleText);
         }
         recentre.setVisibility(following ? View.GONE : View.VISIBLE);
+        float zy = following ? 0 : -U.u(66); // panning: zoom slides up, clear of the locate button
+        if (zoomBox != null && zoomBox.getTranslationY() != zy) zoomBox.animate().translationY(zy).setDuration(U.ms(200)).start();
         // compass needle points north on screen
         boolean hu = headingUp() && following && !Float.isNaN(Loc.bearing);
         compass.animate().rotation(hu ? -Loc.bearing : 0).setDuration(U.ms(600)).start();
