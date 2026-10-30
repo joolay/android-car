@@ -46,6 +46,9 @@ final class Trace {
         if (running || !on()) return;
         running = true;
         prune(c);
+        // first thing, before the music: the logs since the last send (the previous drive), retried
+        // every 15 s for 3 minutes while the box has no internet yet
+        if (Store.flag(AUTO, true)) sendPrevious(c.getApplicationContext(), 0);
         long n = Store.lng("trace_starts", 0) + 1;
         Store.put("trace_starts", n);
         event(c, "=== Car Launcher started (" + About.version(c) + ", " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
@@ -63,6 +66,13 @@ final class Trace {
             final Context app = c.getApplicationContext();
             U.ui.postDelayed(() -> send(app, Store.lng("logs_auto_at", 0), true), 180000);
         }
+    }
+
+    private static void sendPrevious(Context app, int tries) {
+        send(app, Store.lng("logs_auto_at", 0), true, () -> {
+            if (tries < 12) U.ui.postDelayed(() -> sendPrevious(app, tries + 1), 15000);
+            else event(app, "Previous logs couldn't be sent at start (no internet?)");
+        });
     }
 
     /** Logs older than 3 days go, and the oldest ones too if they've grown past ~40 MB. */
@@ -108,6 +118,11 @@ final class Trace {
 
     /** Send the logs changed since `since` (0 = all); `auto` = by itself after a start (quiet unless it fails). */
     static void send(Context c, long since, boolean auto) {
+        send(c, since, auto, null);
+    }
+
+    /** As above; `failed` runs (on the main thread) when the upload didn't go through. */
+    static void send(Context c, long since, boolean auto, Runnable failed) {
         final Context app = c.getApplicationContext();
         final long started = System.currentTimeMillis();
         event(app, auto ? "=== Logs sent by themselves (after start)" : "=== Logs sent from Settings");
@@ -162,7 +177,9 @@ final class Trace {
                 result = "Couldn't send the logs: no connection? Try again in Settings → Logs";
             }
             final String r = result;
+            final boolean bad = r != null && !"Logs sent".equals(r);
             U.ui.post(() -> {
+                if (bad && failed != null) failed.run();
                 if (r != null && !auto) toast(app, r);
                 Sheets.refresh();
             });
