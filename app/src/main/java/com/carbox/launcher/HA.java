@@ -241,7 +241,7 @@ final class HA {
         void tick() {
             if (lit != HomeApproach.near) { // arriving home: the tile lights up (in-tile alert)
                 lit = HomeApproach.near;
-                v.setBackground(lit ? U.outline(0xFF13284A, U.ACCENT, 3, 16) : U.round(U.CARD, 16));
+                v.setBackground(lit ? U.outline(0xFF13284A, U.ACCENT, 3, 16) : Glass.card(U.CARD, 16));
             }
             if (configured()) maybeRefresh();
             if (seen != version) {
@@ -301,7 +301,7 @@ final class HA {
             boolean on = isOn(id);
             LinearLayout b = U.col(c);
             b.setGravity(Gravity.CENTER);
-            b.setBackground(U.round(on ? 0xFF3A3115 : U.CARD2, 12));
+            b.setBackground((on ? U.round(0xFF3A3115, 12) : Glass.inner(U.CARD2, 12)));
             b.addView(U.icon(c, icon(id), on ? U.AMBER : U.SUB), U.lpu(22, 22));
             TextView n = U.line(c, name(id), 10, on ? U.TEXT : U.TEXT2, false);
             n.setGravity(Gravity.CENTER);

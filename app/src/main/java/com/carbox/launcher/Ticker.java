@@ -44,7 +44,7 @@ final class Ticker {
     Ticker(Context c) {
         this.c = c;
         view = U.row(c);
-        view.setBackground(U.round(U.CARD, 12));
+        view.setBackground(Glass.card(U.CARD, 12));
         U.pad(view, 8, 0, 12, 0);
         tag = U.text(c, "NEWS", 11, U.TEXT, true);
         tag.setLetterSpacing(0.04f);

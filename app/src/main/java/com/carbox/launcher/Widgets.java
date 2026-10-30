@@ -261,7 +261,7 @@ final class Widgets {
 
     static LinearLayout card(Context c, int bg) {
         LinearLayout l = U.col(c);
-        l.setBackground(U.round(bg, 16));
+        l.setBackground(bg == U.CARD ? Glass.card(bg, 16) : U.round(bg, 16)); // glass in the Glass theme
         U.pad(l, 14, 14, 14, 14);
         return l;
     }
@@ -407,7 +407,7 @@ final class Widgets {
             if (over) dial.max = Math.max(dial.max, dial.value);
             if (over != lit) {
                 lit = over;
-                box.setBackground(over ? U.outline(0xFF5A1010, 0xFFE24B4A, 3, 16) : U.round(U.CARD, 16));
+                box.setBackground(over ? U.outline(0xFF5A1010, 0xFFE24B4A, 3, 16) : Glass.card(U.CARD, 16));
                 box.animate().cancel();
                 box.setAlpha(1f);
                 if (over) pulse();
@@ -555,7 +555,7 @@ final class Widgets {
                 title.setText("Park here");
                 sub.setText("Tap to save this spot");
                 sub2.setVisibility(View.GONE);
-                box.setBackground(U.round(U.CARD, 16));
+                box.setBackground(Glass.card(U.CARD, 16));
             } else {
                 title.setText(new java.text.SimpleDateFormat(Store.flag(Store.H24, true) ? "HH:mm" : "h:mm a", Locale.getDefault()).format(new java.util.Date(at)));
                 String town = Store.str("park_town", "");
@@ -916,7 +916,7 @@ final class Widgets {
 
         private View place(int icon, String name, String key) {
             LinearLayout b = U.row(c);
-            b.setBackground(U.round(U.CARD2, 12));
+            b.setBackground(Glass.inner(U.CARD2, 12));
             b.setGravity(Gravity.CENTER_VERTICAL);
             // big in the Top Left Widget; in a tile (narrower) smaller so the name isn't cut off
             U.pad(b, tl ? 14 : 9, 0, tl ? 10 : 6, 0);
@@ -944,7 +944,7 @@ final class Widgets {
         e.setTextColor(U.TEXT);
         e.setHintTextColor(U.MUTED);
         e.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, U.uf(14));
-        e.setBackground(U.round(U.CARD2, 10));
+        e.setBackground(Glass.inner(U.CARD2, 10));
         U.pad(e, 12, 9, 12, 9);
         if (secret) e.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
         e.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI | android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
@@ -1036,7 +1036,7 @@ final class Widgets {
 
     private static View placeRow(Context c, int icon, String name, String addr, Runnable go, Runnable remove) {
         LinearLayout r = U.row(c);
-        r.setBackground(U.round(U.CARD2, 12));
+        r.setBackground(Glass.inner(U.CARD2, 12));
         U.pad(r, 12, 8, 8, 8);
         r.setMinimumHeight(U.u(56));
         r.addView(U.icon(c, icon, U.ACCENT_SOFT), U.lpu(22, 22));
@@ -1371,7 +1371,7 @@ final class Widgets {
             super(c, i, s);
             Person p = person(cfg.optJSONObject("person"));
             FrameLayout f = new FrameLayout(c);
-            f.setBackground(U.round(U.CARD, 16));
+            f.setBackground(Glass.card(U.CARD, 16));
             if (p == null) {
                 LinearLayout l = card(c, U.CARD);
                 l.addView(U.text(c, "Contact", 15, U.TEXT, true));
@@ -1471,7 +1471,7 @@ final class Widgets {
                 pill.setText("Now");
                 return;
             }
-            v.setBackground(U.round(U.CARD, 16));
+            v.setBackground(Glass.card(U.CARD, 16));
             double[] n = Prayer.next();
             if (n == null) {
                 name.setText("Prayer");

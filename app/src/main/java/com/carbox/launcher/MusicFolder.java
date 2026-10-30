@@ -99,7 +99,7 @@ final class MusicFolder {
 
         // maximise, overlapping the top-right corner (only with more than 4 apps)
         FrameLayout m = new FrameLayout(c);
-        m.setBackground(U.oval(U.CARD2));
+        m.setBackground(Glass.inner(U.CARD2, 20));
         m.addView(U.icon(c, R.drawable.ic_maximize, U.TEXT), U.flpu(20, 20, Gravity.CENTER));
         m.setContentDescription("Show all music apps");
         m.setOnClickListener(v -> showAll(c));

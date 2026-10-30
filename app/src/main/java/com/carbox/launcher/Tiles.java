@@ -382,7 +382,7 @@ final class Tiles {
                     cell.removeAllViews();
                     TextView more = U.text(a, "+" + (list.size() - 3), 13, U.TEXT, true);
                     more.setGravity(Gravity.CENTER);
-                    more.setBackground(Glass.card(U.CARD2, 10));
+                    more.setBackground(Glass.inner(U.CARD2, 10));
                     cell.addView(more, U.flpu(38, 38, Gravity.CENTER));
                     cell.setOnClickListener(v -> AppPanels.folder(index));
                 }

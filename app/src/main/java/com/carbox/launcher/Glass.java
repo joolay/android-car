@@ -36,6 +36,57 @@ final class Glass {
         return new Card(color, radius);
     }
 
+    /** A button or row inside a card: a light see-through pane in the Glass theme, else the solid colour. */
+    static Drawable inner(int color, float radius) {
+        return new Inner(color, radius);
+    }
+
+    private static final class Inner extends Drawable {
+        private final int color;
+        private final float r;
+        private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), edge = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF box = new RectF();
+
+        Inner(int color, float radius) {
+            this.color = color;
+            this.r = U.uf(radius);
+            edge.setStyle(Paint.Style.STROKE);
+            edge.setStrokeWidth(Math.max(1f, U.uf(1)));
+            edge.setColor(0x2EFFFFFF);
+        }
+
+        @Override
+        public void draw(Canvas c) {
+            box.set(getBounds());
+            boolean g = on();
+            fill.setColor(g ? 0x1FFFFFFF : color);
+            c.drawRoundRect(box, r, r, fill);
+            if (g) {
+                float e = edge.getStrokeWidth() / 2;
+                box.inset(e, e);
+                c.drawRoundRect(box, r, r, edge);
+            }
+        }
+
+        @Override
+        public void setAlpha(int alpha) {
+        }
+
+        @Override
+        public void setColorFilter(ColorFilter cf) {
+        }
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
+
+        @Override
+        public void getOutline(android.graphics.Outline o) {
+            o.setRoundRect(getBounds(), r);
+        }
+    }
+
     /** The wallpaper changed (or the look was switched): rebuild the blur and redraw every card. */
     static void refresh() {
         blur = null;
@@ -59,7 +110,7 @@ final class Glass {
         Drawable bg = root.getBackground();
         if (bg == null) return null;
         try {
-            int sw = Math.max(1, w / 14), sh = Math.max(1, h / 14);
+            int sw = Math.max(1, w / 18), sh = Math.max(1, h / 18);
             Bitmap small = Bitmap.createBitmap(sw, sh, Bitmap.Config.ARGB_8888);
             Canvas cv = new Canvas(small);
             cv.scale(sw / (float) w, sh / (float) h);
@@ -113,7 +164,7 @@ final class Glass {
             host.getLocationInWindow(at);
             root.getLocationInWindow(ro);
             c.drawBitmap(b, ro[0] - at[0], ro[1] - at[1], pic); // the blurred wallpaper right behind this card
-            fill.setColor(0x33141A24); // a little dark frost so text stays readable
+            fill.setColor(0x4D141A24); // dark frost so text stays readable over a bright wallpaper
             c.drawRect(box, fill);
             shine.setShader(new LinearGradient(0, box.top, 0, box.top + box.height() * 0.6f, 0x24FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
             c.drawRect(box, shine);

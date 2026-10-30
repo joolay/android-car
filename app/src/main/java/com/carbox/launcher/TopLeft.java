@@ -203,7 +203,7 @@ final class TopLeft {
         boolean elsewhere = MUSIC.equals(w[0]) && (bottom ? list().contains(MUSIC) : MUSIC.equals(bottom()));
         LinearLayout cell = U.col(c);
         U.pad(cell, 5, 5, 5, 6);
-        cell.setBackground(sel ? U.outline(0xFF15233A, U.ACCENT, 3, 16) : U.round(U.CARD2, 16));
+        cell.setBackground(sel ? U.outline(0xFF15233A, U.ACCENT, 3, 16) : Glass.inner(U.CARD2, 16));
         cell.addView(MUSIC.equals(w[0]) ? musicPreview(c) : Widgets.preview(c, w[0]), new LinearLayout.LayoutParams(U.MATCH, 0, 1));
         String label = sel && !bottom ? (on.indexOf(w[0]) + 1) + ". " + w[1] : w[1];
         if (elsewhere && !sel) label += bottom ? " · in Top Left" : " · in Bottom Left";
