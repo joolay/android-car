@@ -40,6 +40,11 @@ final class Reorder {
      * page (`turn`). With no host given, the pages it sits in (a {@link Pager}) are used, if any.
      */
     static void attach(View cell, int index, List<View> cells, Moved moved, Runnable hold, View host0, Turn turn0) {
+        attach(cell, index, cells, moved, hold, host0, turn0, false);
+    }
+
+    /** instant: no hold needed, the app lifts as soon as the finger moves (edit mode). */
+    static void attach(View cell, int index, List<View> cells, Moved moved, Runnable hold, View host0, Turn turn0, boolean instant) {
         final int slop = ViewConfiguration.get(cell.getContext()).getScaledTouchSlop() * 2;
         final float[] down = new float[2];
         final boolean[] dragging = {false}, moving = {false};
@@ -50,6 +55,7 @@ final class Reorder {
         final View[] host = {host0};
         final Turn[] turn = {turn0};
         cell.setOnLongClickListener(v -> {
+            if (dragging[0]) return true; // already lifted by a move (instant)
             if (host[0] == null) { // inside pages: they turn
                 for (android.view.ViewParent p = v.getParent(); p != null; p = p.getParent())
                     if (p instanceof Pager) {
@@ -75,10 +81,16 @@ final class Reorder {
                     down[0] = e.getRawX();
                     down[1] = e.getRawY();
                     moving[0] = false;
+                    if (instant && v.getParent() != null) v.getParent().requestDisallowInterceptTouchEvent(true);
                     return false;
                 case MotionEvent.ACTION_MOVE:
-                    if (!dragging[0]) return false;
                     float dx = e.getRawX() - down[0], dy = e.getRawY() - down[1];
+                    if (!dragging[0] && instant && Math.hypot(dx, dy) > slop / 2f) { // edit mode: lift on the first move
+                        v.cancelLongPress();
+                        dragging[0] = true;
+                        ghost[0] = lift(v);
+                    }
+                    if (!dragging[0]) return false;
                     if (!moving[0] && Math.hypot(dx, dy) > slop) moving[0] = true;
                     if (ghost[0] != null) {
                         ghost[0].setTranslationX(dx);

@@ -57,15 +57,14 @@ final class Dock {
         while (pinned.size() > SLOTS) pinned.remove(pinned.size() - 1);
         int left = Math.max(0, SLOTS - pinned.size());
         List<Apps.App> recent = Apps.recents(left);
-        // everything at full size: padding, dialler, icons, dividers, All apps; if that's wider than the
+        // everything at full size: padding, dialler, icons, All apps; if that's wider than the
         // dock, it all shrinks together so All apps is never cut off
         int apps = pinned.size() + recent.size();
-        float need = 20 + (dialler() ? 42 + 1 : 0) + apps * 48 + (!pinned.isEmpty() && !recent.isEmpty() ? 1 : 0) + 1 + 14 + 40 + 6;
+        float need = 20 + (dialler() ? 42 : 0) + apps * 48 + 14 + 40 + 6;
         need = U.uf(need * scale());
         int avail = view.getWidth();
         fit = avail > 0 ? Math.min(1f, avail / need) : 1f;
         // even spacing: exactly one equal gap between neighbours (none at the ends, just the padding);
-        // a divider sits in the middle of its gap where the group changes (dialler | pinned | recent | All apps)
         group = 0;
         if (dialler()) {
             addDialler();
@@ -159,13 +158,6 @@ final class Dock {
         view.addView(f, U.lpu(s(48), s(48)));
     }
 
-    private void divider() {
-        View d = new View(a);
-        d.setBackgroundColor(U.LINE);
-        LinearLayout.LayoutParams lp = U.lpu(s(1), s(30));
-        view.addView(d, lp);
-    }
-
     private void spacer() {
         spacer(1);
     }
@@ -176,17 +168,13 @@ final class Dock {
 
     private int group; // what came last: 0 nothing, 1 dialler, 2 pinned, 3 recent, 4 All apps
 
-    /** The gap before the next item: one equal gap; where the group changes, a divider with an equal gap each side. */
+    /** The gap before the next item: one equal gap between all items. */
     private void gapBefore(int next) {
         if (group == 0) {
             group = next;
             return;
         }
-        if (group != next) { // the divider counts as an item: a full gap either side
-            spacer(1);
-            divider();
-            spacer(1);
-        } else spacer(1);
+        spacer(1); // no dividers: every icon evenly spaced
         group = next;
     }
 }

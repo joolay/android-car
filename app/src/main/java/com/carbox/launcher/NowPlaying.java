@@ -339,7 +339,10 @@ final class NowPlaying {
             return;
         }
         empty.setVisibility(View.GONE);
-        if (folder != null) folder.view.setVisibility(View.GONE);
+        if (folder != null) {
+            folder.endEdit(); // music started: edit mode over
+            folder.view.setVisibility(View.GONE);
+        }
         if (videoBtns != null) videoBtns.setVisibility(isVideo(m.getPackageName()) ? View.VISIBLE : View.GONE);
         content.setVisibility(View.VISIBLE);
         Bitmap bm = md.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);

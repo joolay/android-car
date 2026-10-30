@@ -90,6 +90,11 @@ final class MusicFolder {
         dl.topMargin = U.u(2);
         box.addView(dots, dl);
         view.addView(box, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        view.setOnTouchListener((v, e) -> { // editing: a tap on an empty spot finishes
+            if (!editing) return false;
+            if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP) endEdit();
+            return true;
+        });
 
         // maximise, overlapping the top-right corner (only with more than 4 apps)
         FrameLayout m = new FrameLayout(c);
@@ -130,27 +135,64 @@ final class MusicFolder {
         }).start();
     }
 
+    // ------------------------------------------------------------------ edit mode (hold an icon on the tile)
+    private boolean editing;
+    private final List<android.animation.Animator> jiggles = new ArrayList<>();
+    private final Runnable editTimeout = this::endEdit;
+
+    /** Hold an icon: the icons jiggle, drag to move them, the red − takes one out. */
+    void startEdit() {
+        editing = true;
+        render();
+    }
+
+    /** Tap an icon or an empty spot (or leave it 12 s) to finish. */
+    void endEdit() {
+        if (!editing) return;
+        editing = false;
+        render();
+    }
+
+    private void stopJiggle() {
+        for (android.animation.Animator an : jiggles) an.cancel();
+        jiggles.clear();
+    }
+
+    private void jiggle(View v, int i) {
+        android.animation.ObjectAnimator an = android.animation.ObjectAnimator.ofFloat(v, "rotation", -2.5f, 2.5f);
+        an.setDuration(120 + (i % 2) * 15);
+        an.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        an.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+        an.setStartDelay(i * 40L);
+        an.start();
+        jiggles.add(an);
+    }
+
     void render() {
         grid.removeAllViews();
+        stopJiggle();
+        U.ui.removeCallbacks(editTimeout);
+        if (editing) U.ui.postDelayed(editTimeout, 12000);
         List<String> l = apps(c);
         int n = pages(l.size());
         if (page >= n) page = n - 1;
         // maximise: from the 2nd page on, and only with 8 or more apps
         max.setVisibility(l.size() >= 8 && page >= 1 && !maximised ? View.VISIBLE : View.GONE);
         List<View> cells = new ArrayList<>();
-        for (int i = page * 4; i < Math.min(page * 4 + 4, l.size()); i++) cells.add(cell(c, l.get(i), false));
-        // hold and drag an app onto another's place to move it (a hold without moving opens the full grid)
+        for (int i = page * 4; i < Math.min(page * 4 + 4, l.size()); i++) cells.add(cell(c, l.get(i), editing ? 1 : 0));
+        // edit mode: drag an app onto another's place to move it (no hold needed)
         final int base = page * 4, onPage = cells.size();
-        for (int i = 0; i < onPage; i++)
+        for (int i = 0; i < onPage; i++) if (editing) jiggle(cells.get(i), i);
+        if (editing) for (int i = 0; i < onPage; i++)
         {
             final int at = i;
-            Reorder.attach(cells.get(i), i, cells.subList(0, onPage), (from, to) -> move(c, base + from, base + to), () -> showAll(c),
+            Reorder.attach(cells.get(i), i, cells.subList(0, onPage), (from, to) -> move(c, base + from, base + to), null,
                     view, dir -> { // held at the edge: the app goes to the start of the next page (or end of the previous one)
                         int cnt = apps(c).size(), to = dir > 0 ? Math.min(cnt - 1, base + 4) : Math.max(0, base - 1);
                         if (to != base + at) move(c, base + at, to);
                         page(dir);
                         return false;
-                    });
+                    }, true);
         }
         if (cells.size() < 4 && page == n - 1) cells.add(plus(c)); // room left on the last page: + adds an app
         dots.removeAllViews();
@@ -173,8 +215,10 @@ final class MusicFolder {
         }
     }
 
-    /** An app: icon and name; tap opens it, hold (or −) removes it. */
-    private static View cell(Context c, String pkg, boolean editable) {
+    /** An app. mode 0: on the tile (tap opens, hold starts edit mode); 1: tile in edit mode (− removes,
+     *  tap finishes editing); 2: the big grid with names (tap opens, hold or − removes). */
+    private static View cell(Context c, String pkg, int mode) {
+        boolean editable = mode == 2;
         FrameLayout f = new FrameLayout(c);
         LinearLayout col = U.col(c);
         col.setGravity(Gravity.CENTER);
@@ -194,12 +238,19 @@ final class MusicFolder {
         }
         f.addView(col, new FrameLayout.LayoutParams(U.MATCH, U.MATCH, Gravity.CENTER));
         f.setOnClickListener(v -> {
+            if (mode == 1) { // editing: a tap finishes
+                if (I != null) I.endEdit();
+                return;
+            }
             if (Sheets.open()) Sheets.close();
             Apps.launchPkg(c, pkg);
         });
-        f.setOnLongClickListener(v -> { // hold: take it out of the folder
+        f.setOnLongClickListener(v -> { // hold: take it out of the folder (big grid), or edit mode (tile)
             if (editable) remove(c, pkg);
-            else showAll(c);
+            else if (mode == 0 && I != null) {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                I.startEdit();
+            }
             return true;
         });
         f.setContentDescription(Apps.label(pkg));
@@ -213,6 +264,21 @@ final class MusicFolder {
             FrameLayout.LayoutParams ml = U.flpu(22, 22, Gravity.TOP | Gravity.END);
             ml.setMargins(0, U.u(2), U.u(10), 0);
             f.addView(minus, ml);
+        }
+        if (mode == 1) { // red − on the icon's top-right corner
+            FrameLayout minus = new FrameLayout(c);
+            minus.setBackground(U.oval(U.RED));
+            minus.setElevation(U.uf(2));
+            minus.addView(U.icon(c, R.drawable.ic_minus, U.TEXT), U.flpu(12, 12, Gravity.CENTER));
+            minus.setContentDescription("Remove " + Apps.label(pkg));
+            minus.setOnClickListener(v -> remove(c, pkg));
+            final int b = U.u(20), pad = U.u(6);
+            f.addView(minus, new FrameLayout.LayoutParams(b, b, Gravity.TOP | Gravity.START));
+            f.addOnLayoutChangeListener((v, l, t, r, bo, ol, ot, or, ob) -> { // follow the drawn icon's corner
+                int w = r - l, h = bo - t, size = Math.min(w, h) - 2 * pad;
+                minus.setTranslationX((w + size) / 2f - b * 0.7f);
+                minus.setTranslationY((h - size) / 2f - b * 0.3f);
+            });
         }
         return f;
     }
@@ -251,7 +317,7 @@ final class MusicFolder {
             b.addView(U.text(c, "Tap to open. − takes an app out of the folder, + adds one.", 12, U.SUB, false));
             List<View> cells = new ArrayList<>();
             List<String> all = apps(c);
-            for (String p : all) cells.add(cell(c, p, true));
+            for (String p : all) cells.add(cell(c, p, 2));
             // hold and drag to move an app; a hold without moving takes it out (as the − does)
             for (int i = 0; i < all.size(); i++) {
                 final String p = all.get(i);
