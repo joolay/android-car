@@ -31,7 +31,10 @@ import java.util.Map;
  * to false (or delete this class). Falls back to the free lyrics source whenever this has nothing.
  */
 final class SpotifyLyrics {
-    static final boolean ENABLED = true;
+    /** Only with the owner's private code (PrivateAddons). */
+    static boolean ENABLED() {
+        return PrivateAddons.on(PrivateAddons.SPOTIFY);
+    }
     private static final String ON = "spotify_lyrics_on";
     private static final String UA = "Mozilla/5.0 (Linux; Android 13; Car) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
     private static String token;
@@ -44,7 +47,7 @@ final class SpotifyLyrics {
 
     /** Signed in (the web player's cookie is there) and switched on. */
     static boolean active() {
-        return ENABLED && Prefs.flag(ON, false) && signedIn();
+        return ENABLED() && Prefs.flag(ON, false) && signedIn();
     }
 
     static boolean signedIn() {

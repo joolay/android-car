@@ -8,14 +8,17 @@ package com.carbox.launcher;
  * Before the Play Store: set ENABLED to false (or delete this class and gtraffic.js).
  */
 final class GoogleTraffic {
-    static final boolean ENABLED = true;
+    /** Only with the owner's private code (PrivateAddons). */
+    static boolean ENABLED() {
+        return PrivateAddons.on(PrivateAddons.TRAFFIC);
+    }
 
     private GoogleTraffic() {
     }
 
     /** Traffic can be shown: the official layer on the Google map, or the unofficial tiles everywhere else. */
     static boolean available() {
-        return Maps.google() || ENABLED;
+        return Maps.google() || ENABLED();
     }
 
     static boolean on() {
@@ -28,6 +31,6 @@ final class GoogleTraffic {
 
     /** Page set-up call: lets gtraffic.js run (or not) on this map. */
     static String setupJs() {
-        return "if(window.GTraffic)GTraffic.allow(" + (ENABLED && !Maps.google()) + ");";
+        return "if(window.GTraffic)GTraffic.allow(" + (ENABLED() && !Maps.google()) + ");";
     }
 }

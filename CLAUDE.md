@@ -81,8 +81,7 @@ Ticker at the top of the middle column (hidden: map/tiles take its space, tiles 
 
 ## Before the Play Store (when the owner says he's publishing)
 - Remove `Updater.BUILT_IN_KEY` (and remind him to delete that token on GitHub).
-- Set `GoogleTraffic.ENABLED = false` (or delete `GoogleTraffic.java` + `assets/gtraffic.js`): unofficial Google traffic tiles, personal use only.
-- Set `SpotifyLyrics.ENABLED = false` (or delete it): unofficial Spotify lyrics via the web player sign-in, personal use only.
+- Private add-ons (`PrivateAddons`: Google traffic `GoogleTraffic` + `assets/gtraffic.js`, Spotify lyrics `SpotifyLyrics`) are hidden behind the owner's code (SHA-256 only in the app; 7 taps on the version in About). For the Play Store, delete them altogether (they break Google's and Spotify's terms).
 - Remove the automatic log sending after every start (`Trace.AUTO`, its switch) and default crash reports to off.
 
 ## With ADB on the box

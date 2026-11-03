@@ -114,7 +114,9 @@ final class About {
         Panels.Page p = () -> {
             Context c = Panels.ctx();
             LinearLayout b = Ui.col(c);
-            b.addView(Ui.line(c, "Car Launcher " + version(c), 22, Ui.TEXT, true));
+            android.widget.TextView vt = Ui.line(c, "Car Launcher " + version(c), 22, Ui.TEXT, true);
+            vt.setOnClickListener(v -> PrivateAddons.versionTapped());
+            b.addView(vt);
             b.addView(Ui.text(c, "A home screen made for Android car boxes. Built for Dr. Joolay.", 13, Ui.SUB, false), Widgets.top(2));
             b.addView(Panels.section("Features"));
             for (String[] f : FEATURES) {
