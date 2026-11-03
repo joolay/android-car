@@ -746,6 +746,16 @@ final class NewsTicker {
         return Panels.panel("Playback", b, 660, 440);
     }
 
+    /** Headline playback is on screen. */
+    boolean playing() {
+        return slide != null;
+    }
+
+    /** The headline list (when the Tile Drawer goes after covering playback). */
+    void openList() {
+        feedList();
+    }
+
     /** Opening the ticker: play the headlines through once, then drop to the list. */
     private void openFeed() {
         feedNews = showingNews;

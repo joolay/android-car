@@ -1080,6 +1080,10 @@ public class MainActivity extends Activity {
         big.post(() -> morph(big, false, null));
     }
 
+    // what the Tile Drawer covered on the Centre Stage, brought back when it slides away
+    private boolean drawerLyrics, drawerTicker, drawerSticky;
+    private java.util.List<Panels.Page> drawerPages;
+
     void drawer(boolean open) {
         if (open == drawerOpen && !peeking) return;
         mapAside = false;
@@ -1095,6 +1099,13 @@ public class MainActivity extends Activity {
         android.view.animation.Interpolator ease = new android.view.animation.DecelerateInterpolator(1.8f);
         tiles.view.setTranslationX(0);
         if (open) {
+            // whatever is on the Centre Stage steps aside for the tiles, and comes back when they go:
+            // lyrics shrink back into Now Playing, tile-area windows (the ticker's list…) slide back up
+            drawerLyrics = LyricsView.isShown();
+            drawerTicker = ticker != null && ticker.playing(); // headline playback: the list comes back instead
+            drawerPages = !drawerTicker && Panels.inTiles() ? Panels.saveStack() : null;
+            drawerSticky = Panels.sticky;
+            if (drawerLyrics) LyricsView.hide();
             if (Panels.open()) Panels.close();
             tiles.view.setVisibility(View.VISIBLE);
             if (!fromPeek) tiles.view.setTranslationY(h); // from a peek it carries on from where it is
@@ -1110,6 +1121,24 @@ public class MainActivity extends Activity {
             tiles.view.animate().translationY(h).setDuration(Ui.ms(300)).setInterpolator(ease)
                     .withEndAction(() -> { if (!drawerOpen && !peeking) tiles.view.setVisibility(View.INVISIBLE); }).start();
             if (map == null) return;
+            if (drawerLyrics || drawerTicker || drawerPages != null) { // bring back what the tiles covered, not the map
+                final boolean lyr = drawerLyrics, tick = drawerTicker, st = drawerSticky;
+                final java.util.List<Panels.Page> pages = drawerPages;
+                drawerLyrics = drawerTicker = false;
+                drawerPages = null;
+                mapAside = true; // the map waits in its small panel and grows back once this closes
+                Ui.ui.postDelayed(() -> {
+                    if (drawerOpen) return;
+                    if (lyr) LyricsView.show(); // grows back out of Now Playing
+                    else if (tick) ticker.openList();
+                    else {
+                        Panels.restoreStack(pages);
+                        Panels.sticky = st;
+                    }
+                    if (!LyricsView.isShown() && !Panels.inTiles()) mapAside(false); // nothing came back: the map does
+                }, Ui.ms(250));
+                return;
+            }
             if (!map.expanded()) map.expand(true);
             View big = map.bigView();
             if (big == null) return;
