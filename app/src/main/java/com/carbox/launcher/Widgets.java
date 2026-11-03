@@ -337,7 +337,7 @@ final class Widgets {
             super(c, i, s);
             LinearLayout l = Ui.col(c);
             l.setBackground(Themes.on() ? Themes.card(0xFF1F4E9A, 16) : new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF1F4E9A, 0xFF13284A}));
-            ((GradientDrawable) l.getBackground()).setCornerRadius(Ui.uf(16));
+            if (l.getBackground() instanceof GradientDrawable) ((GradientDrawable) l.getBackground()).setCornerRadius(Ui.uf(16)); // glass cards are rounded already
             Ui.pad(l, 14, 16, 14, 16);
             FrameLayout ic = new FrameLayout(c);
             ic.setBackground(Ui.oval(0x33FFFFFF));
@@ -1278,7 +1278,7 @@ final class Widgets {
             super(c, i, s);
             LinearLayout l = Ui.col(c);
             l.setBackground(Themes.on() ? Themes.card(0xFF1F7A46, 16) : new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF1F7A46, 0xFF0F3D26}));
-            ((GradientDrawable) l.getBackground()).setCornerRadius(Ui.uf(16));
+            if (l.getBackground() instanceof GradientDrawable) ((GradientDrawable) l.getBackground()).setCornerRadius(Ui.uf(16)); // glass cards are rounded already
             Ui.pad(l, 14, 16, 14, 16);
             FrameLayout ic = new FrameLayout(c);
             ic.setBackground(Ui.oval(0x33FFFFFF));
