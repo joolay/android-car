@@ -696,7 +696,7 @@ final class Maps {
         recentre = round(a, R.drawable.ic_myloc, true, () -> js("recenter()"));
         recentre.setBackground(Ui.oval(Ui.ACCENT));
         FrameLayout.LayoutParams ml = Ui.flpu(48, 48, Gravity.BOTTOM | Gravity.END);
-        ml.setMargins(0, 0, Ui.u(10), Ui.u(12));
+        ml.setMargins(0, 0, Ui.u(10), Ui.u(12 + 97 + 8)); // above the zoom buttons (they stay put)
         o.addView(recentre, ml);
         // bottom left: limit sign, speed, scale
         LinearLayout bl = Ui.row(a);
@@ -768,8 +768,6 @@ final class Maps {
             scaleLbl.setText(scaleText);
         }
         recentre.setVisibility(following ? View.GONE : View.VISIBLE);
-        float zy = following ? 0 : -Ui.u(66); // panning: zoom slides up, clear of the locate button
-        if (zoomBox != null && zoomBox.getTranslationY() != zy) zoomBox.animate().translationY(zy).setDuration(Ui.ms(200)).start();
         // compass needle points north on screen
         boolean hu = headingUp() && following && !Float.isNaN(Gps.bearing);
         compass.animate().rotation(hu ? -Gps.bearing : 0).setDuration(Ui.ms(600)).start();
