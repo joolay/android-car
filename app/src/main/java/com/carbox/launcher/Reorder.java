@@ -44,7 +44,9 @@ final class Reorder {
     }
 
     /** instant: no hold needed, the app lifts as soon as the finger moves (edit mode). */
-    static void attach(View cell, int index, List<View> cells, Moved moved, Runnable hold, View host0, Turn turn0, boolean instant) {
+    static void attach(View cell, int index, List<View> cells0, Moved moved, Runnable hold, View host0, Turn turn0, boolean instant) {
+        // its own copy: the logs showed a crash when the list it came from (a part of a bigger list) changed mid-drag
+        final List<View> cells = new java.util.ArrayList<>(cells0);
         final int slop = ViewConfiguration.get(cell.getContext()).getScaledTouchSlop() * 2;
         final float[] down = new float[2];
         final boolean[] dragging = {false}, moving = {false};

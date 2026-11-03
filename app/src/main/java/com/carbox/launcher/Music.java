@@ -216,6 +216,9 @@ final class Music {
     /** Press "play" on the chosen app (or on whatever played last), without opening it. */
     private static int tries;
 
+    private static String startUri; // what was asked for at the car start
+    private static int guardTries;
+
     static void resume(Context c) {
         String p = pkg();
         MediaController m = MediaListener.controller;
@@ -223,7 +226,19 @@ final class Music {
         // a session with nothing loaded yet (state 0) ignores play: the logs showed Spotify like that
         // for the first seconds, so then it's treated as no session (play button / Android's play key)
         android.media.session.PlaybackState st = m == null ? null : m.getPlaybackState();
-        if (m != null && (st == null || st.getState() == android.media.session.PlaybackState.STATE_NONE)) m = null;
+        if (m != null && (st == null || st.getState() == android.media.session.PlaybackState.STATE_NONE)) {
+            // nothing loaded: play and the play keys are ignored (the logs showed Spotify like that for a whole minute),
+            // so every third try asks again for the playlist to be loaded and played
+            if (startUri != null && guardTries++ % 3 == 0) {
+                log("Nothing loaded in " + Apps.label(m.getPackageName()) + ": asking again for " + startUri);
+                try {
+                    m.getTransportControls().playFromUri(android.net.Uri.parse(startUri), null);
+                    return;
+                } catch (Exception ignored) {
+                }
+            }
+            m = null;
+        }
         if (m != null && (p == null || p.equals(m.getPackageName()))) {
             log("Play pressed on " + Apps.label(m.getPackageName()) + "'s session");
             m.getTransportControls().play();
@@ -293,6 +308,7 @@ final class Music {
         if (m != null) {
             try {
                 log("Asked " + Apps.label(target) + " to play " + (uri != null ? uri : "\"" + q + "\"") + " (after " + tries * 0.4 + " s)");
+                startUri = uri;
                 if (uri != null) m.getTransportControls().playFromUri(Uri.parse(uri), null);
                 else m.getTransportControls().playFromSearch(q, null);
                 // check it took: if nothing plays within a few seconds, fall back to opening the app
