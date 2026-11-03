@@ -20,7 +20,7 @@ final class Trace {
     static final String KEEP = "logs_keep", PENDING = "trace_pending";
     /** TEMPORARY (owner's box, before the Play Store): send the logs by themselves after every start. */
     static final String AUTO = "logs_auto";
-    private static final long MAX_SEND = 10L * 1024 * 1024; // per send
+    private static final long MAX_SEND = 1024L * 1024; // per send: 1 MB
     private static final long KEEP_MS = 3 * 24 * 3600 * 1000L, MAX_BYTES = 40L * 1024 * 1024;
     private static boolean running;
     private static Process logcat;
@@ -145,7 +145,7 @@ final class Trace {
                     if (!auto) Ui.ui.post(() -> toast(app, "There are no logs yet"));
                     return;
                 }
-                // at most 10 MB (ntfy refuses over 15 MB, and smaller sends faster): the event logs first,
+                // at most 1 MB (quick to send): the event logs first,
                 // then the Android logs, newest first; older ones that don't fit are left out
                 java.util.Arrays.sort(fs, (x, y) -> {
                     boolean ex = x.getName().startsWith("events-"), ey = y.getName().startsWith("events-");
@@ -166,7 +166,7 @@ final class Trace {
                         z.closeEntry();
                     }
                 }
-                if (left > 0) event(app, "Logs: " + left + " older file(s) left out to stay under 10 MB");
+                if (left > 0) event(app, "Logs: " + left + " older file(s) left out to stay under 1 MB");
                 String name = (auto ? "autolog-" : "logs-") + new SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(new Date()) + ".zip";
                 java.net.HttpURLConnection h = (java.net.HttpURLConnection) new java.net.URL("https://ntfy.sh/" + About.TOPIC).openConnection();
                 h.setRequestMethod("PUT");
