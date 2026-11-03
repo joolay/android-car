@@ -668,7 +668,7 @@ public class MainActivity extends Activity {
     // ---- idle: panels and pop-ups in the tile area minimise 15 s after the last touch anywhere.
     // Calls and turn-by-turn stay; full-screen pages (settings, widgets, All apps) stay.
     private final Runnable idle = () -> {
-        if (WhatsWeb.isOpen()) { /* WhatsApp stays open: it doesn't time out */ } else if (Panels.minimisable() || (AppPanels.galleryRef != null && Panels.top() == AppPanels.galleryRef)) Panels.close();
+        if (WhatsWeb.isOpen() || Panels.sticky) { /* WhatsApp, news and traffic stay open until closed by hand */ } else if (Panels.minimisable() || (AppPanels.galleryRef != null && Panels.top() == AppPanels.galleryRef)) Panels.close();
         PhoneScreen.hide();
         SalahCard.hide();
         SpeedCard.hide();

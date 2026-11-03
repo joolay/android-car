@@ -55,6 +55,7 @@ final class Panels {
 
     /** Replace everything with a new page stack. */
     static void show(Page p) {
+        sticky = false; // a new page: it times out as usual unless it says otherwise
         stack.clear();
         stack.add(p);
         modes.clear();
@@ -104,8 +105,12 @@ final class Panels {
         if (!stack.isEmpty()) render();
     }
 
+    /** What's open stays until it's closed by hand (no closing after a while without a touch): news and traffic. */
+    static boolean sticky;
+
     static void close() {
         InAppKeyboard.hide();
+        sticky = false;
         stack.clear();
         modes.clear();
         final View sv = slideView;
@@ -177,6 +182,7 @@ final class Panels {
         scrim.setBackgroundColor(scrimColor);
         // tapping beside a panel closes it, except full-screen pages (they have Done / ✕)
         scrim.setOnClickListener(v -> {
+            if (sticky) return; // news and traffic: only their ✕ closes them
             if (!full || (cardPage != null && top() == cardPage)) close();
         });
         layer.addView(scrim, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));

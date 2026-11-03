@@ -607,6 +607,7 @@ final class NewsTicker {
     private void openFeed() {
         feedNews = showingNews;
         feedView = 0;
+        Ui.ui.post(() -> Panels.sticky = true); // news and traffic stay until you close them
         Panels.showSlide(() -> { // slides down out of the ticker, back up when closed
             Context c = Panels.ctx();
             boolean n = feedNews;
