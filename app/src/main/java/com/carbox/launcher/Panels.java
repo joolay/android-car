@@ -322,7 +322,8 @@ final class Panels {
         View t = titleView != null ? titleView : Ui.line(ctx, title, up ? 15 : 20, Ui.TEXT, true);
         head.addView(t, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
         if (action != null) {
-            head.addView(action, Ui.lpu(ic + 8, ic + 8));
+            action.setMinimumWidth(Ui.u(ic + 8)); // a single icon keeps its square size; a row of icons grows
+            head.addView(action, new LinearLayout.LayoutParams(Ui.WRAP, Ui.u(ic + 8)));
             head.addView(Ui.gap(ctx, 12, 1));
         }
         View x = Ui.icon(ctx, R.drawable.ic_x, Ui.SUB);

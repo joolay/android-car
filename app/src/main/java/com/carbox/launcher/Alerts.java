@@ -63,8 +63,8 @@ final class Alerts {
             if (a == null) return;
             if (at > 0) a.tiles.refresh();
             a.tiles.view.toStart();
-            // map is the home view: the alert tile shows over the map in the first spot (highlighted);
-            // it goes after the usual 15 s without a touch, or tap it to open the tiles
+            // big map on the Centre Stage: the alert shows for a few seconds on the alternate left stage
+            // (never over the map); tap it to open the tiles
             if (MainActivity.mapHome() && a.map.expanded() && !a.drawerOpen) {
                 a.alertTile(0);
                 a.resetIdle();

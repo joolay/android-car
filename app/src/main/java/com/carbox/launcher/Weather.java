@@ -86,7 +86,7 @@ final class Weather {
                         + "&hourly=temperature_2m,weather_code,precipitation_probability,is_day"
                         + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,"
                         + "wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,sunrise,sunset"
-                        + "&timezone=auto&forecast_days=7&forecast_hours=12",
+                        + "&timezone=auto&forecast_days=7&forecast_hours=48",
                 Gps.lat, Gps.lon);
         Net.get(url, null, (body, code) -> {
             loading = false;
@@ -156,7 +156,7 @@ final class Weather {
                         + "&hourly=temperature_2m,weather_code,precipitation_probability,is_day"
                         + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,"
                         + "wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,sunrise,sunset"
-                        + "&timezone=auto&forecast_days=7&forecast_hours=12", p[1], p[2]);
+                        + "&timezone=auto&forecast_days=7&forecast_hours=48", p[1], p[2]);
         Net.get(url, null, (body, code) -> {
             if (body == null || code != 200) return;
             Prefs.put(key, body);
@@ -203,10 +203,16 @@ final class Weather {
         if (h != null) {
             JSONArray t = h.getJSONArray("time"), tt = h.getJSONArray("temperature_2m"), wc = h.getJSONArray("weather_code");
             JSONArray pp = h.optJSONArray("precipitation_probability"), dd = h.optJSONArray("is_day");
-            for (int i = 0; i < t.length() && hours.size() < 8; i++) {
+            String lastDate = null;
+            int dayOff = 0;
+            for (int i = 0; i < t.length() && hours.size() < 48; i++) {
                 String ts = t.getString(i); // 2026-10-26T20:00
+                String date = ts.substring(0, 10);
+                if (lastDate != null && !date.equals(lastDate)) dayOff++; // crossed midnight: next day
+                lastDate = date;
                 int hr = Integer.parseInt(ts.substring(11, 13));
-                hours.add(new double[]{hr, tt.getDouble(i), wc.getInt(i), pp == null ? 0 : pp.optDouble(i, 0), dd == null ? 1 : dd.optInt(i, 1)});
+                // [hourOfDay, temp, code, rainProb, isDay, dayOffset] — dayOffset 0 today, 1 tomorrow…
+                hours.add(new double[]{hr, tt.getDouble(i), wc.getInt(i), pp == null ? 0 : pp.optDouble(i, 0), dd == null ? 1 : dd.optInt(i, 1), dayOff});
             }
         }
         days.clear();

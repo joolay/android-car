@@ -287,8 +287,8 @@ final class InfoPanels {
         Context c = Panels.ctx();
         LinearLayout b = Ui.col(c);
         LinearLayout tabs = Ui.row(c);
-        String[] names = {"Today", "3 days", "7 days"};
-        for (int i = 0; i < 3; i++) {
+        String[] names = {"Today", "Tomorrow", "3 days", "7 days"};
+        for (int i = 0; i < names.length; i++) {
             final int k = i;
             tabs.addView(Ui.seg(c, names[i], weatherTab == i, () -> {
                 weatherTab = k;
@@ -323,7 +323,8 @@ final class InfoPanels {
             final LinearLayout fb = b;
             if (!Weather.withPlace(p, () -> {
                 if (weatherTab == 0) today(c, fb);
-                else if (weatherTab == 1) threeDays(c, fb);
+                else if (weatherTab == 1) tomorrow(c, fb);
+                else if (weatherTab == 2) threeDays(c, fb);
                 else sevenDays(c, fb);
             })) b.addView(Ui.text(c, "Loading the forecast for " + p[0] + "…", 14, Ui.SUB, false), top(24));
             return Panels.panel(title, b, 660, 440);
@@ -333,7 +334,8 @@ final class InfoPanels {
             return Panels.panel(title, b, 660, 440);
         }
         if (weatherTab == 0) today(c, b);
-        else if (weatherTab == 1) threeDays(c, b);
+        else if (weatherTab == 1) tomorrow(c, b);
+        else if (weatherTab == 2) threeDays(c, b);
         else sevenDays(c, b);
         return Panels.panel(title, b, 660, 440);
     }
@@ -392,30 +394,79 @@ final class InfoPanels {
         }
         r.addView(grid);
         b.addView(r, top(18));
+        hourly(c, b, -1); // today's hours, scrolling on into tomorrow
+    }
 
+    /**
+     * The scrolling hourly strip. onlyDay -1: from now, carrying on past midnight into tomorrow (with a
+     * "Tomorrow" divider); 0 or 1: just that day's hours.
+     */
+    private static void hourly(Context c, LinearLayout b, int onlyDay) {
         LinearLayout hours = Ui.row(c);
-        for (int i = 0; i < Math.min(12, Weather.hours.size()); i++) {
+        int shown = 0;
+        boolean dividerDone = false;
+        for (int i = 0; i < Weather.hours.size() && shown < 24; i++) {
             double[] h = Weather.hours.get(i);
+            int off = h.length > 5 ? (int) h[5] : 0;
+            if (onlyDay >= 0 && off != onlyDay) continue;
+            if (onlyDay < 0 && off >= 1 && !dividerDone) { // mark where tomorrow begins
+                dividerDone = true;
+                LinearLayout div = Ui.col(c);
+                div.setGravity(Gravity.CENTER);
+                View bar = new View(c); // a slim line marks midnight
+                bar.setBackgroundColor(Ui.ACCENT_SOFT);
+                div.addView(bar, Ui.lpu(2, 40));
+                TextView dl = Ui.line(c, "Tomorrow", 11, Ui.ACCENT_SOFT, true);
+                div.addView(dl, top(6));
+                LinearLayout.LayoutParams dvl = Ui.lpu(72, Ui.MATCH);
+                if (shown > 0) dvl.leftMargin = Ui.u(8);
+                hours.addView(div, dvl);
+            }
+            boolean now = onlyDay < 0 && shown == 0;
             LinearLayout cell = Ui.col(c);
             cell.setGravity(Gravity.CENTER_HORIZONTAL);
-            cell.setBackground(Themes.inner(i == 0 ? Ui.CARD3 : Ui.CARD2, 12));
+            cell.setBackground(Themes.inner(now ? Ui.CARD3 : Ui.CARD2, 12));
             Ui.pad(cell, 8, 10, 8, 10);
-            cell.addView(Ui.text(c, i == 0 ? "Now" : clockShort((int) h[0]), 11, Ui.SUB, false));
+            cell.addView(Ui.text(c, now ? "Now" : clockShort((int) h[0]), 11, Ui.SUB, false));
             LinearLayout.LayoutParams il = Ui.lpu(28, 28);
             il.topMargin = Ui.u(6);
             cell.addView(Ui.icon(c, Weather.icon((int) h[2], h[4] > 0), 0), il);
-            TextView tt = Ui.text(c, Weather.t(h[1]), 14, Ui.TEXT, true);
-            cell.addView(tt, top(6));
-            TextView rp = Ui.text(c, (int) h[3] + "%", 10, (int) h[3] >= 40 ? Ui.ACCENT_SOFT : Ui.MUTED, false);
-            cell.addView(rp, top(3));
+            cell.addView(Ui.text(c, Weather.t(h[1]), 14, Ui.TEXT, true), top(6));
+            cell.addView(Ui.text(c, (int) h[3] + "%", 10, (int) h[3] >= 40 ? Ui.ACCENT_SOFT : Ui.MUTED, false), top(3));
             LinearLayout.LayoutParams cl = Ui.lpu(62, Ui.WRAP); // same width each, never squashed
-            if (i > 0) cl.leftMargin = Ui.u(8);
+            if (shown > 0 || dividerDone) cl.leftMargin = Ui.u(8);
             hours.addView(cell, cl);
+            shown++;
         }
-        android.widget.HorizontalScrollView hsv = new android.widget.HorizontalScrollView(c); // swipe for later hours
-        hsv.setHorizontalScrollBarEnabled(false);
-        hsv.addView(hours);
-        b.addView(hsv, top(18));
+        if (shown == 0) b.addView(Ui.text(c, "No hourly forecast.", 13, Ui.SUB, false), top(18));
+        else {
+            android.widget.HorizontalScrollView hsv = new android.widget.HorizontalScrollView(c); // swipe for later hours
+            hsv.setHorizontalScrollBarEnabled(false);
+            hsv.addView(hours);
+            b.addView(hsv, top(18));
+        }
+    }
+
+    /** Tomorrow: the day's headline figures, then tomorrow's hours. */
+    private static void tomorrow(Context c, LinearLayout b) {
+        Weather.Day d = Weather.days.size() > 1 ? Weather.days.get(1) : null;
+        if (d == null) {
+            b.addView(Ui.text(c, "Tomorrow's forecast isn't in yet.", 14, Ui.SUB, false), top(24));
+            return;
+        }
+        LinearLayout r = Ui.row(c);
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.addView(Ui.icon(c, Weather.icon(d.code, true), 0), Ui.lpu(64, 64));
+        LinearLayout t = Ui.col(c);
+        t.addView(Ui.text(c, "H " + Weather.t(d.hi) + "   L " + Weather.t(d.lo), 24, Ui.TEXT, true));
+        t.addView(Ui.text(c, Weather.describe(d.code), 14, Ui.TEXT2, false), top(2));
+        LinearLayout.LayoutParams tl = Ui.lp(Ui.WRAP, Ui.WRAP);
+        tl.leftMargin = Ui.u(14);
+        r.addView(t, tl);
+        b.addView(r, top(8));
+        b.addView(Ui.line(c, "Rain " + d.rainProb + "%   ·   Wind " + Math.round(d.windKmh) + " km/h " + Weather.compass(d.windDir)
+                + "   ·   UV " + Math.round(d.uv), 13, Ui.SUB, false), top(10));
+        hourly(c, b, 1); // tomorrow's hours
     }
 
     static String clockShort(int hour) {

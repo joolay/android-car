@@ -598,7 +598,7 @@ final class NewsTicker {
         if (Panels.open() || CallState.state != CallState.NONE) return; // don't interrupt
         boolean was = showingNews;
         showingNews = false;
-        openFeed();
+        feedList(); // traffic at start: show the list straight away, no auto-play
         showingNews = was;
         if (MainActivity.I != null) MainActivity.I.resetIdle();
     }
@@ -606,22 +606,37 @@ final class NewsTicker {
     private boolean feedNews = true; // which feed the open window shows (the NEWS / TRAFFIC label switches it)
     private int feedView; // 0 today's headlines, 1 archive, 2 bin
 
-    /** Make the scrolling headline text smaller or bigger (11\u201324). */
-    private void zoomFont(int d) {
-        int f = Math.max(11, Math.min(24, Prefs.num("ticker_font", 15) + d * 2));
-        Prefs.put("ticker_font", f);
-        marquee.applyFont();
+    // ---- text size: one magnifier cycles three sizes (small, medium, large), applied everywhere the feed
+    // shows \u2014 the scrolling ticker, the list, the playback slides and the article view.
+    static int fontLevel() {
+        return Math.max(0, Math.min(2, Prefs.num("ticker_font_level", 1)));
+    }
+
+    /** Pick a size for the current level: small / medium / large. */
+    static float lvlSize(float sm, float md, float lg) {
+        int l = fontLevel();
+        return l == 0 ? sm : l == 1 ? md : lg;
+    }
+
+    /** Next of the three sizes; refresh the scrolling ticker (callers refresh their own view). */
+    static void nextFont() {
+        Prefs.put("ticker_font_level", (fontLevel() + 1) % 3);
+        if (MainActivity.I != null && MainActivity.I.ticker != null) MainActivity.I.ticker.marquee.applyFont();
     }
 
     // ---- Playback: each headline shown big on the Centre Stage for 5 s, with tick / archive / delete
     private List<Item> slide;
     private int slideIdx;
     private boolean slidePaused;
+    private boolean slideAutoList; // auto-play on opening the ticker: show the list once the round is done
     private final Runnable slideTick = new Runnable() {
         @Override
         public void run() {
             if (slide == null || slide.isEmpty() || slidePaused) return;
-            slideIdx = (slideIdx + 1) % slide.size();
+            if (slideIdx + 1 >= slide.size()) { // finished the last headline
+                if (slideAutoList) { feedList(); return; } // auto-play done → open the list
+                slideIdx = 0; // a manual replay just loops
+            } else slideIdx++;
             Panels.refresh();
             Ui.ui.postDelayed(this, 5000);
         }
@@ -634,13 +649,20 @@ final class NewsTicker {
     }
 
     void slideshow() {
+        slideshow(false);
+    }
+
+    /** autoList: play once through, then drop to the list (used when the ticker is opened). */
+    void slideshow(boolean autoList) {
         buildSlides();
         if (slide.isEmpty()) {
+            if (autoList) { feedList(); return; } // nothing to play: straight to the list
             android.widget.Toast.makeText(c, "No headlines to play", android.widget.Toast.LENGTH_SHORT).show();
             return;
         }
         slideIdx = 0;
         slidePaused = false;
+        slideAutoList = autoList;
         Ui.ui.post(() -> Panels.sticky = true); // stays until you close it
         Panels.show(this::slidePage);
         Ui.ui.post(() -> Panels.whenClosed(() -> {
@@ -678,21 +700,30 @@ final class NewsTicker {
         }
         if (slideIdx >= slide.size()) slideIdx = 0;
         Item it = slide.get(slideIdx);
-        int fz = Prefs.num("ticker_font", 15); // the A- / A+ size carries into the slides
-        TextView h = Ui.text(c, it.title, Math.min(34, fz + 10), Ui.TEXT, true);
+        // the headline (and story) centred in the window, with the buttons pinned along the bottom
+        b.setGravity(Gravity.CENTER_HORIZONTAL);
+        b.addView(new View(c), new LinearLayout.LayoutParams(Ui.MATCH, 0, 1)); // space above: centres the text
+        TextView h = Ui.text(c, it.title, lvlSize(24, 28, 33), Ui.TEXT, true);
+        h.setGravity(Gravity.CENTER);
         h.setLineSpacing(Ui.uf(3), 1);
-        b.addView(h);
+        h.setOnClickListener(v -> feedList()); // tap the headline to skip straight to the list
+        b.addView(h, Ui.lp(Ui.MATCH, Ui.WRAP));
         String m = (it.source != null ? it.source : "") + (it.date > 0 ? (it.source != null ? " \u00b7 " : "") + ago(it.date) : "");
-        if (!m.isEmpty()) b.addView(Ui.line(c, m, 13, Ui.MUTED, false), Widgets.top(6));
+        if (!m.isEmpty()) {
+            TextView mv = Ui.line(c, m, 13, Ui.MUTED, false);
+            mv.setGravity(Gravity.CENTER);
+            b.addView(mv, Widgets.top(8));
+        }
         String d = clean(it.desc);
         if (!d.isEmpty() && !d.equalsIgnoreCase(it.title)) {
-            TextView dt = Ui.text(c, d, fz + 2, Ui.TEXT2, false);
+            TextView dt = Ui.text(c, d, lvlSize(15, 17, 20), Ui.TEXT2, false);
+            dt.setGravity(Gravity.CENTER);
             dt.setLineSpacing(Ui.uf(5), 1);
             dt.setMaxLines(8); // the stage is roomy: show more of the story
             b.addView(dt, Widgets.top(14));
         }
-        b.addView(new View(c), new LinearLayout.LayoutParams(Ui.MATCH, 0, 1)); // push the buttons down
-        // footer: pause/resume and which slide on the left; read, archive, delete on the right
+        b.addView(new View(c), new LinearLayout.LayoutParams(Ui.MATCH, 0, 1)); // space below: centres the text
+        // footer along the bottom: pause/resume and which slide on the left; read, archive, delete on the right
         LinearLayout foot = Ui.row(c);
         foot.setGravity(Gravity.CENTER_VERTICAL);
         foot.addView(Ui.iconButton(c, slidePaused ? R.drawable.ic_play : R.drawable.ic_pause,
@@ -715,9 +746,16 @@ final class NewsTicker {
         return Panels.panel("Playback", b, 660, 440);
     }
 
+    /** Opening the ticker: play the headlines through once, then drop to the list. */
     private void openFeed() {
         feedNews = showingNews;
+        slideshow(true);
+    }
+
+    private void feedList() {
+        feedNews = showingNews;
         feedView = 0;
+        Ui.ui.removeCallbacks(slideTick); // stop playback if we came from it
         Ui.ui.post(() -> Panels.sticky = true); // news and traffic stay until you close them
         Panels.showSlide(() -> { // slides down out of the ticker, back up when closed
             Context c = Panels.ctx();
@@ -751,7 +789,7 @@ final class NewsTicker {
             Ui.press(ed);
             head.addView(ed, Ui.lpu(28, 28));
             head.addView(Ui.gap(c, 12, 1));
-            // play the headlines as full-stage slides, and make the feed text smaller / bigger
+            // play the headlines as full-stage slides, and one magnifier that cycles the three text sizes
             View pl = Ui.icon(c, R.drawable.ic_play, Ui.ACCENT_SOFT);
             Ui.pad(pl, 4, 4, 4, 4);
             pl.setContentDescription("Play the headlines");
@@ -759,19 +797,12 @@ final class NewsTicker {
             Ui.press(pl);
             head.addView(pl, Ui.lpu(30, 30));
             head.addView(Ui.gap(c, 10, 1));
-            View sm = Ui.icon(c, R.drawable.ic_minus, Ui.ACCENT_SOFT);
-            Ui.pad(sm, 4, 4, 4, 4);
-            sm.setContentDescription("Smaller text");
-            sm.setOnClickListener(v -> zoomFont(-1));
-            Ui.press(sm);
-            head.addView(sm, Ui.lpu(30, 30));
-            head.addView(Ui.gap(c, 6, 1));
-            View bg = Ui.icon(c, R.drawable.ic_plus, Ui.ACCENT_SOFT);
-            Ui.pad(bg, 4, 4, 4, 4);
-            bg.setContentDescription("Bigger text");
-            bg.setOnClickListener(v -> zoomFont(1));
-            Ui.press(bg);
-            head.addView(bg, Ui.lpu(30, 30));
+            View fs = Ui.icon(c, R.drawable.ic_search, Ui.ACCENT_SOFT);
+            Ui.pad(fs, 4, 4, 4, 4);
+            fs.setContentDescription("Text size");
+            fs.setOnClickListener(v -> { nextFont(); Panels.refresh(); }); // rebuild the list at the new size
+            Ui.press(fs);
+            head.addView(fs, Ui.lpu(30, 30));
             head.addView(Ui.gap(c, 12, 1));
             // archive and bin: tap to see them, tap again for today's headlines (lit while open)
             for (int k = 1; k <= 2; k++) {
@@ -840,11 +871,11 @@ final class NewsTicker {
         LinearLayout r = Ui.col(c);
         Ui.pad(r, 0, 11, 0, 11);
         r.addView(Ui.hr(c));
-        TextView t = Ui.text(c, it.title, 15, wasRead ? Ui.MUTED : Ui.TEXT, !wasRead);
+        TextView t = Ui.text(c, it.title, lvlSize(14, 15, 18), wasRead ? Ui.MUTED : Ui.TEXT, !wasRead);
         t.setLineSpacing(Ui.uf(2), 1);
         r.addView(t, Widgets.top(10));
         if (it.desc != null && !wasRead) {
-            TextView d = Ui.text(c, it.desc, 12, Ui.SUB, false);
+            TextView d = Ui.text(c, it.desc, lvlSize(11, 12, 14), Ui.SUB, false);
             d.setMaxLines(3);
             r.addView(d, Widgets.top(4));
         }
@@ -918,7 +949,7 @@ final class NewsTicker {
         Panels.push(() -> {
             Context c = Panels.ctx();
             LinearLayout b = Ui.col(c);
-            TextView t = Ui.text(c, it.title, 22, Ui.TEXT, true);
+            TextView t = Ui.text(c, it.title, lvlSize(20, 22, 26), Ui.TEXT, true);
             t.setLineSpacing(Ui.uf(3), 1);
             b.addView(t);
             String m = (it.source != null ? it.source : "") + (it.date > 0 ? (it.source != null ? " · " : "") + ago(it.date) : "");
@@ -927,14 +958,14 @@ final class NewsTicker {
             TextView sumHead = Ui.line(c, "SUMMARY", 11, Ui.SUB, true);
             sumHead.setLetterSpacing(0.08f);
             b.addView(sumHead, Widgets.top(14));
-            TextView summary = Ui.text(c, it.link != null ? "Getting the story…" : clean(it.desc), 18, Ui.TEXT, false);
+            TextView summary = Ui.text(c, it.link != null ? "Getting the story…" : clean(it.desc), lvlSize(16, 18, 21), Ui.TEXT, false);
             summary.setLineSpacing(Ui.uf(6), 1);
             b.addView(summary, Widgets.top(6));
             TextView restHead = Ui.line(c, "FULL STORY", 11, Ui.SUB, true);
             restHead.setLetterSpacing(0.08f);
             restHead.setVisibility(View.GONE);
             b.addView(restHead, Widgets.top(18));
-            TextView body = Ui.text(c, "", 16, Ui.TEXT2, false);
+            TextView body = Ui.text(c, "", lvlSize(14, 16, 19), Ui.TEXT2, false);
             body.setLineSpacing(Ui.uf(6), 1);
             b.addView(body, Widgets.top(6));
             if (it.link != null) realLink(it.link, url -> Net.get(url, pageHeaders(), (html, code) -> Ui.ui.post(() -> {
@@ -964,10 +995,24 @@ final class NewsTicker {
                     body.setText(rest.toString());
                 }
             })));
-            View open = null; // open in the chosen browser (Chrome by default): its icon in the title bar
+            // title-bar actions: the same magnifier (cycles the three text sizes, live) and open-in-browser
+            LinearLayout acts = Ui.row(c);
+            acts.setGravity(Gravity.CENTER_VERTICAL);
+            View fs = Ui.icon(c, R.drawable.ic_search, Ui.ACCENT_SOFT);
+            Ui.pad(fs, 3, 3, 3, 3);
+            fs.setContentDescription("Text size");
+            fs.setOnClickListener(v -> {
+                nextFont();
+                t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.uf(lvlSize(20, 22, 26)));
+                summary.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.uf(lvlSize(16, 18, 21)));
+                body.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.uf(lvlSize(14, 16, 19)));
+            });
+            Ui.press(fs);
+            acts.addView(fs, Ui.lpu(30, 30));
             if (it.link != null) {
                 String bp = browser();
                 android.graphics.drawable.Drawable bi = bp != null ? Apps.iconOf(bp) : null;
+                View open;
                 if (bi != null) {
                     android.widget.ImageView iv = new android.widget.ImageView(c);
                     iv.setImageDrawable(bi);
@@ -981,8 +1026,10 @@ final class NewsTicker {
                     return true;
                 });
                 Ui.press(open);
+                acts.addView(Ui.gap(c, 8, 1));
+                acts.addView(open, Ui.lpu(30, 30));
             }
-            return Panels.panel(null, it.source != null ? it.source : "Story", b, 660, 440, open);
+            return Panels.panel(null, it.source != null ? it.source : "Story", b, 660, 440, acts);
         });
     }
 
@@ -1115,14 +1162,14 @@ final class NewsTicker {
         Marquee(Context c) {
             super(c);
             p.setColor(Ui.TEXT);
-            p.setTextSize(Ui.uf(Prefs.num("ticker_font", 15)));
+            p.setTextSize(Ui.uf(lvlSize(13, 16, 20)));
             p.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
             dot.setColor(Ui.TEXT2);
         }
 
-        /** The feed text size changed (the ticker's A- / A+): re-measure and redraw. */
+        /** The feed text size changed (the magnifier): re-measure and redraw. */
         void applyFont() {
-            p.setTextSize(Ui.uf(Prefs.num("ticker_font", 15)));
+            p.setTextSize(Ui.uf(lvlSize(13, 16, 20)));
             width = p.measureText(joined);
             invalidate();
         }

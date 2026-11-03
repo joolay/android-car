@@ -967,17 +967,25 @@ public class MainActivity extends Activity {
         }
     };
 
+    /** How long an alert stays on the alternate stage before the usual widget comes back. */
+    private static final long ALERT_MS = 8000;
+    private final Runnable alertAway = this::hideAlertTile;
+
+    /**
+     * An alert's widget, shown for a few seconds on the alternate left stage (the one that isn't Now Playing),
+     * so it never covers the map.
+     */
     void alertTile(int index) {
         hideAlertTile();
         org.json.JSONObject spec = TileDrawer.specs().optJSONObject(index);
-        if (spec == null || !"w".equals(spec.optString("t"))) return;
+        if (spec == null || !"w".equals(spec.optString("t")) || map == null) return;
         try {
-            alertW = Widgets.make(this, index, spec);
+            alertW = LeftStages.make(this, spec.optString("id")); // the roomier left-stage design
+            if (alertW == null || alertW.v == null) alertW = Widgets.make(this, index, spec);
         } catch (Exception e) {
             return;
         }
         if (alertW == null || alertW.v == null) return;
-        float gap = Ui.u(8), cw = (tileArea.getWidth() - gap * (TileDrawer.COLS - 1)) / TileDrawer.COLS, ch = (tileArea.getHeight() - gap) / TileDrawer.ROWS;
         alertTile = new FrameLayout(this);
         alertTile.addView(alertW.v, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         Maps.clip(alertTile, 16);
@@ -989,17 +997,18 @@ public class MainActivity extends Activity {
             hideAlertTile();
             drawer(true);
         });
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Math.round(cw), Math.round(ch), Gravity.TOP | Gravity.START);
-        tileArea.addView(alertTile, tileArea.indexOfChild(sheetHost), lp); // over the map, under panels
+        map.view.addView(alertTile, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH)); // on top of the alternate stage
         alertTile.setScaleX(0.85f);
         alertTile.setScaleY(0.85f);
         alertTile.setAlpha(0f);
         alertTile.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(Ui.ms(260)).setInterpolator(new android.view.animation.OvershootInterpolator(1.6f)).start();
         Ui.ui.post(alertTick);
+        Ui.ui.postDelayed(alertAway, ALERT_MS);
     }
 
     void hideAlertTile() {
         Ui.ui.removeCallbacks(alertTick);
+        Ui.ui.removeCallbacks(alertAway);
         alertW = null;
         if (alertTile != null) {
             final View t = alertTile;

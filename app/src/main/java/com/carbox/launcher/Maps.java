@@ -575,7 +575,8 @@ final class Maps {
     private boolean following = true;
     private int scaleW;
     private String scaleText = "";
-    private TextView street, limit, spd, scaleLbl;
+    private TextView street, roadLine, limit, spd, scaleLbl;
+    private LinearLayout placeBox;
     private View recentre, scaleBar, zoomBox;
     private ImageView compass;
 
@@ -633,14 +634,18 @@ final class Maps {
 
     private FrameLayout controls(Context a) {
         FrameLayout o = new FrameLayout(a);
-        // street you're on
-        street = Ui.line(a, "", 18, Ui.TEXT, true); // area / street name: easy to read at a glance
-        street.setBackground(btn(14));
-        Ui.pad(street, 14, 7, 14, 7);
-        street.setElevation(Ui.uf(4));
+        // where you are: the area on top, the street you're on below it, easy to read at a glance
+        placeBox = Ui.col(a);
+        placeBox.setBackground(btn(14));
+        Ui.pad(placeBox, 14, 7, 14, 7);
+        placeBox.setElevation(Ui.uf(4));
+        street = Ui.line(a, "", 18, Ui.TEXT, true); // the area (town / suburb)
+        placeBox.addView(street);
+        roadLine = Ui.line(a, "", 14, Ui.TEXT2, false); // the current street
+        placeBox.addView(roadLine, Widgets.top(1));
         FrameLayout.LayoutParams rl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.TOP | Gravity.START);
         rl.setMargins(Ui.u(10), Ui.u(10), Ui.u(60), 0);
-        o.addView(street, rl);
+        o.addView(placeBox, rl);
         // right-hand column: close, compass, traffic
         LinearLayout col = Ui.col(a);
         if (!MainActivity.mapHome()) col.addView(round(a, R.drawable.ic_x, true, () -> expand(false)), Ui.lpu(48, 48)); // the map is home: no close
@@ -771,9 +776,13 @@ final class Maps {
 
     private void updateControls() {
         if (street == null || bigHolder == null) return;
-        String r = SpeedLimit.road != null && !SpeedLimit.road.isEmpty() ? SpeedLimit.road : Gps.town;
-        street.setText(r == null ? "" : r);
-        street.setVisibility(r == null || r.isEmpty() ? View.GONE : View.VISIBLE);
+        String area = Gps.town, road = SpeedLimit.road;
+        boolean hasArea = area != null && !area.isEmpty(), hasRoad = road != null && !road.isEmpty();
+        street.setText(hasArea ? area : hasRoad ? road : ""); // no area yet: the street takes the top line
+        street.setVisibility(hasArea || hasRoad ? View.VISIBLE : View.GONE);
+        roadLine.setText(hasArea && hasRoad ? road : "");
+        roadLine.setVisibility(hasArea && hasRoad && !road.equalsIgnoreCase(area) ? View.VISIBLE : View.GONE);
+        placeBox.setVisibility(hasArea || hasRoad ? View.VISIBLE : View.GONE);
         boolean mph = Widgets.mph();
         int lim = SpeedLimit.kmh;
         limit.setText(lim > 0 ? String.valueOf(mph ? Math.round(lim / 1.609f) : lim) : "");
