@@ -48,7 +48,6 @@ public class CarIME extends InputMethodService {
     @Override
     public View onCreateInputView() {
         Ui.init((Context) this);
-        Predictor.warm(this);
         // (no live blur behind the keyboard: on this box it was redone on every key press and made typing slow;
         // the glass keyboard uses a tinted frost instead)
         root = new FrameLayout(this);
@@ -122,9 +121,7 @@ public class CarIME extends InputMethodService {
         View paste = Ui.button(c, "Paste", false, this::paste);
         fit(paste);
         strip.addView(paste, Ui.lp(Ui.WRAP, Ui.u(38)));
-        sugg = Ui.row(c); // predictive text: up to 3 words
-        strip.addView(sugg, new LinearLayout.LayoutParams(0, Ui.u(38), 1));
-        suggest();
+        strip.addView(new View(c), new LinearLayout.LayoutParams(0, Ui.u(38), 1));
         TextView hide = Ui.textButton(c, "⌄  Hide", false, () -> requestHideSelf(0));
         fit(hide);
         LinearLayout.LayoutParams hl = Ui.lp(Ui.WRAP, Ui.u(38));
@@ -183,36 +180,9 @@ public class CarIME extends InputMethodService {
 
     // ------------------------------------------------------------------ typing
 
-    private LinearLayout sugg;
-
-    private CharSequence before() {
-        InputConnection ic = getCurrentInputConnection();
-        return ic == null ? "" : ic.getTextBeforeCursor(80, 0);
-    }
-
-    /** Suggestions for the text before the cursor; a tap swaps the word being typed for it. */
-    private void suggest() {
-        if (sugg == null) return;
-        InAppKeyboard.fillSuggestions(sugg, before(), w -> {
-            InputConnection ic = getCurrentInputConnection();
-            if (ic == null) return;
-            CharSequence b = before();
-            String cur = Predictor.current(b), prev = Predictor.previous(b);
-            if (!cur.isEmpty()) ic.deleteSurroundingText(cur.length(), 0);
-            ic.commitText(w + " ", 1);
-            Predictor.learn(w, prev);
-            suggest();
-        });
-    }
-
     private void type(String s) {
         InputConnection ic = getCurrentInputConnection();
-        if (!s.isEmpty() && !Character.isLetter(s.charAt(0)) && s.charAt(0) != '\'') { // a word was finished
-            CharSequence b = before();
-            Predictor.learn(Predictor.current(b), Predictor.previous(b));
-        }
         if (ic != null) ic.commitText(s, 1);
-        suggest();
         if (shift) {
             shift = false;
             render();
@@ -225,7 +195,6 @@ public class CarIME extends InputMethodService {
         CharSequence sel = ic.getSelectedText(0);
         if (sel != null && sel.length() > 0) ic.commitText("", 1);
         else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
-        Ui.ui.post(this::suggest);
     }
 
     private void enter() {

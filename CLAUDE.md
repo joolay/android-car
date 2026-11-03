@@ -32,7 +32,7 @@ Widgets have profiles **Main** (left stage), **Expanded** (Centre Stage), **Tile
 Add-ons (`Addons.CATALOGUE`): widgets, themes (Modern, Glass = default), map providers, keyboard; all unlocked until billing.
 Classes kept for Android (don't rename): MainActivity, BackButtonService, MediaListener, CarIME, CarInCallService.
 Renamed: Tiles→TileDrawer, Ticker→NewsTicker, TopLeft→LeftStages, MapPanel→Maps, Sheets→Panels, Glass→Themes, Store→Prefs, U→Ui,
-Loc→Gps, Keyboard→InAppKeyboard, LyricsCard→LyricsView. Predictive text: `Predictor` + assets/dict_en.txt (SCOWL).
+Loc→Gps, Keyboard→InAppKeyboard, LyricsCard→LyricsView. (Predictive text was tried and removed: too slow on the box.)
 CI: any branch builds; only `main` publishes a release.
 
 ## Layout of the screen

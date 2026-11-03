@@ -102,7 +102,6 @@ final class InAppKeyboard {
         kb.setClickable(true);
         kb.setBackground(kbBackground(true));
         Ui.pad(kb, 8, 10, 8, 6);
-        Predictor.warm(c);
 
         // the field being edited, with Paste / Clear
         LinearLayout top = Ui.row(c);
@@ -143,9 +142,6 @@ final class InAppKeyboard {
             commit();
         }));
         kb.addView(top, Ui.lp(Ui.MATCH, Ui.WRAP));
-        suggestRow = Ui.row(c);
-        if (!secret) kb.addView(suggestRow, Ui.lpu(Ui.MATCH, 44)); // no guessing passwords
-        suggest();
 
         if (numeric) { // a number or phone field: the number pad
             numpad(c, kb, phone, InAppKeyboard::type, InAppKeyboard::backspace, InAppKeyboard::hide, "Done", () -> {
@@ -203,10 +199,7 @@ final class InAppKeyboard {
     }
 
     private static void type(String s) {
-        if (!secret && !s.isEmpty() && !Character.isLetter(s.charAt(0)) && s.charAt(0) != '\'')
-            Predictor.learn(Predictor.current(text), Predictor.previous(text)); // a word was finished
         text.append(s);
-        suggest();
         if (shift) {
             shift = false;
             commit();
@@ -220,7 +213,6 @@ final class InAppKeyboard {
         if (text.length() > 0) {
             text.setLength(text.length() - 1);
             commit();
-            suggest();
         }
     }
 
@@ -293,58 +285,6 @@ final class InAppKeyboard {
     static android.graphics.drawable.Drawable kbBackground(boolean inLauncher) {
         if (!Themes.on()) return new android.graphics.drawable.ColorDrawable(Ui.CARD);
         return new android.graphics.drawable.ColorDrawable(0xD9141A24); // frosted, cheap to draw on every key press
-    }
-
-    // ---- predictive text: up to 3 suggestions above the keys
-    private static LinearLayout suggestRow;
-
-    /** Fill a row with suggestion chips for the text so far; tapping one swaps it in for the word being typed. */
-    private static final java.util.concurrent.ExecutorService guess = java.util.concurrent.Executors.newSingleThreadExecutor();
-    private static int asked;
-
-    /** Suggestions are worked out in the background (keys never wait for them); only the newest are shown. */
-    static void fillSuggestions(LinearLayout row, CharSequence before, U2 pick) {
-        final int n = ++asked;
-        final String text = before == null ? "" : before.toString();
-        guess.execute(() -> {
-            java.util.List<String> l = Predictor.suggest(text);
-            Ui.ui.post(() -> {
-                if (n == asked) showSuggestions(row, l, pick);
-            });
-        });
-    }
-
-    private static void showSuggestions(LinearLayout row, java.util.List<String> l, U2 pick) {
-        row.removeAllViews();
-        for (int i = 0; i < 3; i++) {
-            final String w = i < l.size() ? l.get(i) : null;
-            TextView t = Ui.line(row.getContext(), w == null ? "" : w, 17, Ui.TEXT, i == 0 && w != null);
-            t.setGravity(Gravity.CENTER);
-            if (w != null) {
-                t.setBackground(Ui.round(Themes.on() ? 0x1FFFFFFF : Ui.CARD2, 10));
-                t.setOnClickListener(v -> pick.run(w));
-                Ui.press(t);
-            }
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.MATCH, 1);
-            lp.setMargins(Ui.u(4), Ui.u(2), Ui.u(4), Ui.u(2));
-            row.addView(t, lp);
-        }
-    }
-
-    interface U2 {
-        void run(String word);
-    }
-
-    private static void suggest() {
-        if (suggestRow == null || secret) return;
-        fillSuggestions(suggestRow, text, w -> {
-            String cur = Predictor.current(text), prev = Predictor.previous(text);
-            text.setLength(text.length() - cur.length());
-            text.append(w).append(' ');
-            Predictor.learn(w, prev);
-            commit();
-            suggest();
-        });
     }
 
     static final float KEY_H = 66; // 58 du key + 8 du gap, and the gap is touchable too
