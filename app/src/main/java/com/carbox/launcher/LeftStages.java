@@ -81,12 +81,7 @@ final class LeftStages {
     static Widgets.W make(Context c, String id) {
         int idx = tileIndex(id);
         JSONObject spec = idx >= 0 ? TileDrawer.specs().optJSONObject(idx) : TileDrawer.widget(id);
-        Widgets.TL = true;
-        try {
-            return Widgets.make(c, idx, spec);
-        } finally {
-            Widgets.TL = false;
-        }
+        return Widgets.make(c, idx, spec, Widgets.Profile.MAIN);
     }
 
     private static void toggle(Context c, String id) {

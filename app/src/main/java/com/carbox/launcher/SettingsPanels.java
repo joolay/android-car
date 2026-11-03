@@ -158,7 +158,7 @@ final class SettingsPanels {
 
         int railOn = 0;
         for (String[] e : Rail.order()) if ("1".equals(e[1])) railOn++;
-        String w = Prefs.str(Prefs.WALL, "black");
+        String w = Prefs.str(Prefs.WALL, "road");
         String as = Prefs.str(Prefs.ASSIST, "gemini"), ext = Prefs.str(Prefs.ASSIST_PKG, null);
         final int BLUE = 0xFF1F4E9A, GREEN = 0xFF1F7A46, AMBER = 0xFF8A5A10, PURPLE = 0xFF5A3A9A, GREY = Ui.CARD3;
         Object[][][] groups = {
@@ -311,7 +311,7 @@ final class SettingsPanels {
             Context c = c();
             LinearLayout b = Ui.col(c);
         // wallpaper
-        String w = Prefs.str(Prefs.WALL, "black");
+        String w = Prefs.str(Prefs.WALL, "road");
         View swatch = new View(c);
         swatch.setBackground(Ui.oval(Prefs.num(Prefs.WALL_COLOR, 0xFF1A2433)));
         LinearLayout colour = Ui.row(c);
@@ -337,7 +337,10 @@ final class SettingsPanels {
                 })));
         b.addView(Ui.hr(c));
         boolean glass = Themes.on();
-        b.addView(Panels.row("Theme", Ui.seg(c, "Modern", !glass, () -> theme(false)), Ui.seg(c, "Glass", glass, () -> theme(true))));
+        LinearLayout themes = Ui.row(c);
+        if (Addons.unlocked("theme_modern")) themes.addView(Ui.seg(c, "Modern", !glass, () -> theme(false)));
+        if (Addons.unlocked("theme_glass")) { themes.addView(Ui.gap(c, 8, 1)); themes.addView(Ui.seg(c, "Glass", glass, () -> theme(true))); }
+        b.addView(Panels.row("Theme", themes));
         b.addView(Ui.text(c, "Glass: the dock, Rail Bar, Now playing, left widgets and tiles see-through, like iOS (best with a wallpaper)", 12, Ui.SUB, false), top(4));
 
             return Panels.panel("Wallpaper", b, 600, 330);
@@ -837,8 +840,8 @@ final class SettingsPanels {
     private static void mapRows(Context c, LinearLayout b) {
         {
             String prov = Maps.provider();
-            b.addView(radio(c, "Standard", "OpenStreetMap. Free, no account. Dark style.", "osm".equals(prov), () -> setMap("osm")));
-            b.addView(radio(c, "OpenFreeMap", "Free vector map with sharp labels that stay upright as it turns.", "ofm".equals(prov), () -> setMap("ofm")));
+            if (Addons.mapUnlocked("osm")) b.addView(radio(c, "Standard", "OpenStreetMap. Free, no account. Dark style.", "osm".equals(prov), () -> setMap("osm")));
+            if (Addons.mapUnlocked("ofm")) b.addView(radio(c, "OpenFreeMap", "Free vector map with sharp labels that stay upright as it turns.", "ofm".equals(prov), () -> setMap("ofm")));
             if ("ofm".equals(prov)) {
                 String st = Prefs.str("ofm_style", "liberty");
                 if ("dark".equals(st)) st = "liberty";
@@ -846,7 +849,7 @@ final class SettingsPanels {
                         Ui.seg(c, "Positron", "positron".equals(st), () -> { Prefs.put("ofm_style", "positron"); setMap("ofm"); }),
                         Ui.seg(c, "Bright", "bright".equals(st), () -> { Prefs.put("ofm_style", "bright"); setMap("ofm"); })), top(4));
             }
-            b.addView(radio(c, "Offline map", "Download the area around you (or use a .pmtiles file). Works with no internet.", "pmtiles".equals(prov), () -> {
+            if (Addons.mapUnlocked("pmtiles")) b.addView(radio(c, "Offline map", "Download the area around you (or use a .pmtiles file). Works with no internet.", "pmtiles".equals(prov), () -> {
                 if (Prefs.str(OfflineMap.URI, "").isEmpty()) MapDownload.panel();
                 else setMap("pmtiles");
             }));
@@ -863,7 +866,7 @@ final class SettingsPanels {
                 b.addView(Ui.text(c, "Download map here fetches just the area around the car (choose how far and how detailed). Or choose a .pmtiles file you copied onto the box. Street-name lettering needs internet the first time; the map itself works offline.",
                         12, Ui.SUB, false), top(6));
             }
-            b.addView(radio(c, "Google Maps", "Needs your own Google Maps API key. Live traffic.", "google".equals(prov), () -> setMap("google")));
+            if (Addons.mapUnlocked("google")) b.addView(radio(c, "Google Maps", "Needs your own Google Maps API key. Live traffic.", "google".equals(prov), () -> setMap("google")));
             String col = Maps.colours();
             b.addView(Panels.row("Colours", Ui.seg(c, "Auto (day / night)", "auto".equals(col), () -> { Prefs.put("map_colours", "auto"); setMap(prov); }),
                     Ui.seg(c, "Light", "light".equals(col), () -> { Prefs.put("map_colours", "light"); setMap(prov); }),
@@ -1711,7 +1714,7 @@ final class SettingsPanels {
     private static void theme(boolean glass) {
         Prefs.put(Themes.KEY, glass);
         // glass over plain black shows nothing: bring in the Road wallpaper
-        if (glass && "black".equals(Prefs.str(Prefs.WALL, "black"))) Prefs.put(Prefs.WALL, "road");
+        if (glass && "black".equals(Prefs.str(Prefs.WALL, "road"))) Prefs.put(Prefs.WALL, "road");
         if (MainActivity.I != null) MainActivity.I.applyWallpaper(); // also redraws the cards
         else Themes.refresh();
         Panels.refresh();

@@ -242,7 +242,7 @@ final class TileDrawer {
             JSONObject o = s.optJSONObject(i);
             if (o != null) have.add(o.optString("id"));
         }
-        for (String[] w : Widgets.CATALOG) if (Faith.widgetAllowed(w[0]) && have.add(w[0])) s.put(widget(w[0]));
+        for (String[] w : Widgets.CATALOG) if (Faith.widgetAllowed(w[0]) && Addons.unlocked(w[0]) && have.add(w[0])) s.put(widget(w[0]));
         Prefs.put("tiles_cm", true);
         if (!Apps.all.isEmpty()) save(s); // wait until the app list has loaded before remembering defaults
         return s;

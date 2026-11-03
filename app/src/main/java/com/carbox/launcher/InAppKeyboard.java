@@ -33,6 +33,7 @@ final class InAppKeyboard {
 
     /** Make an EditText open this keyboard instead of the system one. */
     static void attach(EditText e, String fieldLabel) {
+        if (!Addons.unlocked("keyboard")) return; // the keyboard add-on isn't unlocked: the box's own keyboard types
         e.setShowSoftInputOnFocus(false);
         e.setFocusable(false);
         e.setCursorVisible(false);

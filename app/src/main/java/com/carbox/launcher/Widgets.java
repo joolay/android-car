@@ -88,17 +88,43 @@ final class Widgets {
         return "goto".equals(id) || "quickdial".equals(id) || "contact".equals(id) || "ha".equals(id) || "rest".equals(id) || "safety".equals(id) || "logbook".equals(id);
     }
 
+    /**
+     * Every widget has a design per place it can show:
+     * MAIN on a left stage (roomier), EXPANDED on the Centre Stage (its full page), TILE in the Tile Drawer.
+     */
+    enum Profile {MAIN, EXPANDED, TILE}
+
+    /** Tile sizes on the 4×2 Tile Drawer grid, width × height. Only 1×1 is made for now. */
+    static final int[][] SPANS = {{1, 1}, {2, 1}, {1, 2}, {2, 2}};
+
+    /** Which sizes a widget's Tile profile comes in (more get added when they're designed). */
+    static int[][] spans(String id) {
+        return new int[][]{{1, 1}};
+    }
+
+    /** A tile's size from its saved spec (1×1 unless set). */
+    static int[] span(JSONObject spec) {
+        return new int[]{Math.max(1, spec.optInt("w", 1)), Math.max(1, spec.optInt("h", 1))};
+    }
+
     abstract static class W {
         final Context c;
         final int index;
         final JSONObject spec;
         final JSONObject cfg;
-        final boolean tl; // made for the Top Left Widget
+        final boolean tl; // MAIN profile (a left stage)
+        final Profile profile;
         View v;
+
+        /** Open this widget's EXPANDED profile on the Centre Stage (by default what tapping it opens). */
+        void expand() {
+            if (v != null) v.performClick();
+        }
 
         W(Context c, int index, JSONObject spec) {
             this.c = c;
             tl = TL;
+            profile = TL ? Profile.MAIN : Profile.TILE;
             this.index = index;
             this.spec = spec;
             JSONObject o = spec.optJSONObject("cfg");
@@ -117,8 +143,20 @@ final class Widgets {
         }
     }
 
+    /** A widget in the given profile (MAIN for a left stage, TILE for the Tile Drawer). */
+    static W make(Context c, int index, JSONObject spec, Profile p) {
+        boolean was = TL;
+        TL = p == Profile.MAIN;
+        try {
+            return make(c, index, spec);
+        } finally {
+            TL = was;
+        }
+    }
+
     static W make(Context c, int index, JSONObject spec) {
         String id = spec.optString("id");
+        if (!Addons.unlocked(id)) return new Empty(c, index, spec); // an add-on that isn't unlocked
         switch (id) {
             case "carconnect":
                 return new CarConnect(c, index, spec);
@@ -165,7 +203,7 @@ final class Widgets {
      * A live, non-touchable preview of a widget: built at real tile size, then scaled to fit
      * whatever space it's given (the widget gallery and the tile editor).
      */
-    /** True while a widget is being made for the Top Left Widget (its own, roomier design). */
+    /** True while a widget is being made in its MAIN profile (a left stage: roomier design). */
     static boolean TL;
 
     /** Text size: a size up in the Top Left Widget. */

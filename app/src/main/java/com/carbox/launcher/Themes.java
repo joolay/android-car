@@ -27,8 +27,14 @@ final class Themes {
     private Themes() {
     }
 
+    /** The Glass theme is on (the default; Modern is the other). Locked: Modern. */
     static boolean on() {
-        return Prefs.flag(KEY, false);
+        if (!Prefs.flag("glass_default_v1", false)) { // Glass became the default: switched on once for everyone
+            Prefs.put("glass_default_v1", true);
+            Prefs.put(KEY, true);
+            if ("black".equals(Prefs.str(Prefs.WALL, "road"))) Prefs.put(Prefs.WALL, "road"); // glass needs a wallpaper behind it
+        }
+        return Prefs.flag(KEY, true) && Addons.unlocked("theme_glass");
     }
 
     /** A card background: glass when the look is on, else the solid colour as before. */

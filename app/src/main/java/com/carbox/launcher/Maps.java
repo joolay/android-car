@@ -197,6 +197,7 @@ final class Maps {
             if ("osm".equals(Prefs.str(Prefs.MAP_PROVIDER, "osm"))) Prefs.put(Prefs.MAP_PROVIDER, "ofm");
         }
         String p = Prefs.str(Prefs.MAP_PROVIDER, "ofm");
+        if (!Addons.mapUnlocked(p)) return "ofm"; // a provider add-on that isn't unlocked
         if ("google".equals(p) && Prefs.str(Prefs.MAP_KEY, "").isEmpty()) return "ofm";
         if ("pmtiles".equals(p) && Prefs.str(OfflineMap.URI, "").isEmpty()) return "ofm";
         return p;
@@ -268,7 +269,7 @@ final class Maps {
                 p.setFillType(android.graphics.Path.FillType.EVEN_ODD);
                 p.addRect(b.left - 2, b.top - 2, b.right + 2, b.bottom + 2, android.graphics.Path.Direction.CW);
                 p.addRoundRect(b.left, b.top, b.right, b.bottom, rr, rr, android.graphics.Path.Direction.CW);
-                String mode = Prefs.str(Prefs.WALL, "black");
+                String mode = Prefs.str(Prefs.WALL, "road");
                 fill.setColor("color".equals(mode) ? Prefs.num(Prefs.WALL_COLOR, Ui.BG) : android.graphics.Color.BLACK);
                 cv.drawPath(p, fill);
                 line.setStyle(android.graphics.Paint.Style.STROKE);

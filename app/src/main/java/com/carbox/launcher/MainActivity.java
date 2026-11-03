@@ -287,7 +287,7 @@ public class MainActivity extends Activity {
     // ------------------------------------------------------------------ wallpaper
 
     void applyWallpaper() {
-        String mode = Prefs.str(Prefs.WALL, "black");
+        String mode = Prefs.str(Prefs.WALL, "road");
         if ("color".equals(mode)) {
             root.setBackground(new ColorDrawable(Prefs.num(Prefs.WALL_COLOR, Ui.BG)));
         } else if ("image".equals(mode)) {
