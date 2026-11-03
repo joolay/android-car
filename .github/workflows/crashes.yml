@@ -32,6 +32,7 @@ jobs:
           echo "::warning::ntfy answered $code with $(grep -c '"event":"message"' new.jsonl) messages; first bytes: $(head -c 200 new.jsonl | tr -d '\n')"
           # keep only messages, skip ones already saved (by id)
           jq -c 'select(.event=="message") | {id, time, title, message, file: (.attachment.name // null), url: (.attachment.url // null)}' new.jsonl > msgs.jsonl || true
+          echo "::warning::kept $(wc -l < msgs.jsonl) messages; jq says: $(jq -c . new.jsonl 2>&1 >/dev/null | head -c 300)" 
           mkdir -p logs
           while IFS= read -r line; do
             id=$(echo "$line" | jq -r .id)
