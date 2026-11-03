@@ -266,7 +266,7 @@ final class InfoPanels {
     private static TextView small(Context c, String s, boolean on, Runnable click) {
         TextView t = Ui.text(c, s, 12, on ? Ui.TEXT : Ui.SUB, on);
         t.setGravity(Gravity.CENTER);
-        t.setBackground(Ui.round(on ? Ui.ACCENT : Ui.CARD2, 12));
+        t.setBackground(on ? Ui.round(Ui.ACCENT, 12) : Themes.inner(Ui.CARD2, 12));
         Ui.pad(t, 12, 5, 12, 5);
         t.setOnClickListener(v -> click.run());
         return t;
@@ -347,7 +347,7 @@ final class InfoPanels {
             double[] h = Weather.hours.get(i);
             LinearLayout cell = Ui.col(c);
             cell.setGravity(Gravity.CENTER_HORIZONTAL);
-            cell.setBackground(Ui.round(i == 0 ? Ui.CARD3 : Ui.CARD2, 12));
+            cell.setBackground(Themes.inner(i == 0 ? Ui.CARD3 : Ui.CARD2, 12));
             Ui.pad(cell, 8, 10, 8, 10);
             cell.addView(Ui.text(c, i == 0 ? "Now" : clockShort((int) h[0]), 11, Ui.SUB, false));
             LinearLayout.LayoutParams il = Ui.lpu(28, 28);
@@ -389,7 +389,7 @@ final class InfoPanels {
             Weather.Day d = Weather.days.get(i);
             LinearLayout card = Ui.col(c);
             card.setGravity(Gravity.CENTER_HORIZONTAL);
-            card.setBackground(Themes.inner(Ui.CARD2, 16));
+            card.setBackground(Themes.card(Ui.CARD2, 16)); // pop-up card: glass in the Glass theme
             Ui.pad(card, 14, 16, 14, 16);
             card.addView(Ui.text(c, dayName(d.date, i), 15, Ui.TEXT, true));
             LinearLayout.LayoutParams il = Ui.lpu(56, 56);
@@ -474,7 +474,7 @@ final class InfoPanels {
         Panels.showCard(() -> {
             Context c = Panels.ctx();
             LinearLayout card = Ui.col(c);
-            card.setBackground(Themes.inner(Ui.CARD2, 16));
+            card.setBackground(Themes.card(Ui.CARD2, 16)); // pop-up card: glass in the Glass theme
             Ui.pad(card, 14, 12, 14, 12);
             card.setLayoutParams(Panels.anchored(260, -2, 88, 230));
             card.addView(Ui.line(c, "Assistants", 15, Ui.TEXT, true));
@@ -527,7 +527,7 @@ final class InfoPanels {
     private static View quickCard(String id) {
         Context c = Panels.ctx();
         LinearLayout card = Ui.col(c);
-        card.setBackground(Themes.inner(Ui.CARD2, 16));
+        card.setBackground(Themes.card(Ui.CARD2, 16)); // pop-up card: glass in the Glass theme
         Ui.pad(card, 16, 14, 16, 14);
         card.setLayoutParams(Panels.anchored(260, -2, 88, 110));
         int icon, tint = Ui.TEXT;
