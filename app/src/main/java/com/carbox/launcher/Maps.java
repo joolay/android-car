@@ -126,6 +126,13 @@ final class Maps {
         };
         mapLayer.setOnLongClickListener(hold);
         mapLayer.setOnClickListener(v -> expand(true));
+        // the small map: swiping it (with the Tile Drawer locked open) shows the alternate stage's widgets;
+        // a tap still makes the map big, a hold opens map settings. Under the map's own buttons.
+        catcher = new SwipeBox(c, this::swipeSmall);
+        catcher.setOnClickListener(v -> expand(true));
+        catcher.onHold(SettingsPanels::mapNav);
+        mapLayer.addView(catcher, smallTraffic != null ? mapLayer.indexOfChild(smallTraffic) : mapLayer.getChildCount(),
+                new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         if (web != null) {
             web.setLongClickable(true);
             web.setOnLongClickListener(hold);
@@ -455,9 +462,47 @@ final class Maps {
     }
 
     /** Swipe the Top Left Widget: the next (or previous) chosen widget slides in. */
+    private SwipeBox catcher;
+    private boolean miniOverMap; // the alternate widgets shown over the small map (Tile Drawer locked open)
+
+    /** Swipe on the small map: with the Tile Drawer locked open, its widgets come in (swipe on through them, back to the map). */
+    private void swipeSmall() {
+        MainActivity a = MainActivity.I;
+        if (a == null || !a.drawerOpen || !MainActivity.drawerLocked() || bigHolder != null) return;
+        miniOverMap = true;
+        LeftStages.step(0);
+        showMini(true);
+        if (mini != null && Ui.ms(1) > 0) {
+            int dir = catcher.dir;
+            mini.setTranslationX(dir * view.getWidth());
+            mini.animate().translationX(0).setDuration(Ui.ms(260)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+        }
+    }
+
+    /** Back to the small map from the widgets swiped over it. */
+    void mapBack() {
+        if (!miniOverMap) return;
+        miniOverMap = false;
+        if (bigHolder == null) showMini(false);
+    }
+
     private void swapMini() {
         if (mini == null) return;
         int dir = mini.dir;
+        if (miniOverMap && bigHolder == null) { // over the small map: past the last (or first) widget, the map comes back
+            java.util.List<String> l = LeftStages.list();
+            int i = l.indexOf(LeftStages.current());
+            if ((dir > 0 && i == l.size() - 1) || (dir < 0 && i == 0) || l.size() < 2) {
+                final View old = mini;
+                Ui.ui.removeCallbacks(miniTick);
+                mini = null;
+                miniW = null;
+                miniOverMap = false;
+                old.animate().translationX(-dir * view.getWidth()).setDuration(Ui.ms(260)).withEndAction(() -> view.removeView(old)).start();
+                if (Ui.ms(260) == 0) view.removeView(old);
+                return;
+            }
+        }
         if (LeftStages.list().size() < 2) return;
         LeftStages.step(dir);
         final View old = mini;
@@ -497,6 +542,7 @@ final class Maps {
             bigHolder.setBackground(Themes.card(Ui.CARD, 16)); // the stage around the round map
             view.removeView(mapLayer);
             bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            if (catcher != null) catcher.setVisibility(View.GONE); // big: the map takes the touches
             mapLayer.setVisibility(View.VISIBLE);
             bigHolder.addView(controls(a), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             trafficLook(); // the big map has its own traffic button
@@ -513,6 +559,7 @@ final class Maps {
             ((android.view.ViewGroup) bigHolder.getParent()).removeView(bigHolder);
             bigHolder = null;
             view.addView(mapLayer, 0, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            if (catcher != null) catcher.setVisibility(View.VISIBLE);
             trafficLook();
         }
     }
@@ -735,7 +782,8 @@ final class Maps {
         if (n == null || NavCard.inTiles()) { // instructions shown in the tile area instead: keep the map
             navCard.setVisibility(View.GONE);
             mapLayer.setVisibility(View.VISIBLE);
-            showMini(bigHolder != null); // map is big: the small panel shows Go to / Speed
+            if (bigHolder != null) miniOverMap = false;
+            showMini(bigHolder != null || miniOverMap); // map is big (or swiped aside): the stage shows its widgets
             return;
         }
         showMini(false);

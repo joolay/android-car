@@ -991,6 +991,7 @@ public class MainActivity extends Activity {
         boolean fromPeek = peeking;
         peeking = false;
         if (open) hideAlertTile();
+        if (!open && map != null) map.mapBack(); // widgets swiped over the small map go back to the map
         drawerOpen = open;
         lockButton(open);
         // the tiles rise up out of the news ticker, while the big map shrinks into the small map
