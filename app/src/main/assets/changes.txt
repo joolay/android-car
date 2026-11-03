@@ -1,3 +1,4 @@
+0.38: Folder drag crash fixed; Spotify start-up retries the playlist; recentre above zoom; map buttons spaced evenly; tiles lock hides itself; logs up to 1 MB; faster keyboard; number pad
 0.37: News window: switch feeds from its label, archive and bin; round map fixed; bigger area name and speed; Glass frosting slider; living wallpaper (time of day and weather); video buttons; Lyrics in the ticker; ticker options; Spotify lyrics sign-in; private add-ons; welcome wizard
 0.36: Fixed the launcher not starting (Glass theme on the Car Connect and Phone tiles); a faulty tile now shows empty instead of stopping the launcher
 0.35: Every window and quick card themed; titles and buttons of open windows in the News Ticker; ticker keeps the last feed; tiles in Glass fixed; folders: hold to jiggle, drag, remove, add; tiles jiggle in edit mode; round radar map; swipe the small map for widgets when the drawer is locked
