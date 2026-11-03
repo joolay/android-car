@@ -178,6 +178,7 @@ final class NewsTicker {
         });
         String mode = Prefs.str(Prefs.TICKER_MODE, "alt");
         showingNews = !"traffic".equals(mode);
+        lyrics = !newsOn() && !trafficOn() && lyricsOn(); // only lyrics chosen
         applyTag();
         // the headlines from the last poll, straight away (new ones replace them when they arrive)
         newsAt = load("ticker_news", newsItems, news);
@@ -258,18 +259,61 @@ final class NewsTicker {
     private int lyricShown = -2;
     private String lyricKey = "";
 
+    static final String NEWS_ON = "ticker_news_on", TRAFFIC_ON = "ticker_traffic_on", LYRICS_ON = "ticker_lyrics_on";
+
+    static boolean newsOn() {
+        return Prefs.flag(NEWS_ON, true);
+    }
+
+    static boolean trafficOn() {
+        return Prefs.flag(TRAFFIC_ON, true);
+    }
+
+    static boolean lyricsOn() {
+        return Prefs.flag(LYRICS_ON, true);
+    }
+
+    /** Switch News, Traffic or Lyrics on or off (Settings → News Ticker); the ticker moves to one that's on. */
+    static void setOn(String key, boolean on) {
+        Prefs.put(key, on);
+        // alternating only makes sense with both News and Traffic on
+        Prefs.put(Prefs.TICKER_MODE, newsOn() && trafficOn() ? "alt" : newsOn() ? "news" : trafficOn() ? "traffic" : "alt");
+        if (MainActivity.I != null) MainActivity.I.ticker.fixMode();
+    }
+
+    /** Keep the ticker on something that's switched on. */
+    void fixMode() {
+        if (lyrics && !lyricsOn()) lyrics = false;
+        if (!lyrics) {
+            if (showingNews && !newsOn() && trafficOn()) showingNews = false;
+            else if (!showingNews && !trafficOn() && newsOn()) showingNews = true;
+            else if (!newsOn() && !trafficOn() && lyricsOn()) lyrics = true;
+        }
+        lyricShown = -2;
+        applyTag();
+        updateText();
+    }
+
     private void tapped() {
-        if (lyrics) {
-            lyrics = false;
-            showingNews = true;
-        } else if (!showingNews) {
+        // go round the ones that are on: News → Traffic → Lyrics
+        int cur = lyrics ? 2 : showingNews ? 0 : 1;
+        boolean[] on = {newsOn(), trafficOn(), lyricsOn()};
+        int next = cur;
+        for (int i = 1; i <= 3; i++) if (on[(cur + i) % 3]) {
+            next = (cur + i) % 3;
+            break;
+        }
+        if (next == cur) return;
+        if (next == 2) {
             lyrics = true; // stays on lyrics until tapped again
             lyricShown = -2;
             applyTag();
             updateText();
             ring.setVisibility(View.GONE);
             return;
-        } else showingNews = false;
+        }
+        lyrics = false;
+        showingNews = next == 0;
         int back = Prefs.num(Prefs.TICKER_BACK, 60);
         String mode = Prefs.str(Prefs.TICKER_MODE, "alt");
         manualStart = SystemClock.elapsedRealtime();

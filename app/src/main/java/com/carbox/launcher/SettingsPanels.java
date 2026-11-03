@@ -175,8 +175,8 @@ final class SettingsPanels {
                         {R.drawable.ic_car, GREEN, "Driving timer", Ui.dur(Rest.limitMin() * 60000L), (Runnable) Rest::setup, Rest.ON, true},
                         {R.drawable.ic_pin, GREEN, "Car location", "Home Assistant", (Runnable) CarHA::settings, CarHA.ON, false},
                         {R.drawable.ic_bell, PURPLE, "Alerts expand", null, (Runnable) Alerts::settings, Alerts.GLOBAL, false}},
-                {{"News ticker"},
-                        {R.drawable.ic_bell, GREEN, "News and traffic", tickerLabel(), (Runnable) SettingsPanels::news},
+                {{"News Ticker"},
+                        {R.drawable.ic_bell, GREEN, "Ticker options", tickerLabel(), (Runnable) SettingsPanels::news},
                         {R.drawable.ic_bell, GREEN, "Show the ticker", Prefs.flag("ticker_on", true) ? "On · tap to hide" : "Off · tap to show", (Runnable) () -> {
                             Prefs.put("ticker_on", !Prefs.flag("ticker_on", true));
                             Panels.close();
@@ -402,8 +402,11 @@ final class SettingsPanels {
     }
 
     static String tickerLabel() {
-        String m = Prefs.str(Prefs.TICKER_MODE, "alt");
-        return "news".equals(m) ? "News only" : "traffic".equals(m) ? "Traffic only" : "Alternate";
+        java.util.List<String> on = new java.util.ArrayList<>();
+        if (NewsTicker.newsOn()) on.add("News");
+        if (NewsTicker.trafficOn()) on.add("Traffic");
+        if (NewsTicker.lyricsOn()) on.add("Lyrics");
+        return on.isEmpty() ? "Nothing chosen" : android.text.TextUtils.join(" · ", on);
     }
 
     static String connLabel() {
@@ -1079,9 +1082,12 @@ final class SettingsPanels {
             }));
             String bp = NewsTicker.browser();
             b.addView(Panels.item("Open stories in", bp != null ? Apps.label(bp) : "Android's default browser", NewsTicker::browserPicker), top(8));
+            // what the ticker shows: tap its label to go round the ones that are on
+            b.addView(Panels.section("Show in the ticker"));
+            b.addView(Panels.switchRow(0, 0, "News", "Local headlines", NewsTicker.newsOn(), on -> { NewsTicker.setOn(NewsTicker.NEWS_ON, on); Panels.refresh(); }));
+            b.addView(Panels.switchRow(0, 0, "Traffic", "Traffic news for your area", NewsTicker.trafficOn(), on -> { NewsTicker.setOn(NewsTicker.TRAFFIC_ON, on); Panels.refresh(); }));
+            b.addView(Panels.switchRow(0, 0, "Lyrics", "The line being sung, while music plays", NewsTicker.lyricsOn(), on -> { NewsTicker.setOn(NewsTicker.LYRICS_ON, on); Panels.refresh(); }));
             String m = Prefs.str(Prefs.TICKER_MODE, "alt");
-            b.addView(Panels.row("Show", segStr(c, Prefs.TICKER_MODE, "alt", "Alternate", m), segStr(c, Prefs.TICKER_MODE, "news", "News only", m),
-                    segStr(c, Prefs.TICKER_MODE, "traffic", "Traffic only", m)));
             int every = Prefs.num(Prefs.TICKER_EVERY, 60);
             if ("alt".equals(m)) b.addView(Panels.row("Switch every", segNum(c, Prefs.TICKER_EVERY, 30, "30 s", every),
                     segNum(c, Prefs.TICKER_EVERY, 60, "1 min", every), segNum(c, Prefs.TICKER_EVERY, 120, "2 min", every), segNum(c, Prefs.TICKER_EVERY, 300, "5 min", every)));
