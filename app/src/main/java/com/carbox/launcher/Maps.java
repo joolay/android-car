@@ -537,9 +537,7 @@ final class Maps {
         if (a == null) return;
         if (on && bigHolder == null) {
             bigHolder = new FrameLayout(a);
-            Maps.clip(bigHolder, 16);
-            // a thin card-coloured rim, like the dark cards beside it, so the bright map doesn't look taller than them
-            bigHolder.setBackground(Themes.card(Ui.CARD, 16)); // the stage around the round map
+            // no background: the round map sits straight on the home behind it, the corners around it see-through
             view.removeView(mapLayer);
             bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             if (catcher != null) catcher.setVisibility(View.GONE); // big: the map takes the touches
