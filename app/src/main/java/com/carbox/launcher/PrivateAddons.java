@@ -13,7 +13,9 @@ import android.widget.TextView;
  */
 final class PrivateAddons {
     /** SHA-256 of the owner's code (lower-case hex). Empty: no code set yet, nothing can be unlocked. */
-    private static final String CODE_SHA256 = "";
+    private static final String CODE_SHA256 = "583b08e38c98f4350a8906d25344ac80b099921a8a8929e64b2dc2b553521343";
+    /** The owner's own builds: unlocked without the code. Set false before publishing. */
+    static final boolean OWNER_BUILD = true;
     private static final String KEY = "private_addons";
     static final String TRAFFIC = "private_gtraffic", SPOTIFY = "private_spotify";
 
@@ -22,6 +24,7 @@ final class PrivateAddons {
 
     /** The code has been entered on this box. */
     static boolean unlocked() {
+        if (OWNER_BUILD && !Prefs.flag("private_locked", false)) return true;
         return !CODE_SHA256.isEmpty() && CODE_SHA256.equals(Prefs.str(KEY, ""));
     }
 
@@ -69,6 +72,7 @@ final class PrivateAddons {
                 String h = sha256(code[0]);
                 if (!CODE_SHA256.isEmpty() && CODE_SHA256.equals(h)) {
                     Prefs.put(KEY, h);
+                    Prefs.put("private_locked", false);
                     applied();
                     Panels.back();
                     page();
@@ -93,6 +97,7 @@ final class PrivateAddons {
             }), SettingsPanels.top(8));
             b.addView(Panels.item("Lock again", "Hides these until the code is typed in again", () -> {
                 Prefs.put(KEY, "");
+                Prefs.put("private_locked", true);
                 applied();
                 Panels.back();
             }), SettingsPanels.top(10));
