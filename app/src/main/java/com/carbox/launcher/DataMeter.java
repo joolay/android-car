@@ -215,15 +215,11 @@ final class DataMeter extends View {
             shownU += (m[1] - shownU) * 0.2;
         }
         float w = getWidth(), h = getHeight();
-        ring.setStrokeWidth(Ui.uf(1));
-        r.set(Ui.uf(1), Ui.uf(1), w - Ui.uf(1), h - Ui.uf(1));
-        cv.drawRoundRect(r, Ui.uf(9), Ui.uf(9), ring);
         float cx = w / 2f;
-        dn.setTextSize(Ui.uf(11));
-        up.setTextSize(Ui.uf(10));
-        float mid = h / 2f; // mobile data only, no label
-        cv.drawText("↓" + shortSize(Math.round(shownD)), cx, mid - Ui.uf(2), dn);
-        cv.drawText("↑" + shortSize(Math.round(shownU)), cx, mid + Ui.uf(11), up);
+        // no box: just this month's mobile data downloaded, a little bigger (tap for the full breakdown)
+        dn.setTextSize(Ui.uf(13));
+        float y = h / 2f - (dn.descent() + dn.ascent()) / 2f;
+        cv.drawText("↓" + shortSize(Math.round(shownD)), cx, y, dn);
         if (anim && (Math.abs(m[0] - shownD) > 500 || Math.abs(m[1] - shownU) > 500)) postInvalidateOnAnimation();
     }
 
