@@ -496,31 +496,113 @@ final class NowPlaying {
 
     private static final Pattern LRC = Pattern.compile("\\[(\\d+):(\\d+)(?:[.:](\\d+))?]\\s*(.*)");
 
+    // Free lyrics, tried in turn until one has them (after Spotify's own, when signed in):
+    // 1. LRCLIB, exact song (timed)  2. LRCLIB search with a cleaned-up title (timed)
+    // 3. LRCLIB's untimed words  4. lyrics.ovh (untimed). Untimed words are spread over the song's length.
     private void fetchLyrics(String key, String track, String artistName, long durMs) {
-        String url = "https://lrclib.net/api/get?track_name=" + Uri.encode(track) + "&artist_name=" + Uri.encode(artistName)
-                + (durMs > 0 ? "&duration=" + Math.round(durMs / 1000.0) : "");
         java.util.Map<String, String> h = new java.util.HashMap<>();
         h.put("User-Agent", "CarLauncher (github.com/joolay/carlauncher)");
-        Net.get(url, h, (body, code) -> {
-            if (body == null || !key.equals(trackKey)) return;
-            try {
-                String synced = new JSONObject(body).optString("syncedLyrics", "");
-                if (synced.isEmpty() || "null".equals(synced)) return;
-                for (String ln : synced.split("\n")) {
-                    Matcher m = LRC.matcher(ln.trim());
-                    if (!m.matches()) continue;
-                    long ms = Long.parseLong(m.group(1)) * 60000 + Long.parseLong(m.group(2)) * 1000;
-                    if (m.group(3) != null) {
-                        String f = m.group(3);
-                        ms += Long.parseLong(f) * (f.length() == 2 ? 10 : f.length() == 1 ? 100 : 1);
+        String url = "https://lrclib.net/api/get?track_name=" + Uri.encode(track) + "&artist_name=" + Uri.encode(artistName)
+                + (durMs > 0 ? "&duration=" + Math.round(durMs / 1000.0) : "");
+        Net.get(url, h, (body, code) -> Ui.ui.post(() -> {
+            if (!key.equals(trackKey)) return;
+            String[] got = lrclib(body);
+            if (got[0] != null && timed(key, got[0], "LRCLIB")) return;
+            // 2: search, with "(feat. …)", " - Remastered" and the like taken off, first artist only
+            String t2 = cleanTitle(track), a2 = artistName.split(",|&| feat| ft\\.| x ")[0].trim();
+            Net.get("https://lrclib.net/api/search?track_name=" + Uri.encode(t2) + "&artist_name=" + Uri.encode(a2), h, (sb, sc) -> Ui.ui.post(() -> {
+                if (!key.equals(trackKey)) return;
+                String plain = got[1];
+                try {
+                    org.json.JSONArray arr = new org.json.JSONArray(sb);
+                    for (int i = 0; i < arr.length(); i++) {
+                        JSONObject o = arr.getJSONObject(i);
+                        double d = o.optDouble("duration", 0);
+                        if (durMs > 0 && d > 0 && Math.abs(d - durMs / 1000.0) > 8) continue; // another version of the song
+                        String syn = o.optString("syncedLyrics", "");
+                        if (!syn.isEmpty() && !"null".equals(syn) && timed(key, syn, "LRCLIB search")) return;
+                        String pl = o.optString("plainLyrics", "");
+                        if (plain == null && !pl.isEmpty() && !"null".equals(pl)) plain = pl;
                     }
-                    lyricTimes.add(new long[]{ms});
-                    lyricText.add(m.group(4));
+                } catch (Exception ignored) {
                 }
-                showLyric();
-            } catch (Exception ignored) {
+                if (plain != null) {
+                    untimed(key, plain, durMs, "LRCLIB (untimed)");
+                    return;
+                }
+                // 4: lyrics.ovh, words only
+                Net.get("https://api.lyrics.ovh/v1/" + Uri.encode(a2) + "/" + Uri.encode(t2), h, (ob, oc) -> Ui.ui.post(() -> {
+                    if (!key.equals(trackKey)) return;
+                    try {
+                        String l = new JSONObject(ob).optString("lyrics", "");
+                        if (!l.trim().isEmpty()) untimed(key, l, durMs, "lyrics.ovh (untimed)");
+                        else Trace.event("Lyrics: none found for " + track);
+                    } catch (Exception e) {
+                        Trace.event("Lyrics: none found for " + track);
+                    }
+                }));
+            }));
+        }));
+    }
+
+    /** {synced, plain} from an LRCLIB answer (either may be null). */
+    private static String[] lrclib(String body) {
+        String[] out = new String[2];
+        try {
+            JSONObject o = new JSONObject(body);
+            String s1 = o.optString("syncedLyrics", ""), s2 = o.optString("plainLyrics", "");
+            if (!s1.isEmpty() && !"null".equals(s1)) out[0] = s1;
+            if (!s2.isEmpty() && !"null".equals(s2)) out[1] = s2;
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    private static String cleanTitle(String t) {
+        return t.replaceAll("(?i)\\s*[\\(\\[](feat|ft|with|from|remaster|live|radio|edit|version|prod)[^\\)\\]]*[\\)\\]]", "")
+                .replaceAll("(?i)\\s+-\\s+(remaster|live|radio|edit|single|mono|stereo|feat|from).*$", "").trim();
+    }
+
+    /** Timed (LRC) lyrics in: true when there were lines. */
+    private boolean timed(String key, String synced, String from) {
+        List<long[]> t = new ArrayList<>();
+        List<String> w = new ArrayList<>();
+        for (String ln : synced.split("\n")) {
+            Matcher m = LRC.matcher(ln.trim());
+            if (!m.matches()) continue;
+            long ms = Long.parseLong(m.group(1)) * 60000 + Long.parseLong(m.group(2)) * 1000;
+            if (m.group(3) != null) {
+                String f = m.group(3);
+                ms += Long.parseLong(f) * (f.length() == 2 ? 10 : f.length() == 1 ? 100 : 1);
             }
-        });
+            t.add(new long[]{ms});
+            w.add(m.group(4));
+        }
+        if (w.isEmpty() || !key.equals(trackKey)) return false;
+        lyricTimes.clear();
+        lyricText.clear();
+        lyricTimes.addAll(t);
+        lyricText.addAll(w);
+        Trace.event("Lyrics: " + w.size() + " lines from " + from);
+        showLyric();
+        return true;
+    }
+
+    /** Words without timing: spread evenly over the song (after a short intro), so they still move along. */
+    private void untimed(String key, String plain, long durMs, String from) {
+        if (!key.equals(trackKey)) return;
+        List<String> w = new ArrayList<>();
+        for (String ln : plain.split("\n")) if (!ln.trim().isEmpty()) w.add(ln.trim());
+        if (w.isEmpty()) return;
+        long dur = durMs > 0 ? durMs : 210000, start = dur / 12, span = dur - start - dur / 15;
+        lyricTimes.clear();
+        lyricText.clear();
+        for (int i = 0; i < w.size(); i++) {
+            lyricTimes.add(new long[]{start + span * i / w.size()});
+            lyricText.add(w.get(i));
+        }
+        Trace.event("Lyrics: " + w.size() + " lines from " + from);
+        showLyric();
     }
 
     private int shownIdx = -2;
