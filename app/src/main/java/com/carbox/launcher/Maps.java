@@ -45,7 +45,7 @@ final class Maps {
             s.setJavaScriptEnabled(true);
             s.setDomStorageEnabled(true);
             s.setCacheMode(WebSettings.LOAD_DEFAULT);
-            web.setBackgroundColor(Ui.BG);
+            web.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             web.setVerticalScrollBarEnabled(false);
             web.setHorizontalScrollBarEnabled(false);
             web.setWebViewClient(new WebViewClient() {
@@ -61,7 +61,7 @@ final class Maps {
                     pageReady = true;
                     String key = Prefs.str(Prefs.MAP_KEY, "").replace("'", "");
                     shownDark = darkNow();
-                    web.evaluateJavascript(GoogleTraffic.setupJs() + "setZoomPref(" + Prefs.str("map_zoom", "15") + ");setDark(" + shownDark + ");setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setTraffic(" + GoogleTraffic.on() + ")", null);
+                    web.evaluateJavascript(GoogleTraffic.setupJs() + "setZoomPref(" + Prefs.str("map_zoom", "15") + ");setDark(" + shownDark + ");setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setRound(" + (bigHolder != null) + ");setTraffic(" + GoogleTraffic.on() + ")", null);
                     push();
                 }
             });
@@ -88,10 +88,8 @@ final class Maps {
             }, "Android");
             web.loadUrl("file:///android_asset/map.html");
             mapLayer.addView(web, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-            // the map shows as a round radar; around it, the stage (themed). Above the map, below the buttons
-            mask = new View(c);
-            mask.setBackground(radar());
-            mapLayer.addView(mask, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            // on the Centre Stage the map page crops itself to a round radar (setRound) and is see-through
+            // around it, so the themed stage shows there; the buttons keep their corners
             if (GoogleTraffic.available()) { // traffic on/off on the small map too (the big map has its own)
                 smallTraffic = Ui.icon(c, R.drawable.ic_traffic, Ui.TEXT);
                 Ui.pad(smallTraffic, 9, 9, 9, 9);
@@ -545,7 +543,7 @@ final class Maps {
             view.removeView(mapLayer);
             bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             if (catcher != null) catcher.setVisibility(View.GONE); // big: the map takes the touches
-            if (mask != null) mask.invalidate(); // round on the Centre Stage
+            js("setRound(true)"); // round on the Centre Stage
             mapLayer.setVisibility(View.VISIBLE);
             bigHolder.addView(controls(a), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             trafficLook(); // the big map has its own traffic button
@@ -563,7 +561,7 @@ final class Maps {
             bigHolder = null;
             view.addView(mapLayer, 0, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             if (catcher != null) catcher.setVisibility(View.VISIBLE);
-            if (mask != null) mask.invalidate(); // square again
+            js("setRound(false)"); // square again
             trafficLook();
         }
     }

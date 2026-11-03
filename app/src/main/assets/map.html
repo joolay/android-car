@@ -19,7 +19,11 @@ html,body{margin:0;height:100%;width:100%;background:#171c24;overflow:hidden}
 .me .d{position:absolute;inset:3px;border-radius:50%;background:#3d8bfd;border:2px solid #fff;box-shadow:0 0 0 6px rgba(61,139,253,.25)}
 .me .a{position:absolute;left:4px;top:-9px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid #3d8bfd;display:none}
 .gm-style-cc,.gmnoprint a,.gm-style a[href^="https://maps.google.com/maps"]{opacity:.55}
-</style></head><body><div id="m"></div>
+html.round,html.round body,html.round .leaflet-container{background:transparent!important}
+html.round #m{border-radius:50%;overflow:hidden;transition:none;box-shadow:0 0 0 3px rgba(255,255,255,.4)}
+#rings{position:absolute;display:none;border-radius:50%;pointer-events:none;z-index:500;
+  background:radial-gradient(circle,transparent 32.5%,rgba(255,255,255,.14) 33%,transparent 33.6%,transparent 65.5%,rgba(255,255,255,.14) 66%,transparent 66.6%)}
+</style></head><body><div id="m"></div><div id="rings"></div>
 <script src="gtraffic.js"></script>
 <script>
 // Map engines: 'osm' (Leaflet + OpenStreetMap tiles), 'ofm' (MapLibre + OpenFreeMap), 'pmtiles'
@@ -37,14 +41,20 @@ var headUp=true, rot=0, glBearing=0;
 // diagonal so no corners show). MapLibre: the map turns itself, so labels stay upright.
 function size(){
   var W=innerWidth,H=innerHeight,el=document.getElementById('m');
-  var big=false, D=0; // picture-tile maps never turn (their words would turn with them)
+  // round (the Centre Stage): the map is a circle as big as fits, centred; the stage shows around it
+  var big=round, D=big?Math.min(W,H)-12:0;
   el.style.width=(big?D:W)+'px'; el.style.height=(big?D:H)+'px';
   el.style.left=(big?(W-D)/2:0)+'px'; el.style.top=(big?(H-D)/2:0)+'px';
+  var rg=document.getElementById('rings');
+  if(rg){ rg.style.display=big?'block':'none'; rg.style.width=D+'px'; rg.style.height=D+'px'; rg.style.left=((W-D)/2)+'px'; rg.style.top=((H-D)/2)+'px'; }
+  document.documentElement.className=big?'round':'';
   if(map) map.invalidateSize(false);
   if(gl) gl.resize();
   if(pending&&follow) centre();
 }
 window.addEventListener('resize',size);
+var round=false;
+function setRound(b){ round=!!b; size(); }
 function setHeadingUp(b){ headUp=!!b&&isGl(); if(!headUp) turn(0,true); size(); } // only vector maps turn: their labels stay upright
 // turn to a heading the short way round (no spinning past north)
 function isGl(){ return mode==='ofm'||mode==='pmtiles'; }
