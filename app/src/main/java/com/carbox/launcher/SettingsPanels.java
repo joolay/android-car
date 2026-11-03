@@ -337,13 +337,15 @@ final class SettingsPanels {
                     if (MainActivity.I != null) MainActivity.I.pickWallpaperImage();
                 })));
         b.addView(Ui.hr(c));
-        boolean glass = Themes.on();
+        String tm = Themes.mode();
         LinearLayout themes = Ui.row(c);
-        if (Addons.unlocked("theme_modern")) themes.addView(Ui.seg(c, "Modern", !glass, () -> theme(false)));
-        if (Addons.unlocked("theme_glass")) { themes.addView(Ui.gap(c, 8, 1)); themes.addView(Ui.seg(c, "Glass", glass, () -> theme(true))); }
+        if (Addons.unlocked("theme_modern")) themes.addView(Ui.seg(c, "Modern", "modern".equals(tm), () -> theme("modern")));
+        if (Addons.unlocked("theme_glass")) { themes.addView(Ui.gap(c, 8, 1)); themes.addView(Ui.seg(c, "Glass", "glass".equals(tm), () -> theme("glass"))); }
+        themes.addView(Ui.gap(c, 8, 1));
+        themes.addView(Ui.seg(c, "Simple", "simple".equals(tm), () -> theme("simple")));
         b.addView(Panels.row("Theme", themes));
-        b.addView(Ui.text(c, "Glass: the dock, Rail Bar, Now playing, left widgets and tiles see-through, like iOS (best with a wallpaper)", 12, Ui.SUB, false), top(4));
-        if (glass) { // how frosted the glass is: live as you slide
+        b.addView(Ui.text(c, "Glass: see-through cards, like iOS (best with a wallpaper). Simple: plain black with no animations, lightest on the box.", 12, Ui.SUB, false), top(4));
+        if ("glass".equals(tm)) { // how frosted the glass is: live as you slide
             TextView fl = Ui.text(c, frostLabel(Themes.frost()), 13, Ui.SUB, false);
             b.addView(fl, top(14));
             SeekBar fs = new SeekBar(c);
@@ -1750,11 +1752,9 @@ final class SettingsPanels {
         Panels.refresh();
     }
 
-    /** Modern (solid cards) or Glass (see-through cards). */
-    private static void theme(boolean glass) {
-        Prefs.put(Themes.KEY, glass);
-        // glass over plain black shows nothing: bring in the Road wallpaper
-        if (glass && "black".equals(Prefs.str(Prefs.WALL, "road"))) Prefs.put(Prefs.WALL, "road");
+    /** Modern (solid cards), Glass (see-through) or Simple (plain black, no animations). */
+    private static void theme(String mode) {
+        Themes.setMode(mode);
         if (MainActivity.I != null) MainActivity.I.applyWallpaper(); // also redraws the cards
         else Themes.refresh();
         Panels.refresh();

@@ -41,13 +41,34 @@ final class Themes {
         refresh(); // new blur and frost on every card
     }
 
-    static boolean on() {
+    static final String THEME = "theme"; // "modern", "glass" (default) or "simple"
+
+    /** The chosen theme. */
+    static String mode() {
         if (!Prefs.flag("glass_default_v1", false)) { // Glass became the default: switched on once for everyone
             Prefs.put("glass_default_v1", true);
-            Prefs.put(KEY, true);
+            Prefs.put(THEME, "glass");
             if ("black".equals(Prefs.str(Prefs.WALL, "road"))) Prefs.put(Prefs.WALL, "road"); // glass needs a wallpaper behind it
         }
-        return Prefs.flag(KEY, true) && Addons.unlocked("theme_glass");
+        String m = Prefs.str(THEME, Prefs.flag(KEY, true) ? "glass" : "modern"); // migrate the old glass on/off
+        if ("glass".equals(m) && !Addons.unlocked("theme_glass")) return "modern";
+        return m;
+    }
+
+    /** The Glass theme (see-through cards). */
+    static boolean on() {
+        return "glass".equals(mode());
+    }
+
+    /** The Simple theme: plain black background, solid cards, no window or widget animations. */
+    static boolean simple() {
+        return "simple".equals(mode());
+    }
+
+    static void setMode(String m) {
+        Prefs.put(THEME, m);
+        Prefs.put(KEY, "glass".equals(m)); // keep the old flag in step
+        if ("glass".equals(m) && "black".equals(Prefs.str(Prefs.WALL, "road"))) Prefs.put(Prefs.WALL, "road");
     }
 
     /** A card background: glass when the look is on, else the solid colour as before. */

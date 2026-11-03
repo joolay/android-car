@@ -251,7 +251,7 @@ final class Ui {
 
     /** Animation length: as given, or instant when animations are switched off (Settings → Home screen). */
     static long ms(long d) {
-        return Prefs.flag("anim_on", true) ? d : 0;
+        return (Prefs.flag("anim_on", true) && !Themes.simple()) ? d : 0; // Simple theme: no animations
     }
 
     static void press(View v) {

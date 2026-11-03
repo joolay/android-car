@@ -82,9 +82,11 @@ final class Wizard {
             case 1:
                 title(card, "Theme", "How the stages, tiles, dock and Rail look.");
                 LinearLayout row = Ui.row(c);
-                row.addView(themeChoice(c, false), new LinearLayout.LayoutParams(0, Ui.u(150), 1));
-                row.addView(Ui.gap(c, 12, 1));
-                row.addView(themeChoice(c, true), new LinearLayout.LayoutParams(0, Ui.u(150), 1));
+                row.addView(themeChoice(c, "modern"), new LinearLayout.LayoutParams(0, Ui.u(150), 1));
+                row.addView(Ui.gap(c, 10, 1));
+                row.addView(themeChoice(c, "glass"), new LinearLayout.LayoutParams(0, Ui.u(150), 1));
+                row.addView(Ui.gap(c, 10, 1));
+                row.addView(themeChoice(c, "simple"), new LinearLayout.LayoutParams(0, Ui.u(150), 1));
                 body.addView(row, Ui.lp(Ui.MATCH, Ui.WRAP));
                 if (Themes.on()) frosting(c, body);
                 break;
@@ -188,23 +190,23 @@ final class Wizard {
         });
     }
 
-    /** A theme to tap: a little sample tile drawn in that theme (glass shows the real wallpaper behind it). */
-    private static View themeChoice(Context c, boolean glass) {
-        boolean sel = Themes.on() == glass;
+    /** A theme to tap: a little sample tile drawn in that theme. */
+    private static View themeChoice(Context c, String mode) {
+        boolean sel = Themes.mode().equals(mode);
+        boolean glass = "glass".equals(mode), simple = "simple".equals(mode);
         LinearLayout l = Ui.col(c);
         l.setGravity(Gravity.CENTER);
         Ui.pad(l, 10, 10, 10, 10);
         l.setBackground(sel ? Ui.outline(0x00000000, Ui.ACCENT, 3, 16) : Ui.outline(0x00000000, Ui.LINE, 1, 16));
         LinearLayout sample = Ui.col(c);
         Ui.pad(sample, 10, 8, 10, 8);
-        sample.setBackground(glass ? new GlassSample() : Ui.round(Ui.CARD, 12));
+        sample.setBackground(glass ? new GlassSample() : Ui.round(simple ? 0xFF161616 : Ui.CARD, 12));
         sample.addView(Ui.line(c, "SPEED", 10, Ui.SUB, true));
         sample.addView(Ui.line(c, "62 km/h", 18, Ui.TEXT, true), SettingsPanels.top(4));
         l.addView(sample, new LinearLayout.LayoutParams(Ui.MATCH, 0, 1));
-        l.addView(Ui.line(c, glass ? "Glass" : "Modern", 14, sel ? Ui.ACCENT_SOFT : Ui.TEXT, true), SettingsPanels.top(8));
+        l.addView(Ui.line(c, glass ? "Glass" : simple ? "Simple" : "Modern", 14, sel ? Ui.ACCENT_SOFT : Ui.TEXT, true), SettingsPanels.top(8));
         l.setOnClickListener(v -> {
-            Prefs.put(Themes.KEY, glass);
-            if (glass && "black".equals(Prefs.str(Prefs.WALL, "road"))) Prefs.put(Prefs.WALL, "road");
+            Themes.setMode(mode);
             if (MainActivity.I != null) MainActivity.I.recreate(); // the whole home in the new look (the wizard comes back)
             Prefs.put("wizard_resume", 1);
         });

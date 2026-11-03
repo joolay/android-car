@@ -318,7 +318,7 @@ public class MainActivity extends Activity {
     };
 
     void applyWallpaper() {
-        String mode = Prefs.str(Prefs.WALL, "road");
+        String mode = Themes.simple() ? "black" : Prefs.str(Prefs.WALL, "road"); // Simple theme: always plain black
         if ("color".equals(mode)) {
             root.setBackground(new ColorDrawable(Prefs.num(Prefs.WALL_COLOR, Ui.BG)));
         } else if ("image".equals(mode)) {
