@@ -571,9 +571,53 @@ final class AppPanels {
 
     // ------------------------------------------------------------------ folders
 
+    // a tile folder's expanded view works like the Now Playing folder: hold an app and they all jiggle;
+    // drag to move, the red − takes one out, + adds one; tap an app or an empty spot to finish
+    private static int editingFolder = -1;
+    private static final List<android.animation.Animator> jiggles = new ArrayList<>();
+
+    private static void jiggle(View v, int i) {
+        android.animation.ObjectAnimator an = android.animation.ObjectAnimator.ofFloat(v, "rotation", -2.5f, 2.5f);
+        an.setDuration(120 + (i % 2) * 15);
+        an.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        an.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+        an.setStartDelay(i * 30L);
+        an.start();
+        jiggles.add(an);
+    }
+
+    private static void saveFolder(int index, List<String> keys) {
+        JSONArray na = new JSONArray();
+        for (String k : keys) na.put(k);
+        JSONObject sp = TileDrawer.specs().optJSONObject(index);
+        if (sp == null) return;
+        Widgets.put(sp, "apps", na);
+        TileDrawer.setSpec(index, sp);
+    }
+
+    /** The red − on an app's top-right corner (same as the Now Playing folder's). */
+    private static View minusBadge(Context c, Runnable remove, String name) {
+        FrameLayout m = new FrameLayout(c);
+        m.setBackground(Ui.oval(Ui.RED));
+        m.setElevation(Ui.uf(2));
+        m.addView(Ui.icon(c, R.drawable.ic_minus, Ui.TEXT), Ui.flpu(17, 17, Gravity.CENTER));
+        m.setContentDescription("Remove " + name);
+        m.setOnClickListener(v -> remove.run());
+        return m;
+    }
+
     static void folder(int index) {
+        editingFolder = -1;
+        Ui.ui.post(() -> Panels.whenClosed(() -> { // after it opens, so opening doesn't count as closing
+            editingFolder = -1;
+            for (android.animation.Animator an : jiggles) an.cancel();
+            jiggles.clear();
+        }));
         Panels.show(() -> {
             Context c = Panels.ctx();
+            for (android.animation.Animator an : jiggles) an.cancel();
+            jiggles.clear();
+            boolean editing = editingFolder == index;
             JSONObject spec = TileDrawer.specs().optJSONObject(index);
             JSONArray apps = spec.optJSONArray("apps");
             List<View> cells = new ArrayList<>();
@@ -581,37 +625,85 @@ final class AppPanels {
             if (apps != null) for (int i = 0; i < apps.length(); i++) {
                 Apps.App a = Apps.get(apps.optString(i));
                 if (a == null) continue;
-                View cell = appCell(c, a, false, Actions.isAutostart(a.key));
+                View inner = appCell(c, a, false, Actions.isAutostart(a.key));
+                FrameLayout cell = new FrameLayout(c);
+                cell.addView(inner, new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP));
+                final String key = a.key;
+                if (editing) {
+                    FrameLayout.LayoutParams ml = Ui.flpu(28, 28, Gravity.TOP | Gravity.END);
+                    ml.setMargins(0, 0, Ui.u(6), 0);
+                    cell.addView(minusBadge(c, () -> {
+                        List<String> l = new ArrayList<>(keys);
+                        l.remove(key);
+                        saveFolder(index, l);
+                        Panels.refresh();
+                    }, a.label), ml);
+                }
                 cell.setOnClickListener(v -> {
+                    if (editingFolder == index) { // editing: a tap finishes
+                        editingFolder = -1;
+                        Panels.refresh();
+                        return;
+                    }
                     Panels.close();
                     Apps.launch(c, a);
                 });
                 cells.add(cell);
                 keys.add(a.key);
             }
-            // hold and drag an app onto another's place to move it; a hold without moving opens its menu
             for (int i = 0; i < cells.size(); i++) {
-                final Apps.App a = Apps.get(keys.get(i));
+                if (editing) jiggle(cells.get(i), i);
                 Reorder.attach(cells.get(i), i, cells, (from, to) -> {
                     List<String> order = new ArrayList<>(keys);
                     order.add(to, order.remove(from));
-                    JSONArray na = new JSONArray();
-                    for (String k : order) na.put(k);
-                    JSONObject sp = TileDrawer.specs().optJSONObject(index);
-                    if (sp == null) return;
-                    Widgets.put(sp, "apps", na);
-                    TileDrawer.setSpec(index, sp);
+                    saveFolder(index, order);
                     Panels.refresh();
-                }, () -> appMenu(a, null));
+                }, editing ? null : () -> { // a hold without moving: edit mode
+                    editingFolder = index;
+                    Panels.refresh();
+                }, null, null, editing); // while editing: drag straight away, no second hold
+            }
+            if (editing) { // + adds an app
+                FrameLayout plus = new FrameLayout(c);
+                FrameLayout ring = new FrameLayout(c);
+                ring.setBackground(Ui.outline(0, Ui.LINE, 1.5f, 12));
+                ring.addView(Ui.icon(c, R.drawable.ic_plus, Ui.SUB), Ui.flpu(26, 26, Gravity.CENTER));
+                plus.addView(ring, Ui.flpu(56, 56, Gravity.CENTER_HORIZONTAL | Gravity.TOP));
+                plus.setContentDescription("Add an app");
+                plus.setOnClickListener(v -> appPicker("Add to " + spec.optString("name", "folder"), a -> {
+                    List<String> l = new ArrayList<>(keys);
+                    if (!l.contains(a.key)) l.add(a.key);
+                    saveFolder(index, l);
+                    Panels.back();
+                }));
+                Ui.press(plus);
+                cells.add(plus);
             }
             LinearLayout b = Ui.col(c);
-            if (cells.isEmpty()) b.addView(Ui.text(c, "This folder is empty.", 14, Ui.SUB, false));
+            if (cells.isEmpty()) b.addView(Ui.text(c, "This folder is empty. Hold here to add apps.", 14, Ui.SUB, false));
             else b.addView(new Pager(c, cells, 6, 2, 6), Ui.lp(Ui.MATCH, Ui.WRAP)); // pages of 12, slide sideways
-            // edit (apps and name) is an icon in the title bar
-            View ed = Ui.icon(c, R.drawable.ic_edit, Ui.ACCENT_SOFT);
+            b.setMinimumHeight(Ui.u(200));
+            b.setOnClickListener(v -> { // editing: a tap on an empty spot finishes
+                if (editingFolder == index) {
+                    editingFolder = -1;
+                    Panels.refresh();
+                }
+            });
+            b.setOnLongClickListener(v -> {
+                editingFolder = index;
+                Panels.refresh();
+                return true;
+            });
+            // edit (apps and name) is an icon in the title bar; while editing it's a tick to finish
+            View ed = Ui.icon(c, editing ? R.drawable.ic_check : R.drawable.ic_edit, Ui.ACCENT_SOFT);
             Ui.pad(ed, 4, 4, 4, 4);
-            ed.setContentDescription("Edit folder");
-            ed.setOnClickListener(v -> editFolder(index));
+            ed.setContentDescription(editing ? "Done" : "Edit folder");
+            ed.setOnClickListener(v -> {
+                if (editingFolder == index) {
+                    editingFolder = -1;
+                    Panels.refresh();
+                } else editFolder(index);
+            });
             Ui.press(ed);
             return Panels.panel(null, spec.optString("name", "Folder"), b, 640, 400, ed);
         });

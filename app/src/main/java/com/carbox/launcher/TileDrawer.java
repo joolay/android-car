@@ -260,7 +260,22 @@ final class TileDrawer {
 
     // ------------------------------------------------------------------ build
 
+    private final List<android.animation.Animator> jiggles = new ArrayList<>();
+
+    /** Edit mode: the tiles jiggle like the folder icons (each slightly out of step). */
+    private void jiggle(View v, int i) {
+        android.animation.ObjectAnimator an = android.animation.ObjectAnimator.ofFloat(v, "rotation", -1.2f, 1.2f);
+        an.setDuration(130 + (i % 3) * 12);
+        an.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        an.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+        an.setStartDelay((i % 4) * 35L);
+        an.start();
+        jiggles.add(an);
+    }
+
     void refresh() {
+        for (android.animation.Animator an : jiggles) an.cancel();
+        jiggles.clear();
         view.removeAllViews();
         widgets.clear();
         spans.clear();
@@ -269,7 +284,9 @@ final class TileDrawer {
             JSONObject spec = s.optJSONObject(i);
             if (spec == null) spec = widget("none");
             spans.add(span(spec));
-            view.addView(tile(i, spec));
+            View t = tile(i, spec);
+            view.addView(t);
+            if (editing && Ui.ms(1) > 0) jiggle(t, i);
         }
         if (editing) {
             spans.add(new int[]{1, 1});
