@@ -310,12 +310,14 @@ final class NewsTicker {
     }
 
     private final List<String> lastNews = new ArrayList<>(), lastTraffic = new ArrayList<>();
-    private final Runnable loadingOver = () -> {
+    private final Runnable loadingOver = this::loadingDone;
+
+    private void loadingDone() {
         List<String> l = new ArrayList<>();
         for (Item it : showingNews ? newsItems : trafficItems) if (!deleted(it)) l.add(it.title); // the last feed, even if older
         if (l.isEmpty()) l.add(showingNews ? "No new headlines today" : "No traffic news right now");
         marquee.setItems(l);
-    };
+    }
 
     private String place() {
         return Gps.town != null ? Gps.town : "South Africa";
