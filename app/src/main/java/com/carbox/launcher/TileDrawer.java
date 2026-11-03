@@ -294,7 +294,7 @@ final class TileDrawer {
         }
         if (running) for (Widgets.W w : widgets) w.tick();
         view.clampScroll();
-        MainActivity.reInvert(); // smart invert: app-shortcut tile icons keep their true colours
+        MainActivity.reWhite(); // White theme: app-shortcut tile icons keep their true colours
     }
 
     private View tile(int index, JSONObject spec) {

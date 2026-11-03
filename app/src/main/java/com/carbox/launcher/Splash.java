@@ -19,10 +19,10 @@ final class Splash {
     private Splash() {
     }
 
-    // Themed splash colours. The splash is an overlay above the Inverted colour layer, so it never flips
-    // on its own — Inverted is handled here by hand (light background, dark text).
+    // Themed splash colours. The splash is an overlay above the White theme's colour layer, so it never
+    // changes on its own — the White theme is handled here by hand (light background, dark text).
     private static boolean inv() {
-        return Themes.inverted();
+        return Themes.white();
     }
 
     private static int bg() {

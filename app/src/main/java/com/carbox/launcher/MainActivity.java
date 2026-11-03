@@ -347,42 +347,54 @@ public class MainActivity extends Activity {
             liveWall.update(Themes.Sky.now());
         }
         Themes.refresh(); // glass cards show the new wallpaper
-        applyInvert();
+        applyWhite();
     }
 
-    private static final android.graphics.Paint INVERT = new android.graphics.Paint();
+    // Simple White theme. Rather than a plain negative (which turns the blue accent orange), we invert
+    // *lightness* but keep hue: invert, then rotate hue 180°. Greys flip (dark bg -> white, white text ->
+    // black) while blues stay blue, greens green, just light. LIGHT is applied to the whole home; pictures
+    // and the map get PIC, the exact inverse, so LIGHT∘PIC cancels and they show their true colours.
+    private static final android.graphics.Paint LIGHT = new android.graphics.Paint(), PIC = new android.graphics.Paint();
     static {
-        INVERT.setColorFilter(new android.graphics.ColorMatrixColorFilter(new float[]{
-                -1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0}));
+        android.graphics.ColorMatrix inv = new android.graphics.ColorMatrix(new float[]{
+                -1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0});
+        float[] hue180 = { // hue rotation by 180°, luminance-preserving (grey rows each sum to 1)
+                -0.574f, 1.430f, 0.144f, 0, 0, 0.426f, 0.430f, 0.144f, 0, 0, 0.426f, 1.430f, -0.856f, 0, 0, 0, 0, 0, 1, 0};
+        android.graphics.ColorMatrix light = new android.graphics.ColorMatrix(inv);
+        light.postConcat(new android.graphics.ColorMatrix(hue180)); // invert first, then hue
+        LIGHT.setColorFilter(new android.graphics.ColorMatrixColorFilter(light));
+        android.graphics.ColorMatrix pic = new android.graphics.ColorMatrix(hue180);
+        pic.postConcat(inv); // the exact inverse: hue first, then invert
+        PIC.setColorFilter(new android.graphics.ColorMatrixColorFilter(pic));
     }
 
-    /** Simple Inverted: invert the whole home (white background, black text, colours flipped). It's a
-     *  "smart" invert: the map, app icons, album art and photos are inverted a second time so their real
-     *  colours show through — only the interface flips, not pictures. */
-    void applyInvert() {
+    /** Simple White: turn the whole home into a light, high-contrast look (white background, black text,
+     *  colours kept but lightened). The map, app icons, album art and photos get the inverse transform so
+     *  they keep their true colours — only the interface changes, not pictures. */
+    void applyWhite() {
         if (root == null) return;
-        boolean inv = Themes.inverted();
-        root.setLayerType(inv ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE, inv ? INVERT : null);
+        boolean w = Themes.white();
+        root.setLayerType(w ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE, w ? LIGHT : null);
         if (map != null && map.view != null)
-            map.view.setLayerType(inv ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE, inv ? INVERT : null);
-        keepPictures(root, inv);
+            map.view.setLayerType(w ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE, w ? PIC : null);
+        keepPictures(root, w);
     }
 
-    /** Re-run the smart invert over newly shown content (panels, album art, freshly built tiles). A no-op
-     *  unless Inverted mode is on, so it's cheap to call from anywhere the screen changes. */
-    static void reInvert() {
-        if (I != null && I.root != null && Themes.inverted()) I.keepPictures(I.root, true);
+    /** Re-apply the White theme over newly shown content (panels, album art, freshly built tiles). A no-op
+     *  unless the White theme is on, so it's cheap to call from anywhere the screen changes. */
+    static void reWhite() {
+        if (I != null && I.root != null && Themes.white()) I.keepPictures(I.root, true);
     }
 
-    /** Gives every picture (app icon, album art, photo) a second inversion so it keeps its true colours;
-     *  interface glyphs (our tinted vector icons) and everything else stay inverted. */
-    private void keepPictures(View v, boolean inv) {
+    /** Gives every picture (app icon, album art, photo) the inverse transform so it keeps its true colours;
+     *  interface glyphs (our tinted vector icons) and everything else take the light look. */
+    private void keepPictures(View v, boolean w) {
         if (map != null && v == map.view) return; // handled on its own above
         if (v instanceof android.widget.ImageView && isPicture(((android.widget.ImageView) v).getDrawable()))
-            v.setLayerType(inv ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE, inv ? INVERT : null);
+            v.setLayerType(w ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE, w ? PIC : null);
         if (v instanceof android.view.ViewGroup) {
             android.view.ViewGroup g = (android.view.ViewGroup) v;
-            for (int i = 0; i < g.getChildCount(); i++) keepPictures(g.getChildAt(i), inv);
+            for (int i = 0; i < g.getChildCount(); i++) keepPictures(g.getChildAt(i), w);
         }
     }
 

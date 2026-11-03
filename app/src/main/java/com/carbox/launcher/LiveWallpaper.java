@@ -85,6 +85,16 @@ final class LiveWallpaper extends View {
         invalidate();
     }
 
+    /** This wallpaper is one of the animated scenes right now (so Glass should blur the live frame, not the flat base). */
+    boolean isAnimated() {
+        return animated(scene);
+    }
+
+    /** The base colour behind the current scene. */
+    int baseColor() {
+        return base(scene);
+    }
+
     /** The base colour behind each animated scene, so Glass cards tint to match. */
     static int base(String scene) {
         switch (scene) {

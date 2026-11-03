@@ -216,7 +216,7 @@ final class LeftStages {
         MainActivity a = MainActivity.I;
         if (a == null) return;
         if (a.map != null) a.map.remini();
-        MainActivity.reInvert(); // smart invert: left-stage widget icons/photos keep their true colours
+        MainActivity.reWhite(); // White theme: left-stage widget icons/photos keep their true colours
     }
 
     private static LinearLayout.LayoutParams top(float du) {

@@ -65,9 +65,9 @@ final class Themes {
         return "simple".equals(mode());
     }
 
-    /** Simple, Inverted: a white background with everything else inverted too (a light, high-contrast look). */
-    static boolean inverted() {
-        return simple() && Prefs.flag("simple_inverted", false);
+    /** Simple White: a white background with black text and colours lightened (a light, high-contrast look). */
+    static boolean white() {
+        return simple() && Prefs.flag("simple_white", false);
     }
 
     static void setMode(String m) {
@@ -156,27 +156,41 @@ final class Themes {
         }
     }
 
-    /** The screen's wallpaper, blurred: drawn small and scaled back up (soft, and cheap). */
+    private static long blurAt;
+
+    /** The screen's wallpaper, blurred: drawn small and scaled back up (soft, and cheap). With an animated
+     *  scene the flat root background tells us nothing, so we blur the live frame instead (throttled). */
     private static Bitmap blurred(View root) {
         int w = root.getWidth(), h = root.getHeight();
         if (w == 0 || h == 0) return null;
-        if (blur != null && blurW == w && blurH == h) return blur;
+        MainActivity a = MainActivity.I;
+        LiveWallpaper lw = a != null ? a.liveWall : null;
+        boolean live = lw != null && lw.isAnimated();
+        long nowMs = android.os.SystemClock.uptimeMillis();
+        // cache by size; for a live scene, refresh a few times a second so it stays see-through, not frozen
+        if (blur != null && blurW == w && blurH == h && (!live || nowMs - blurAt < 140)) return blur;
         Drawable bg = root.getBackground();
-        if (bg == null) return null;
+        if (bg == null && !live) return null;
         try {
             int div = 8 + frost() / 5; // more frost: softer blur (8 … 28)
             int sw = Math.max(1, w / div), sh = Math.max(1, h / div);
             Bitmap small = Bitmap.createBitmap(sw, sh, Bitmap.Config.ARGB_8888);
             Canvas cv = new Canvas(small);
             cv.scale(sw / (float) w, sh / (float) h);
-            Rect old = bg.copyBounds();
-            bg.setBounds(0, 0, w, h);
-            bg.draw(cv);
-            bg.setBounds(old);
+            if (live) { // the moving scene itself, over its base colour
+                cv.drawColor(lw.baseColor());
+                lw.draw(cv);
+            } else {
+                Rect old = bg.copyBounds();
+                bg.setBounds(0, 0, w, h);
+                bg.draw(cv);
+                bg.setBounds(old);
+            }
             Bitmap mid = Bitmap.createScaledBitmap(small, sw * 3, sh * 3, true); // two soft steps: smoother blur
             blur = Bitmap.createScaledBitmap(mid, w, h, true);
             blurW = w;
             blurH = h;
+            blurAt = nowMs;
         } catch (Throwable t) {
             blur = null;
         }

@@ -34,7 +34,7 @@ function lib(local, cdn, done){
   s.onload=done; s.onerror=function(){ var t=document.createElement('script'); t.src=cdn; t.onload=done; t.onerror=done; document.head.appendChild(t); };
   document.head.appendChild(s);
 }
-var mode='osm', map=null, me=null, gmap=null, gme=null, gl=null, glMe=null, glOn=false, follow=true, pending=null, key='', opt='';
+var mode='osm', map=null, me=null, gmap=null, gme=null, gl=null, glMe=null, glOn=false, glReady=false, follow=true, pending=null, key='', opt='';
 var headUp=true, rot=0, glBearing=0;
 
 // ---- heading up. Leaflet and Google: the whole map element turns (made as big as the screen's
@@ -178,6 +178,11 @@ function initGl(){
   document.getElementById('m').className=darkOfm?'gl dark':'gl'; // dark: only the map picture is turned dark, not your arrow
   glOn=false;
   gl=new maplibregl.Map({container:'m',style:style,center:[0,0],zoom:2,attributionControl:{compact:false},pitchWithRotate:false,fadeDuration:0,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),refreshExpiredTiles:false});
+  // if the style never loads (slow or no network, a GPU hiccup), drop back to Standard instead of a blank map
+  glReady=false;
+  gl.on('load',function(){ glReady=true; });
+  gl.on('error',function(e){ note('map: '+((e&&e.error&&e.error.message)||'error')); });
+  (function(myGl){ setTimeout(function(){ if(gl===myGl&&!glReady) fallback('The vector map was slow to load, using Standard'); },9000); })(gl);
   var el=document.createElement('div'); el.innerHTML='<div class="me"><div class="a" id="arr"></div><div class="d"></div></div>';
   glMe=new maplibregl.Marker({element:el.firstChild,rotationAlignment:'map'});
   gl.on('dragstart',explore);
@@ -231,8 +236,17 @@ function setPos(lat,lon,bearing){
     if(!glOn){ glOn=true; glMe.addTo(gl); gl.jumpTo({center:[lon,lat],zoom:zoomPref-1}); }
     if(a) a.style.display=bearing>=0?'block':'none';
     glMe.setRotation(bearing>=0?bearing:0);
-    if(headUp&&follow&&bearing>=0) glBearing=bearing;
-    if(follow) gl.easeTo({center:[lon,lat],bearing:headUp?glBearing:0,duration:900});
+    if(follow){
+      // linear easing over a little longer than a GPS fix, so back-to-back fixes blend into one
+      // steady glide instead of a start-stop every second
+      var opts={center:[lon,lat],duration:1100,easing:function(t){return t;}};
+      if(headUp&&bearing>=0){
+        var db=((bearing-glBearing)%360+540)%360-180;
+        if(Math.abs(db)>4) glBearing=bearing; // only turn the map on a real heading change (no jitter when going straight)
+        opts.bearing=glBearing;
+      } else if(!headUp) opts.bearing=0;
+      gl.easeTo(opts);
+    }
     return;
   }
   if(!map) return;

@@ -835,27 +835,21 @@ final class Widgets {
         WeatherW(Context c, int i, JSONObject s) {
             super(c, i, s);
             LinearLayout l = card(c, Ui.CARD);
+            if (!tl) Ui.pad(l, 14, 10, 14, 10); // a bit less top/bottom so the grid tile never clips
             place = Ui.line(c, "", ts(11), Ui.SUB, true);
             l.addView(place);
             icon = Ui.icon(c, R.drawable.ic_w_partly, 0);
-            temp = Ui.text(c, "--°", tl ? 48 : 34, Ui.TEXT, true);
-            if (tl) { // Top Left: big icon beside a big temperature
-                l.addView(new View(c), Ui.weight(1, false));
-                LinearLayout r = Ui.row(c);
-                r.setGravity(Gravity.CENTER_VERTICAL);
-                r.addView(icon, Ui.lpu(68, 68));
-                LinearLayout.LayoutParams tl2 = Ui.lp(Ui.WRAP, Ui.WRAP);
-                tl2.leftMargin = Ui.u(10);
-                r.addView(temp, tl2);
-                l.addView(r);
-                l.addView(new View(c), Ui.weight(1, false));
-            } else {
-                LinearLayout.LayoutParams il = Ui.lpu(48, 48);
-                il.topMargin = Ui.u(10);
-                l.addView(icon, il);
-                l.addView(new View(c), Ui.weight(1, false));
-                l.addView(temp);
-            }
+            temp = Ui.text(c, "--°", tl ? 48 : 30, Ui.TEXT, true);
+            // icon beside the temperature (compact enough for a 1x1 tile), bigger on the Top-Left stage
+            l.addView(new View(c), Ui.weight(1, false));
+            LinearLayout r = Ui.row(c);
+            r.setGravity(Gravity.CENTER_VERTICAL);
+            r.addView(icon, Ui.lpu(tl ? 68 : 40, tl ? 68 : 40));
+            LinearLayout.LayoutParams tl2 = Ui.lp(Ui.WRAP, Ui.WRAP);
+            tl2.leftMargin = Ui.u(tl ? 10 : 8);
+            r.addView(temp, tl2);
+            l.addView(r);
+            l.addView(new View(c), Ui.weight(1, false));
             desc = Ui.line(c, "", ts(12), Ui.TEXT2, false);
             l.addView(desc, top(2));
             hilo = Ui.line(c, "", ts(12), Ui.SUB, false);

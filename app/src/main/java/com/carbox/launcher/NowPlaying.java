@@ -440,24 +440,19 @@ final class NowPlaying {
         android.graphics.drawable.Drawable appIcon = Apps.iconOf(m.getPackageName());
         boolean iconView = showIcon() && !(LyricsView.isShown() && bm != null); // lyrics open: the album art
         if (eq != null) eq.setVisibility(iconView || bm == null ? View.VISIBLE : View.GONE);
+        // the framed app-icon overlay sits in the top-left corner the same way in both views
         appBadge.setImageDrawable(appIcon);
-        appBadge.setVisibility(!(iconView && appIcon != null) && appIcon != null ? View.VISIBLE : View.GONE); // album art: app icon on its corner
-        if (iconView && appIcon != null) { // the music app's icon, centred
-            art.setImageDrawable(appIcon);
-            art.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            // small, top left, with the live equaliser beside and below it
-            art.setPadding(Ui.u(12), Ui.u(10), Math.max(0, view.getWidth() - Ui.u(52)), Math.max(0, view.getHeight() - Ui.u(50)));
+        appBadge.setVisibility(appIcon != null ? View.VISIBLE : View.GONE);
+        art.setPadding(0, 0, 0, 0);
+        if (iconView) {
+            art.setImageDrawable(null); // equaliser view: the equaliser fills, the app shows via the badge
+        } else if (bm != null) {
+            art.setImageBitmap(bm);
+            art.setScaleType(ImageView.ScaleType.CENTER_CROP);
         } else {
-            art.setPadding(0, 0, 0, 0);
-            if (bm != null) {
-                art.setImageBitmap(bm);
-                art.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            } else {
-                art.setImageResource(R.drawable.ic_music);
-                art.setScaleType(ImageView.ScaleType.CENTER);
-            }
+            art.setImageResource(R.drawable.ic_music);
+            art.setScaleType(ImageView.ScaleType.CENTER);
         }
-        MainActivity.reInvert(); // smart invert: album art and the app icon keep their true colours
         durationMs = md.getLong(MediaMetadata.METADATA_KEY_DURATION);
         progressBar.setVisibility(durationMs > 0 ? View.VISIBLE : View.INVISIBLE);
         Ui.ui.removeCallbacks(progressTick);
