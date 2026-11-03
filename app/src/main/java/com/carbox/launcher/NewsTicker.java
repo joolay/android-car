@@ -424,10 +424,11 @@ final class NewsTicker {
         if (np == null || MediaListener.controller == null) line = "Nothing playing";
         else if (np.lyricCount() == 0) line = "♪  " + np.songTitle() + " · " + np.songArtist() + "  ·  no lyrics for this song";
         else if (idx < 0) line = "♪  " + np.songTitle() + " · " + np.songArtist();
-        else {
-            String l = np.lyricLine(idx);
-            line = l.isEmpty() ? "♪" : l;
-            if (idx + 1 < np.lyricCount() && !np.lyricLine(idx + 1).isEmpty()) line += "     ·     " + np.lyricLine(idx + 1); // and the next one
+        else { // the whole song as one strip, easing along to the line being sung
+            List<String> all = new ArrayList<>();
+            for (int i = 0; i < np.lyricCount(); i++) all.add(np.lyricLine(i));
+            marquee.lyrics(key, all, idx);
+            return;
         }
         marquee.setItems(java.util.Collections.singletonList(line));
     }
@@ -1259,9 +1260,18 @@ final class NewsTicker {
 
     /** Smooth scrolling text, or one headline at a time when scrolling is off. */
     final class Marquee extends View {
-        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        // sub-pixel text: it glides in fractions of a pixel instead of stepping a whole pixel at a time
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG | Paint.LINEAR_TEXT_FLAG);
         private final Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
         private List<String> items = new ArrayList<>();
+        // lyrics: the whole song as one strip that eases along to the line being sung (no jump each line)
+        private static final String SEP = "     ·     ";
+        private boolean lyricMode;
+        private String streamKey;
+        private List<String> streamLines = new ArrayList<>();
+        private float[] lineX = new float[0];
+        private int targetIdx;
+        private float vel;
         private String joined = "";
         private float offset, width;
         private long lastFrame;
@@ -1281,10 +1291,39 @@ final class NewsTicker {
         void applyFont() {
             p.setTextSize(Ui.uf(lvlSize(13, 16, 20)));
             width = p.measureText(joined);
+            if (lyricMode) measureStream();
             invalidate();
         }
 
+        /** Lyrics: the song's lines as one strip, gliding to line idx. Built once per song. */
+        void lyrics(String key, List<String> lines, int idx) {
+            if (!lyricMode || !key.equals(streamKey) || lines.size() != streamLines.size()) {
+                lyricMode = true;
+                streamKey = key;
+                streamLines = new ArrayList<>();
+                for (String l : lines) streamLines.add((l.isEmpty() ? "\u266A" : l) + SEP);
+                items = streamLines;
+                measureStream();
+                targetIdx = Math.max(0, Math.min(idx, streamLines.size() - 1));
+                offset = lineX.length > 0 ? lineX[targetIdx] - getWidth() * 0.12f : 0; // start in place
+                vel = 0;
+                lastFrame = 0;
+            }
+            targetIdx = Math.max(0, Math.min(idx, streamLines.size() - 1));
+            invalidate();
+        }
+
+        private void measureStream() {
+            lineX = new float[streamLines.size()];
+            float x = 0;
+            for (int i = 0; i < streamLines.size(); i++) {
+                lineX[i] = x;
+                x += p.measureText(streamLines.get(i));
+            }
+        }
+
         void setItems(List<String> l) {
+            lyricMode = false;
             items = new ArrayList<>(l);
             joined = TextUtils.join("     •     ", items) + "     •     ";
             width = p.measureText(joined);
@@ -1307,6 +1346,28 @@ final class NewsTicker {
             cv.save();
             cv.clipRect(0, 0, getWidth(), getHeight());
             if (items.isEmpty()) {
+                cv.restore();
+                return;
+            }
+            if (lyricMode && lineX.length > 0) {
+                long now = SystemClock.uptimeMillis();
+                float dt = lastFrame == 0 ? 0 : Math.min(0.05f, (now - lastFrame) / 1000f);
+                lastFrame = now;
+                float target = lineX[targetIdx] - getWidth() * 0.12f; // the sung line just in from the left
+                if (on) { // a critically damped spring: it speeds up and slows down smoothly, never overshoots
+                    float k = 5f, acc = k * (target - offset) - 2f * (float) Math.sqrt(k) * vel;
+                    vel += acc * dt;
+                    offset += vel * dt;
+                } else offset = target;
+                for (int i = 0; i < streamLines.size(); i++) { // only the lines on screen
+                    float x = lineX[i] - offset;
+                    float end = i + 1 < lineX.length ? lineX[i + 1] - offset : x + p.measureText(streamLines.get(i));
+                    if (end < 0) continue;
+                    if (x > getWidth()) break;
+                    cv.drawText(streamLines.get(i), x, y, p);
+                }
+                if (on && (Math.abs(target - offset) > 0.3f || Math.abs(vel) > 0.3f)) postInvalidateOnAnimation();
+                else lastFrame = 0; // settled: the next line starts from rest
                 cv.restore();
                 return;
             }
