@@ -260,6 +260,18 @@ public class MainActivity extends Activity {
         return tickerRow != null && tickerRow.getVisibility() == View.VISIBLE && !tiles.editing();
     }
 
+    /**
+     * Expanded windows on the Centre Stage put their title and buttons in the News Ticker's place (themed bar),
+     * so the window itself gets all the room. Returns false when the ticker is hidden (keep the header inside).
+     */
+    boolean titleToTicker(View head) {
+        if (!canHoldTitle() || head == null) return false;
+        head.setBackground(Themes.card(Ui.CARD, 12));
+        Ui.pad(head, 10, 0, 10, 0);
+        tickerTitle(head);
+        return true;
+    }
+
     void tickerTitle(View head) {
         if (tickerSlot == null || tiles.editing()) return;
         if (head == title) return;

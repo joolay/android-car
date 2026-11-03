@@ -170,7 +170,8 @@ final class Themes {
             host.getLocationInWindow(at);
             root.getLocationInWindow(ro);
             c.drawBitmap(b, ro[0] - at[0], ro[1] - at[1], pic); // the blurred wallpaper right behind this card
-            fill.setColor(0x4D141A24); // dark frost so text stays readable over a bright wallpaper
+            // dark frost so text stays readable over a bright wallpaper; a coloured card (an alert) keeps its colour as tinted glass
+            fill.setColor(color == Ui.CARD || color == Ui.CARD2 ? 0x4D141A24 : (color & 0x00FFFFFF) | 0xA6000000);
             c.drawRect(box, fill);
             shine.setShader(new LinearGradient(0, box.top, 0, box.top + box.height() * 0.6f, 0x24FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
             c.drawRect(box, shine);

@@ -80,7 +80,7 @@ final class HomeApproach {
         HA.maybeRefresh();
         shown = new FrameLayout(a);
         shown.setClickable(true);
-        shown.setBackground(Ui.round(0xFF13284A, 16));
+        shown.setBackground(Themes.card(0xFF13284A, 16));
         LinearLayout col = Ui.col(a);
         Ui.pad(col, 18, 14, 18, 14);
         col.addView(Ui.line(a, "ALMOST HOME", 12, Ui.ACCENT_SOFT, true));

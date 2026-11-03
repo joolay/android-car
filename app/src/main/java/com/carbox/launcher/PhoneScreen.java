@@ -113,7 +113,7 @@ final class PhoneScreen {
         row.addView(tabs, Ui.lpu(104, Ui.MATCH));
 
         LinearLayout body = Ui.col(c);
-        body.setBackground(Ui.round(Ui.CARD, 18));
+        body.setBackground(Themes.card(Ui.CARD, 18));
         Ui.pad(body, 12, 10, 12, 10);
         LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(0, Ui.MATCH, 1);
         bl.leftMargin = Ui.u(8);
@@ -131,7 +131,7 @@ final class PhoneScreen {
         LinearLayout results = Ui.col(c);
         if ("contacts".equals(tab)) {
             LinearLayout sb = Ui.row(c);
-            sb.setBackground(Ui.round(Ui.CARD2, 12));
+            sb.setBackground(Themes.inner(Ui.CARD2, 12));
             Ui.pad(sb, 12, 0, 6, 0);
             sb.addView(Ui.icon(c, R.drawable.ic_search, Ui.SUB), Ui.lpu(20, 20));
             EditText e = Widgets.field("Search contacts", query, false, s -> {
@@ -345,7 +345,7 @@ final class PhoneScreen {
 
     private static View square(Context c, int icon, Runnable r) {
         FrameLayout f = new FrameLayout(c);
-        f.setBackground(Ui.round(Ui.CARD2, 12));
+        f.setBackground(Themes.inner(Ui.CARD2, 12));
         f.addView(Ui.icon(c, icon, Ui.TEXT), Ui.flpu(22, 22, Gravity.CENTER));
         f.setOnClickListener(v -> r.run());
         return f;
@@ -379,7 +379,7 @@ final class PhoneScreen {
         nl.setMargins(Ui.u(10), 0, Ui.u(10), 0);
         top.addView(num, nl);
         FrameLayout del = new FrameLayout(c);
-        del.setBackground(Ui.oval(Ui.CARD2));
+        del.setBackground(Themes.inner(Ui.CARD2, 24));
         del.addView(Ui.icon(c, R.drawable.ic_backspace, Ui.TEXT2), Ui.flpu(26, 26, Gravity.CENTER));
         InAppKeyboard.repeat(del, () -> {
             if (number.length() > 0) number.setLength(number.length() - 1);
@@ -403,7 +403,7 @@ final class PhoneScreen {
                 String[] key = keys[r * 3 + k];
                 LinearLayout b = Ui.col(c);
                 b.setGravity(Gravity.CENTER);
-                b.setBackground(Ui.round(Ui.CARD2, 18));
+                b.setBackground(Themes.inner(Ui.CARD2, 18));
                 TextView d = Ui.text(c, key[0], 26, Ui.TEXT, false);
                 d.setGravity(Gravity.CENTER);
                 b.addView(d, new LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP));

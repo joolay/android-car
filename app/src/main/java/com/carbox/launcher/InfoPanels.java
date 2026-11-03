@@ -50,7 +50,7 @@ final class InfoPanels {
         String primary = altView ? Cal.alt() : "gregorian";
 
         LinearLayout card = Ui.col(c);
-        card.setBackground(Ui.round(Ui.CARD, 16));
+        card.setBackground(Themes.card(Ui.CARD, 16));
         Ui.pad(card, 18, 14, 18, 14);
         card.setLayoutParams(Panels.centered(570, 360));
 
@@ -224,7 +224,7 @@ final class InfoPanels {
         for (Cal.Event e : up) {
             LinearLayout r = Ui.row(c);
             r.setGravity(Gravity.TOP);
-            r.setBackground(Ui.round(Ui.CARD2, 12)); // each event on its own card
+            r.setBackground(Themes.inner(Ui.CARD2, 12)); // each event on its own card
             Ui.pad(r, 12, 10, 12, 10);
             View dot = new View(c);
             dot.setBackground(Ui.oval(e.special ? Ui.GREEN : Ui.ACCENT));
@@ -389,7 +389,7 @@ final class InfoPanels {
             Weather.Day d = Weather.days.get(i);
             LinearLayout card = Ui.col(c);
             card.setGravity(Gravity.CENTER_HORIZONTAL);
-            card.setBackground(Ui.round(Ui.CARD2, 16));
+            card.setBackground(Themes.inner(Ui.CARD2, 16));
             Ui.pad(card, 14, 16, 14, 16);
             card.addView(Ui.text(c, dayName(d.date, i), 15, Ui.TEXT, true));
             LinearLayout.LayoutParams il = Ui.lpu(56, 56);
@@ -474,7 +474,7 @@ final class InfoPanels {
         Panels.showCard(() -> {
             Context c = Panels.ctx();
             LinearLayout card = Ui.col(c);
-            card.setBackground(Ui.round(Ui.CARD2, 16));
+            card.setBackground(Themes.inner(Ui.CARD2, 16));
             Ui.pad(card, 14, 12, 14, 12);
             card.setLayoutParams(Panels.anchored(260, -2, 88, 230));
             card.addView(Ui.line(c, "Assistants", 15, Ui.TEXT, true));
@@ -527,7 +527,7 @@ final class InfoPanels {
     private static View quickCard(String id) {
         Context c = Panels.ctx();
         LinearLayout card = Ui.col(c);
-        card.setBackground(Ui.round(Ui.CARD2, 16));
+        card.setBackground(Themes.inner(Ui.CARD2, 16));
         Ui.pad(card, 16, 14, 16, 14);
         card.setLayoutParams(Panels.anchored(260, -2, 88, 110));
         int icon, tint = Ui.TEXT;

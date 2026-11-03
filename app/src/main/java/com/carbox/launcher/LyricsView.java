@@ -31,6 +31,8 @@ final class LyricsView {
 
     private static long changedAt; // when the song changed and its lyrics weren't there yet
 
+    private static android.widget.TextView barTitle; // the song's name up in the ticker's place
+
     static boolean isShown() {
         return shown != null;
     }
@@ -46,7 +48,7 @@ final class LyricsView {
         if (a == null || np == null || np.lyricCount() == 0) return;
         shown = new FrameLayout(a);
         shown.setClickable(true);
-        shown.setBackground(Ui.round(Ui.CARD, 16));
+        shown.setBackground(Themes.card(Ui.CARD, 16));
         a.mapAside(true); // the big map steps aside for the lyrics
         head = Ui.line(a, "", 11, Ui.SUB, true);
         head.setLetterSpacing(0.06f);
@@ -70,7 +72,28 @@ final class LyricsView {
         View x = Ui.icon(a, R.drawable.ic_x, Ui.SUB);
         Ui.pad(x, 8, 8, 8, 8);
         x.setOnClickListener(v -> hide());
-        shown.addView(x, Ui.flpu(46, 46, Gravity.TOP | Gravity.END));
+        // title (song) and close go up into the News Ticker's place; the words get the whole stage
+        LinearLayout bar = Ui.row(a);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        android.widget.TextView bt = Ui.line(a, "", 14, Ui.TEXT, true);
+        bar.addView(bt, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+        View settings = Ui.icon(a, R.drawable.ic_gear, Ui.SUB); // Now Playing's settings
+        Ui.pad(settings, 5, 5, 5, 5);
+        settings.setContentDescription("Music settings");
+        settings.setOnClickListener(v -> SettingsPanels.music());
+        bar.addView(settings, Ui.lpu(30, 30));
+        bar.addView(Ui.gap(a, 8, 1));
+        bar.addView(x, Ui.lpu(30, 30));
+        barTitle = bt;
+        if (a.titleToTicker(bar)) {
+            head.setVisibility(View.GONE);
+            sl.setMargins(Ui.u(16), Ui.u(8), Ui.u(16), Ui.u(8));
+            sv.requestLayout();
+        } else {
+            ((android.view.ViewGroup) bar).removeView(x);
+            shown.addView(x, Ui.flpu(46, 46, Gravity.TOP | Gravity.END));
+            barTitle = null;
+        }
         a.tileArea.addView(shown, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         // grows out of the Now playing tile
         final FrameLayout s0 = shown;
@@ -102,7 +125,11 @@ final class LyricsView {
         final FrameLayout s0 = shown;
         shown = null;
         views.clear();
-        if (MainActivity.I != null) MainActivity.I.mapAside(false);
+        if (MainActivity.I != null) {
+            MainActivity.I.mapAside(false);
+            if (barTitle != null) MainActivity.I.tickerTitle(null); // the News Ticker comes back
+        }
+        barTitle = null;
         if (NowPlaying.I != null) NowPlaying.I.update();
         if (s0 == null || s0.getParent() == null) return;
         float[] t = fromNowPlaying(s0);
@@ -168,6 +195,7 @@ final class LyricsView {
     private static void build(NowPlaying np) {
         forKey = np.lyricKey();
         head.setText(("LYRICS · " + np.songTitle() + " · " + np.songArtist()).toUpperCase(java.util.Locale.ROOT));
+        if (barTitle != null) barTitle.setText(np.songTitle() + " · " + np.songArtist());
         lines.removeAllViews();
         views.clear();
         lines.addView(new View(shown.getContext()), Ui.lpu(1, 90)); // room so the first line can sit in the middle

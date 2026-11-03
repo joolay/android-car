@@ -124,7 +124,7 @@ final class WhatsWeb {
     private static View page() {
         Context c = Panels.ctx();
         LinearLayout card = Ui.col(c);
-        card.setBackground(Ui.round(Ui.CARD, 16));
+        card.setBackground(Themes.card(Ui.CARD, 16));
         Ui.pad(card, 8, 6, 8, 8);
         if (full) card.setLayoutParams(new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         // a slim bar: name, text size, reload, full screen / back to the tiles, close
@@ -146,7 +146,8 @@ final class WhatsWeb {
             open();
         }));
         head.addView(btn(c, R.drawable.ic_x, "Close", Panels::close));
-        card.addView(head, Ui.lp(Ui.MATCH, Ui.u(34)));
+        // in the Centre Stage the bar goes up into the News Ticker's place; full screen keeps it here
+        if (full || MainActivity.I == null || !MainActivity.I.titleToTicker(head)) card.addView(head, Ui.lp(Ui.MATCH, Ui.u(34)));
         WebView w = web(c);
         if (w.getParent() != null) ((ViewGroup) w.getParent()).removeView(w);
         LinearLayout.LayoutParams wl = Ui.weight(1, false);

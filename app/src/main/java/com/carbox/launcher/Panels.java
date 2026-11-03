@@ -294,12 +294,12 @@ final class Panels {
      */
     static LinearLayout panel(View titleView, String title, View body, float w, float h, View action) {
         LinearLayout p = Ui.col(ctx);
-        p.setBackground(Ui.round(Ui.CARD, 16)); // same corners as the tiles it covers
+        p.setBackground(Themes.card(Ui.CARD, 16)); // same corners as the tiles it covers; glass in the Glass theme
         Ui.pad(p, 20, 14, 20, 14);
         p.setLayoutParams(centered(w, h));
 
         // in the tile area the title bar goes up into the ticker's place, so the page gets the whole tile area
-        boolean up = !full && MainActivity.I != null && MainActivity.I.canHoldTitle();
+        boolean up = (!full || cardOverTiles) && MainActivity.I != null && MainActivity.I.canHoldTitle();
         LinearLayout head = Ui.row(ctx);
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
         float ic = up ? 20 : 24;
@@ -319,10 +319,8 @@ final class Panels {
         x.setOnClickListener(v -> close());
         head.addView(x, Ui.lpu(ic + 4, ic + 4)); // close: a touch bigger
         if (up) {
-            head.setBackground(Ui.round(Ui.CARD, 12));
-            Ui.pad(head, 10, 0, 10, 0);
             Ui.pad(p, 20, 12, 20, 12);
-            MainActivity.I.tickerTitle(head);
+            MainActivity.I.titleToTicker(head);
         } else p.addView(head, Ui.lp(Ui.MATCH, Ui.WRAP));
 
         ScrollView sv = new ScrollView(ctx);

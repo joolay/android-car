@@ -204,7 +204,7 @@ final class Ui {
         t.setSingleLine(true);
         pad(t, 16, 12, 16, 12); // finger-sized
         t.setMinHeight(u(44));
-        t.setBackground(round(on ? ACCENT : CARD2, 20));
+        t.setBackground(on ? round(ACCENT, 20) : Themes.inner(CARD2, 20));
         if (click != null) t.setOnClickListener(v -> click.run());
         return t;
     }
@@ -244,7 +244,7 @@ final class Ui {
         t.setSingleLine(true);
         pad(t, 20, 12, 20, 12); // finger-sized
         t.setMinHeight(u(44));
-        t.setBackground(round(primary ? ACCENT : CARD2, 20));
+        t.setBackground(primary ? round(ACCENT, 20) : Themes.inner(CARD2, 20));
         if (click != null) t.setOnClickListener(v -> click.run());
         return t;
     }

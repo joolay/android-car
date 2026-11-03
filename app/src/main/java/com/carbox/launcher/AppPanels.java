@@ -112,7 +112,7 @@ final class AppPanels {
     private static View allAppsPage() {
         Context c = Panels.ctx();
         LinearLayout card = Ui.col(c);
-        card.setBackground(Ui.round(Ui.CARD, 16));
+        card.setBackground(Themes.card(Ui.CARD, 16));
         Ui.pad(card, 16, 12, 16, 12);
         card.setLayoutParams(Panels.centered(760, 452));
 
@@ -122,7 +122,7 @@ final class AppPanels {
         tbox.addView(Ui.line(c, selecting ? selection.size() + " selected" : "All apps", 20, Ui.TEXT, true));
         if (!selecting) {
             android.widget.FrameLayout gear = new android.widget.FrameLayout(c);
-            gear.setBackground(Ui.oval(Ui.CARD2));
+            gear.setBackground(Themes.inner(Ui.CARD2, 24));
             gear.addView(Ui.icon(c, R.drawable.ic_gear, Ui.TEXT), Ui.flpu(20, 20, Gravity.CENTER));
             gear.setOnClickListener(v -> {
                 Panels.close();
@@ -136,7 +136,7 @@ final class AppPanels {
         }
         head.addView(tbox, Ui.lpu(210, Ui.WRAP));
         LinearLayout searchBox = Ui.row(c);
-        searchBox.setBackground(Ui.round(Ui.CARD2, 12));
+        searchBox.setBackground(Themes.inner(Ui.CARD2, 12));
         Ui.pad(searchBox, 10, 0, 6, 0);
         searchBox.addView(Ui.icon(c, R.drawable.ic_search, Ui.SUB), Ui.lpu(18, 18));
         LinearLayout results = Ui.col(c);
@@ -252,7 +252,7 @@ final class AppPanels {
 
     private static View zoomBtn(Context c, int icon, String desc, int step, LinearLayout results) {
         android.widget.FrameLayout b = new android.widget.FrameLayout(c);
-        b.setBackground(Ui.oval(Ui.CARD2));
+        b.setBackground(Themes.inner(Ui.CARD2, 24));
         b.addView(Ui.icon(c, icon, Ui.TEXT), Ui.flpu(18, 18, Gravity.CENTER));
         b.setContentDescription(desc);
         b.setOnClickListener(v -> {
@@ -369,7 +369,7 @@ final class AppPanels {
                 Panels.close();
             }));
             b.addView(btns, top(10));
-            b.setBackground(Ui.round(Ui.CARD, 20));
+            b.setBackground(Themes.card(Ui.CARD, 20));
             Ui.pad(b, 22, 18, 22, 18);
             b.setLayoutParams(Panels.centered(400, -2));
             return b;
@@ -475,7 +475,7 @@ final class AppPanels {
     /** A Car Connect choice as a card: icon and title on top, one line of text, the app to change at the bottom. */
     private static View optionCard(Context c, int icon, int bg, int tint, String title, String sub, String app, Runnable open, Runnable change) {
         LinearLayout r = Ui.col(c);
-        r.setBackground(Ui.round(Ui.CARD2, 16));
+        r.setBackground(Themes.inner(Ui.CARD2, 16));
         Ui.pad(r, 12, 10, 10, 6);
         LinearLayout top = Ui.row(c);
         top.setGravity(Gravity.CENTER_VERTICAL);
@@ -502,7 +502,7 @@ final class AppPanels {
 
     private static View option(Context c, int icon, int bg, int tint, String title, String sub, String app, Runnable open, Runnable change) {
         LinearLayout r = Ui.row(c);
-        r.setBackground(Ui.round(Ui.CARD2, 16));
+        r.setBackground(Themes.inner(Ui.CARD2, 16));
         Ui.pad(r, 16, 0, 12, 0);
         FrameLayout ic = new FrameLayout(c);
         ic.setBackground(Ui.round(bg, 13));
@@ -748,7 +748,7 @@ final class AppPanels {
         Context c = Panels.ctx();
         boolean manage = index < 0;
         LinearLayout card = Ui.col(c);
-        card.setBackground(Ui.round(Ui.CARD, 18));
+        card.setBackground(Themes.card(Ui.CARD, 18));
         Ui.pad(card, 20, 14, 20, 14);
         card.setLayoutParams(Panels.centered(784, 464));
 
@@ -864,7 +864,7 @@ final class AppPanels {
         boolean sel = manage ? on.containsKey(w[0]) : w[0].equals(current);
         LinearLayout cell = Ui.col(c);
         Ui.pad(cell, 5, 5, 5, 6);
-        cell.setBackground(sel ? Ui.outline(0xFF15233A, Ui.ACCENT, 3, 16) : Ui.round(Ui.CARD2, 16));
+        cell.setBackground(sel ? Ui.outline(0xFF15233A, Ui.ACCENT, 3, 16) : Themes.inner(Ui.CARD2, 16));
         cell.addView(Widgets.preview(c, TileDrawer.widget(w[0])), new LinearLayout.LayoutParams(Ui.MATCH, 0, 1));
         Integer cnt = on.get(w[0]);
         String label = Widgets.multiple(w[0]) && manage ? w[1] + (cnt != null ? " (" + cnt + ")" : "") + " · tap to add" : w[1];
@@ -938,7 +938,7 @@ final class AppPanels {
     private static View folderPreview(Context c) {
         LinearLayout l = Ui.col(c);
         l.setGravity(Gravity.CENTER);
-        l.setBackground(Ui.round(Ui.CARD, 14));
+        l.setBackground(Themes.card(Ui.CARD, 14));
         FrameLayout ic = new FrameLayout(c);
         ic.setBackground(Ui.oval(Ui.CARD3));
         ic.addView(Ui.icon(c, R.drawable.ic_folder, Ui.TEXT), Ui.flpu(26, 26, Gravity.CENTER));

@@ -86,7 +86,7 @@ final class Alerts {
         hideNotice();
         notice = new FrameLayout(a);
         notice.setClickable(true);
-        notice.setBackground(Ui.round(bg, 16));
+        notice.setBackground(Themes.card(bg, 16));
         LinearLayout col = Ui.col(a);
         col.setGravity(Gravity.CENTER);
         Ui.pad(col, 20, 16, 20, 16);

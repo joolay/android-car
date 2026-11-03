@@ -19,7 +19,7 @@ final class SalahCard {
         hide();
         shown = new FrameLayout(a);
         shown.setClickable(true);
-        shown.setBackground(Ui.round(0xFF0F3D2E, 16));
+        shown.setBackground(Themes.card(0xFF0F3D2E, 16));
         LinearLayout col = Ui.col(a);
         col.setGravity(Gravity.CENTER);
         Ui.pad(col, 20, 16, 20, 16);

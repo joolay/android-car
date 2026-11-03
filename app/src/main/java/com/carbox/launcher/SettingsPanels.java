@@ -74,7 +74,7 @@ final class SettingsPanels {
     private static View bigRow(Context c, int icon, int color, String title, String value, Runnable open, String key, boolean def) {
         LinearLayout r = Ui.row(c);
         r.setGravity(Gravity.CENTER_VERTICAL);
-        r.setBackground(Ui.round(Ui.CARD2, 12));
+        r.setBackground(Themes.inner(Ui.CARD2, 12));
         Ui.pad(r, 10, 6, 10, 6);
         r.setMinimumHeight(Ui.u(58));
         FrameLayout ic = new FrameLayout(c);
@@ -100,7 +100,7 @@ final class SettingsPanels {
     /** A compact settings row: name, current value, and either a switch (on/off settings) or ›. */
     private static View textRow(Context c, String title, String value, Runnable open, String key, boolean def) {
         LinearLayout r = Ui.row(c);
-        r.setBackground(Ui.round(Ui.CARD2, 10));
+        r.setBackground(Themes.inner(Ui.CARD2, 10));
         Ui.pad(r, 10, 0, 8, 0);
         r.setMinimumHeight(Ui.u(38));
         r.addView(Ui.line(c, title, 13, Ui.TEXT, false), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
@@ -124,7 +124,7 @@ final class SettingsPanels {
     /** One setting: icon, name and current value, all the same size. */
     private static View tile(Context c, int icon, int color, String title, String value, Runnable click) {
         LinearLayout r = Ui.row(c);
-        r.setBackground(Ui.round(Ui.CARD2, 14));
+        r.setBackground(Themes.inner(Ui.CARD2, 14));
         Ui.pad(r, 8, 5, 6, 5);
         r.setMinimumHeight(Ui.u(40)); // compact
         FrameLayout ic = new FrameLayout(c);
@@ -146,7 +146,7 @@ final class SettingsPanels {
     private static View mainPage() {
         Context c = c();
         LinearLayout card = Ui.col(c);
-        card.setBackground(Ui.round(Ui.CARD, 18));
+        card.setBackground(Themes.card(Ui.CARD, 18));
         Ui.pad(card, 20, 14, 20, 14);
         card.setLayoutParams(Panels.centered(784, 464));
         LinearLayout head = Ui.row(c);
@@ -225,7 +225,7 @@ final class SettingsPanels {
             Ui.pad(t, 10, 0, 8, 0);
             t.setMinimumHeight(Ui.u(44));
             boolean on = gi == tab;
-            t.setBackground(on ? Ui.round(Ui.CARD2, 12) : null);
+            t.setBackground(on ? Themes.inner(Ui.CARD2, 12) : null);
             if (first != null) {
                 FrameLayout ic = new FrameLayout(c);
                 ic.setBackground(Ui.oval((Integer) first[1]));
@@ -709,7 +709,7 @@ final class SettingsPanels {
                 int pos = chosen.indexOf(id);
                 boolean on = pos >= 0;
                 LinearLayout r = Ui.row(c);
-                r.setBackground(on ? Ui.outline(0xFF1A2740, Ui.ACCENT, 2, 10) : Ui.round(Ui.CARD2, 10));
+                r.setBackground(on ? Ui.outline(0xFF1A2740, Ui.ACCENT, 2, 10) : Themes.inner(Ui.CARD2, 10));
                 Ui.pad(r, 10, 0, 10, 0);
                 FrameLayout ic = new FrameLayout(c);
                 ic.setBackground(Ui.oval(on ? Ui.ACCENT : Ui.CARD3));
@@ -1104,7 +1104,7 @@ final class SettingsPanels {
             if (cl.isEmpty()) b.addView(Ui.text(c, "Nothing yet. Make or receive a call, then come back. If this stays empty, BT Phone isn't posting notifications at all.", 13, Ui.SUB, false));
             for (String s : cl) {
                 TextView t = Ui.text(c, s, 12, Ui.TEXT2, false);
-                t.setBackground(Ui.round(Ui.CARD2, 10));
+                t.setBackground(Themes.inner(Ui.CARD2, 10));
                 Ui.pad(t, 10, 8, 10, 8);
                 b.addView(t, top(6));
             }
@@ -1305,7 +1305,7 @@ final class SettingsPanels {
     private static View typeTile(Context c, String title, String sub, boolean on, Runnable click) {
         LinearLayout l = Ui.col(c);
         l.setGravity(Gravity.CENTER_VERTICAL);
-        l.setBackground(on ? Ui.outline(0xFF1A2740, Ui.ACCENT, 2, 14) : Ui.round(Ui.CARD2, 14));
+        l.setBackground(on ? Ui.outline(0xFF1A2740, Ui.ACCENT, 2, 14) : Themes.inner(Ui.CARD2, 14));
         Ui.pad(l, 16, 10, 16, 10);
         l.addView(Ui.line(c, title, 15, Ui.TEXT, true));
         l.addView(Ui.line(c, sub, 12, Ui.SUB, false), top(4));
@@ -1331,7 +1331,7 @@ final class SettingsPanels {
                 b.addView(empty, Ui.lp(Ui.MATCH, Ui.WRAP));
             } else {
                 LinearLayout sel = Ui.row(c);
-                sel.setBackground(Ui.round(Ui.CARD2, 14));
+                sel.setBackground(Themes.inner(Ui.CARD2, 14));
                 Ui.pad(sel, 16, 12, 16, 12);
                 LinearLayout t = Ui.col(c);
                 t.addView(Ui.line(c, p.name, 15, Ui.TEXT, true));

@@ -296,10 +296,26 @@ final class NewsTicker {
     private void updateText() {
         List<String> l = new ArrayList<>();
         for (Item it : showingNews ? newsItems : trafficItems) if (today(it) && !read(it) && !deleted(it) && !archived(it)) l.add(it.title);
-        if (l.isEmpty()) {
+        List<String> last = showingNews ? lastNews : lastTraffic;
+        Ui.ui.removeCallbacks(loadingOver);
+        if (!l.isEmpty()) {
+            last.clear();
+            last.addAll(l);
+            marquee.setItems(l);
+        } else if (!last.isEmpty()) marquee.setItems(last); // nothing new yet: keep showing the last feed
+        else { // nothing at all yet: "Loading" for 2 s at most, then whatever headlines were saved last
             marquee.setItems(java.util.Collections.singletonList(Gps.has() ? "Loading headlines…" : "Waiting for location to find local headlines"));
-        } else marquee.setItems(l);
+            Ui.ui.postDelayed(loadingOver, 2000);
+        }
     }
+
+    private final List<String> lastNews = new ArrayList<>(), lastTraffic = new ArrayList<>();
+    private final Runnable loadingOver = () -> {
+        List<String> l = new ArrayList<>();
+        for (Item it : showingNews ? newsItems : trafficItems) if (!deleted(it)) l.add(it.title); // the last feed, even if older
+        if (l.isEmpty()) l.add(showingNews ? "No new headlines today" : "No traffic news right now");
+        marquee.setItems(l);
+    };
 
     private String place() {
         return Gps.town != null ? Gps.town : "South Africa";
@@ -486,10 +502,11 @@ final class NewsTicker {
             boolean n = wasNews;
             List<Item> items = n ? newsItems : trafficItems;
             LinearLayout card = Ui.col(c);
-            card.setBackground(Ui.round(Ui.CARD, 22));
+            card.setBackground(Themes.card(Ui.CARD, 16));
             Ui.pad(card, 26, 20, 26, 16);
             card.setLayoutParams(Panels.centered(660, 440));
             LinearLayout head = Ui.row(c);
+            head.setGravity(Gravity.CENTER_VERTICAL);
             TextView tg = Ui.text(c, n ? "NEWS" : "TRAFFIC", 12, n ? Ui.TEXT : 0xFF3A2600, true);
             tg.setBackground(Ui.round(n ? Ui.ACCENT : Ui.AMBER, 6));
             Ui.pad(tg, 9, 3, 9, 3);
@@ -508,7 +525,9 @@ final class NewsTicker {
             View x = Ui.icon(c, R.drawable.ic_x, Ui.SUB);
             x.setOnClickListener(v -> Panels.close());
             head.addView(x, Ui.lpu(28, 28));
-            card.addView(head);
+            // the title and buttons go up into the ticker's place; the list gets the room
+            if (MainActivity.I != null && MainActivity.I.titleToTicker(head)) Ui.pad(card, 22, 8, 22, 12);
+            else card.addView(head);
             String url = Prefs.str(n ? Prefs.NEWS_URL : Prefs.TRAFFIC_URL, "");
             long at = n ? newsAt : trafficAt;
             String src = (url.isEmpty() ? "Google News · " + place() : Uri.parse(url).getHost()) + (at > 0 ? " · updated " + ago(at) : "");

@@ -38,7 +38,7 @@ final class TileEditor {
     private static View build() {
         Context c = Panels.ctx();
         LinearLayout card = Ui.col(c);
-        card.setBackground(Ui.round(Ui.CARD, 22));
+        card.setBackground(Themes.card(Ui.CARD, 22));
         Ui.pad(card, 22, 16, 22, 16);
         card.setLayoutParams(Panels.centered(784, 464));
 

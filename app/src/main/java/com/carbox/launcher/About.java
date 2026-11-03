@@ -119,7 +119,7 @@ final class About {
             b.addView(Panels.section("Features"));
             for (String[] f : FEATURES) {
                 LinearLayout row = Ui.col(c);
-                row.setBackground(Ui.round(Ui.CARD2, 12));
+                row.setBackground(Themes.inner(Ui.CARD2, 12));
                 Ui.pad(row, 12, 8, 12, 8);
                 row.addView(Ui.line(c, f[0], 14, Ui.TEXT, true));
                 row.addView(Ui.text(c, f[1], 12, Ui.SUB, false), Widgets.top(2));
@@ -146,7 +146,7 @@ final class About {
             for (String s : l) {
                 TextView t = Ui.text(c, s, 10, Ui.TEXT2, false);
                 t.setTypeface(android.graphics.Typeface.MONOSPACE);
-                t.setBackground(Ui.round(Ui.CARD2, 10));
+                t.setBackground(Themes.inner(Ui.CARD2, 10));
                 Ui.pad(t, 10, 8, 10, 8);
                 t.setTextIsSelectable(true);
                 b.addView(t, Widgets.top(6));
