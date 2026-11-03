@@ -550,6 +550,7 @@ final class Maps {
             Ui.ui.post(controlTick);
             int at = a.tileArea.indexOfChild(a.sheetHost); // under panels and alerts
             a.tileArea.addView(bigHolder, Math.max(0, at), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            a.tilesBehind(false); // the tiles would otherwise show through the round map's corners
         } else if (!on && bigHolder != null) {
             Ui.ui.removeCallbacks(controlTick);
             js("setInteractive(false)");
@@ -559,6 +560,7 @@ final class Maps {
             bigHolder = null;
             view.addView(mapLayer, 0, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             if (catcher != null) catcher.setVisibility(View.VISIBLE);
+            a.tilesBehind(true);
             js("setRound(false)"); // square again
             trafficLook();
         }

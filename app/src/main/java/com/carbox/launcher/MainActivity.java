@@ -206,6 +206,11 @@ public class MainActivity extends Activity {
 
     private FrameLayout tilesClip;
 
+    /** Hide the tile grid while the big map covers the Centre Stage, so it doesn't show through around the round map. */
+    void tilesBehind(boolean show) {
+        if (tilesClip != null) tilesClip.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
     // ---- the Bottom Left Widget
     private FrameLayout bottomSlot;
     private Widgets.W bottomW;
