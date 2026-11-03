@@ -89,18 +89,22 @@ final class PhoneScreen {
         row.setGravity(Gravity.TOP);
         Ui.pad(row, 0);
 
-        // tabs
+        // tabs: icons (Favourites, Recents, Contacts, Keypad); themed so they frost in the Glass theme
         LinearLayout tabs = Ui.col(c);
         String[][] t = {{"favourites", "Favourites"}, {"recents", "Recents"}, {"contacts", "Contacts"}, {"keypad", "Keypad"}};
-        for (String[] x : t) {
-            TextView b = Ui.text(c, x[1], 14, Ui.TEXT, x[0].equals(tab));
-            b.setGravity(Gravity.CENTER_VERTICAL);
-            Ui.pad(b, 12, 0, 6, 0);
-            b.setBackground(Ui.round(x[0].equals(tab) ? Ui.ACCENT : Ui.CARD2, 14));
+        int[] icons = {R.drawable.ic_star, R.drawable.ic_history, R.drawable.ic_contacts, R.drawable.ic_apps};
+        for (int i = 0; i < t.length; i++) {
+            final String id = t[i][0];
+            boolean sel = id.equals(tab);
+            FrameLayout b = new FrameLayout(c);
+            b.setBackground(sel ? Ui.round(Ui.ACCENT, 14) : Themes.inner(Ui.CARD2, 14));
+            b.addView(Ui.icon(c, icons[i], sel ? Ui.TEXT : Ui.TEXT2), Ui.flpu(24, 24, Gravity.CENTER));
+            b.setContentDescription(t[i][1]);
             b.setOnClickListener(v -> {
-                tab = x[0];
+                tab = id;
                 render();
             });
+            Ui.press(b);
             LinearLayout.LayoutParams bl = Ui.lpu(Ui.MATCH, 52);
             bl.bottomMargin = Ui.u(6);
             tabs.addView(b, bl);
