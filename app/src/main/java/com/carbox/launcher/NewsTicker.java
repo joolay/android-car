@@ -142,8 +142,42 @@ final class NewsTicker {
         if (l.remove(key(it))) Prefs.putList(GONE, l);
     }
 
+    private static final String READ_AT = "news_read_at"; // when each headline was read (for the 24 h rule)
+    private static final long DAY_MS = 24 * 60 * 60 * 1000L;
+
     static void markRead(Item it) {
         add(READ, it);
+        try { // remember when, the first time; forget entries older than a few days
+            org.json.JSONObject o = new org.json.JSONObject(Prefs.str(READ_AT, "{}"));
+            long now = System.currentTimeMillis();
+            if (!o.has(key(it))) o.put(key(it), now);
+            java.util.Iterator<String> k = o.keys();
+            List<String> old = new ArrayList<>();
+            while (k.hasNext()) {
+                String x = k.next();
+                if (now - o.optLong(x, now) > 3 * DAY_MS) old.add(x);
+            }
+            for (String x : old) o.remove(x);
+            Prefs.put(READ_AT, o.toString());
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** When it was read (0: unread, or read before this was kept). */
+    static long readAt(Item it) {
+        try {
+            return new org.json.JSONObject(Prefs.str(READ_AT, "{}")).optLong(key(it), 0);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /** In the normal list: unread headlines are today's; read ones stay (greyed) for 24 hours after reading. */
+    static boolean inList(Item it) {
+        if (deleted(it) || archived(it)) return false;
+        if (!read(it)) return today(it);
+        long at = readAt(it);
+        return at > 0 ? System.currentTimeMillis() - at < DAY_MS : today(it);
     }
     private boolean showingNews = true;
     private long manualUntil;     // elapsedRealtime; 0 = automatic
@@ -598,7 +632,7 @@ final class NewsTicker {
         if (Panels.open() || CallState.state != CallState.NONE) return; // don't interrupt
         boolean was = showingNews;
         showingNews = false;
-        feedList(); // traffic at start: show the list straight away, no auto-play
+        slideshow(true); // traffic at start: plays its unread headlines, then the list
         showingNews = was;
         if (MainActivity.I != null) MainActivity.I.resetIdle();
     }
@@ -629,23 +663,25 @@ final class NewsTicker {
     private int slideIdx;
     private boolean slidePaused;
     private boolean slideAutoList; // auto-play on opening the ticker: show the list once the round is done
+    private boolean slideNews = true; // which feed is playing (news or traffic)
+    private static final long SLIDE_MS = 10000; // each headline stays 10 s
     private final Runnable slideTick = new Runnable() {
         @Override
         public void run() {
             if (slide == null || slide.isEmpty() || slidePaused) return;
             if (slideIdx + 1 >= slide.size()) { // finished the last headline
-                if (slideAutoList) { feedList(); return; } // auto-play done → open the list
+                if (slideAutoList) { feedList(slideNews); return; } // auto-play done → open the list
                 slideIdx = 0; // a manual replay just loops
             } else slideIdx++;
             Panels.refresh();
-            Ui.ui.postDelayed(this, 5000);
+            Ui.ui.postDelayed(this, SLIDE_MS);
         }
     };
 
     private void buildSlides() {
         slide = new ArrayList<>();
-        for (Item it : showingNews ? newsItems : trafficItems)
-            if (today(it) && !deleted(it) && !archived(it)) slide.add(it);
+        for (Item it : slideNews ? newsItems : trafficItems) // only the ones you haven't read yet
+            if (today(it) && !read(it) && !deleted(it) && !archived(it)) slide.add(it);
     }
 
     void slideshow() {
@@ -654,9 +690,10 @@ final class NewsTicker {
 
     /** autoList: play once through, then drop to the list (used when the ticker is opened). */
     void slideshow(boolean autoList) {
+        slideNews = showingNews;
         buildSlides();
         if (slide.isEmpty()) {
-            if (autoList) { feedList(); return; } // nothing to play: straight to the list
+            if (autoList) { feedList(slideNews); return; } // nothing to play: straight to the list
             android.widget.Toast.makeText(c, "No headlines to play", android.widget.Toast.LENGTH_SHORT).show();
             return;
         }
@@ -670,7 +707,7 @@ final class NewsTicker {
             slide = null;
         }));
         Ui.ui.removeCallbacks(slideTick);
-        Ui.ui.postDelayed(slideTick, 5000);
+        Ui.ui.postDelayed(slideTick, SLIDE_MS);
     }
 
     private void slideAct(Runnable act, boolean remove) {
@@ -680,20 +717,72 @@ final class NewsTicker {
         if (remove) {
             slide.remove(slideIdx);
             updateText();
-            if (slide.isEmpty()) {
-                Panels.close();
+            if (slide.isEmpty()) { // nothing left to play
+                if (slideAutoList) feedList(slideNews);
+                else Panels.close();
                 return;
             }
             if (slideIdx >= slide.size()) slideIdx = 0;
+        } else if (slideIdx + 1 >= slide.size() && slideAutoList) { // past the last one: the list
+            feedList(slideNews);
+            return;
         } else slideIdx = (slideIdx + 1) % slide.size();
         Panels.refresh();
         Ui.ui.removeCallbacks(slideTick);
-        Ui.ui.postDelayed(slideTick, 5000);
+        Ui.ui.postDelayed(slideTick, SLIDE_MS);
     }
 
     private View slidePage() {
         Context c = Panels.ctx();
-        LinearLayout b = Ui.col(c);
+        // swipe left: next headline (this one counts as read); swipe right: archive it
+        LinearLayout b = new LinearLayout(c) {
+            private float x0, y0;
+            private boolean swiping;
+
+            @Override
+            public boolean dispatchTouchEvent(android.view.MotionEvent e) {
+                switch (e.getActionMasked()) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                        x0 = e.getRawX();
+                        y0 = e.getRawY();
+                        swiping = false;
+                        break;
+                    case android.view.MotionEvent.ACTION_MOVE: {
+                        float dx = e.getRawX() - x0, dy = e.getRawY() - y0;
+                        if (!swiping && Math.abs(dx) > Ui.u(24) && Math.abs(dx) > Math.abs(dy) * 1.5f) {
+                            swiping = true; // a swipe, not a tap: the headline and buttons let go
+                            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                            android.view.MotionEvent cancel = android.view.MotionEvent.obtain(e);
+                            cancel.setAction(android.view.MotionEvent.ACTION_CANCEL);
+                            super.dispatchTouchEvent(cancel);
+                            cancel.recycle();
+                        }
+                        if (swiping) {
+                            setTranslationX(dx * 0.6f);
+                            setAlpha(Math.max(0.35f, 1 - Math.abs(dx) / Math.max(1, getWidth())));
+                            return true;
+                        }
+                        break;
+                    }
+                    case android.view.MotionEvent.ACTION_UP:
+                    case android.view.MotionEvent.ACTION_CANCEL:
+                        if (swiping) {
+                            float dx = e.getRawX() - x0;
+                            swiping = false;
+                            animate().translationX(0).alpha(1f).setDuration(Ui.ms(160)).start();
+                            if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP && Math.abs(dx) > Ui.u(70)) {
+                                Item cur = slide != null && slideIdx < slide.size() ? slide.get(slideIdx) : null;
+                                if (cur != null) Ui.ui.post(dx < 0 ? () -> slideAct(() -> markRead(cur), false)
+                                        : () -> slideAct(() -> archive(cur), true));
+                            }
+                            return true;
+                        }
+                        break;
+                }
+                return super.dispatchTouchEvent(e);
+            }
+        };
+        b.setOrientation(LinearLayout.VERTICAL);
         if (slide == null || slide.isEmpty()) {
             b.addView(Ui.text(c, "Nothing to play.", 15, Ui.SUB, false));
             return Panels.panel("Playback", b, 660, 440);
@@ -706,7 +795,7 @@ final class NewsTicker {
         TextView h = Ui.text(c, it.title, lvlSize(24, 28, 33), Ui.TEXT, true);
         h.setGravity(Gravity.CENTER);
         h.setLineSpacing(Ui.uf(3), 1);
-        h.setOnClickListener(v -> feedList()); // tap the headline to skip straight to the list
+        h.setOnClickListener(v -> feedList(slideNews)); // tap the headline to skip straight to the list
         b.addView(h, Ui.lp(Ui.MATCH, Ui.WRAP));
         String m = (it.source != null ? it.source : "") + (it.date > 0 ? (it.source != null ? " \u00b7 " : "") + ago(it.date) : "");
         if (!m.isEmpty()) {
@@ -730,7 +819,7 @@ final class NewsTicker {
                 slidePaused ? "Resume" : "Pause", () -> {
                     slidePaused = !slidePaused;
                     Ui.ui.removeCallbacks(slideTick);
-                    if (!slidePaused) Ui.ui.postDelayed(slideTick, 5000);
+                    if (!slidePaused) Ui.ui.postDelayed(slideTick, SLIDE_MS);
                     Panels.refresh();
                 }));
         foot.addView(Ui.gap(c, 12, 1));
@@ -742,8 +831,10 @@ final class NewsTicker {
         foot.addView(Ui.gap(c, 10, 1));
         foot.addView(Ui.iconButton(c, R.drawable.ic_trash, "Delete", () -> slideAct(() -> delete(it), true)));
         b.addView(foot, Widgets.top(14));
-        markRead(it); // reading it on screen counts as read
-        return Panels.panel("Playback", b, 660, 440);
+        LinearLayout pan = Panels.panel("Playback", b, 660, 440);
+        // the window's scroll area fills it, so the text sits in the middle and the buttons along the bottom
+        if (b.getParent() instanceof android.widget.ScrollView) ((android.widget.ScrollView) b.getParent()).setFillViewport(true);
+        return pan;
     }
 
     /** Headline playback is on screen. */
@@ -753,7 +844,7 @@ final class NewsTicker {
 
     /** The headline list (when the Tile Drawer goes after covering playback). */
     void openList() {
-        feedList();
+        feedList(slideNews);
     }
 
     /** Opening the ticker: play the headlines through once, then drop to the list. */
@@ -763,7 +854,11 @@ final class NewsTicker {
     }
 
     private void feedList() {
-        feedNews = showingNews;
+        feedList(showingNews);
+    }
+
+    private void feedList(boolean news) {
+        feedNews = news;
         feedView = 0;
         Ui.ui.removeCallbacks(slideTick); // stop playback if we came from it
         Ui.ui.post(() -> Panels.sticky = true); // news and traffic stay until you close them
@@ -855,7 +950,7 @@ final class NewsTicker {
             } else { // today's headlines: unread first, then read ones greyed
                 List<Item> unread = new ArrayList<>(), seen = new ArrayList<>();
                 for (Item it : items) {
-                    if (!today(it) || deleted(it) || archived(it)) continue;
+                    if (!inList(it)) continue; // read ones go 24 hours after reading
                     (read(it) ? seen : unread).add(it);
                 }
                 if (unread.isEmpty() && seen.isEmpty())
