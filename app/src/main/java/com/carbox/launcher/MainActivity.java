@@ -356,14 +356,40 @@ public class MainActivity extends Activity {
                 -1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0}));
     }
 
-    /** Simple Inverted: invert the whole home (white background, black text, colours flipped); the map is
-     *  inverted a second time so it stays normal and readable. */
+    /** Simple Inverted: invert the whole home (white background, black text, colours flipped). It's a
+     *  "smart" invert: the map, app icons, album art and photos are inverted a second time so their real
+     *  colours show through — only the interface flips, not pictures. */
     void applyInvert() {
         if (root == null) return;
         boolean inv = Themes.inverted();
         root.setLayerType(inv ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE, inv ? INVERT : null);
         if (map != null && map.view != null)
             map.view.setLayerType(inv ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE, inv ? INVERT : null);
+        keepPictures(root, inv);
+    }
+
+    /** Re-run the smart invert over newly shown content (panels, album art, freshly built tiles). A no-op
+     *  unless Inverted mode is on, so it's cheap to call from anywhere the screen changes. */
+    static void reInvert() {
+        if (I != null && I.root != null && Themes.inverted()) I.keepPictures(I.root, true);
+    }
+
+    /** Gives every picture (app icon, album art, photo) a second inversion so it keeps its true colours;
+     *  interface glyphs (our tinted vector icons) and everything else stay inverted. */
+    private void keepPictures(View v, boolean inv) {
+        if (map != null && v == map.view) return; // handled on its own above
+        if (v instanceof android.widget.ImageView && isPicture(((android.widget.ImageView) v).getDrawable()))
+            v.setLayerType(inv ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE, inv ? INVERT : null);
+        if (v instanceof android.view.ViewGroup) {
+            android.view.ViewGroup g = (android.view.ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) keepPictures(g.getChildAt(i), inv);
+        }
+    }
+
+    /** A real picture (launcher icon or photo), as opposed to one of our flat vector interface glyphs. */
+    private static boolean isPicture(android.graphics.drawable.Drawable d) {
+        return d instanceof android.graphics.drawable.BitmapDrawable
+                || d instanceof android.graphics.drawable.AdaptiveIconDrawable;
     }
 
     /** Draws a bitmap like ImageView's centerCrop. */

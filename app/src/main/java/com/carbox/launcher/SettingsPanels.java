@@ -224,7 +224,7 @@ final class SettingsPanels {
             LinearLayout t = Ui.row(c);
             t.setGravity(Gravity.CENTER_VERTICAL);
             Ui.pad(t, 10, 0, 8, 0);
-            t.setMinimumHeight(Ui.u(44));
+            t.setMinimumHeight(Ui.u(48));
             boolean on = gi == tab;
             t.setBackground(on ? Themes.inner(Ui.CARD2, 12) : null);
             if (first != null) {
@@ -233,7 +233,7 @@ final class SettingsPanels {
                 ic.addView(Ui.icon(c, (Integer) first[0], Ui.TEXT), Ui.flpu(15, 15, Gravity.CENTER));
                 t.addView(ic, Ui.lpu(26, 26));
             }
-            TextView tn = Ui.line(c, (String) groups[gi][0][0], 13, on ? Ui.TEXT : Ui.SUB, on);
+            TextView tn = Ui.line(c, (String) groups[gi][0][0], 16, on ? Ui.TEXT : Ui.SUB, on);
             LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
             tl.leftMargin = Ui.u(10);
             t.addView(tn, tl);
@@ -252,7 +252,7 @@ final class SettingsPanels {
         android.widget.ScrollView ts = new android.widget.ScrollView(c);
         ts.setVerticalScrollBarEnabled(false);
         ts.addView(tabs);
-        body.addView(ts, Ui.lpu(196, Ui.MATCH));
+        body.addView(ts, Ui.lpu(212, Ui.MATCH));
         View div = new View(c);
         div.setBackgroundColor(Ui.LINE);
         LinearLayout.LayoutParams dl = Ui.lpu(1, Ui.MATCH);

@@ -211,6 +211,8 @@ final class Panels {
         grow = false;
         slide = false;
         if (cardOverTiles && cardPage != null && top() == cardPage) fitTiles(); // a refreshed card keeps its place
+        MainActivity.reInvert(); // smart invert: keep app icons / photos on this page true-coloured
+        layer.post(MainActivity::reInvert); // and again once any late images have loaded
     }
 
     private static boolean cardOverTiles;

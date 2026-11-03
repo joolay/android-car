@@ -457,6 +457,7 @@ final class NowPlaying {
                 art.setScaleType(ImageView.ScaleType.CENTER);
             }
         }
+        MainActivity.reInvert(); // smart invert: album art and the app icon keep their true colours
         durationMs = md.getLong(MediaMetadata.METADATA_KEY_DURATION);
         progressBar.setVisibility(durationMs > 0 ? View.VISIBLE : View.INVISIBLE);
         Ui.ui.removeCallbacks(progressTick);

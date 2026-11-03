@@ -80,6 +80,7 @@ final class Dock {
         }
         gapBefore(4);
         allApps();
+        MainActivity.reInvert(); // smart invert: dock app icons keep their true colours
     }
 
     private void addDialler() {
