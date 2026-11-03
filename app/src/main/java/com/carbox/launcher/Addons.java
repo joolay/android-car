@@ -56,9 +56,15 @@ final class Addons {
         return true;
     }
 
-    /** Bought on Google Play. Until billing is added, everything counts as owned. */
+    /** Bought on Google Play, or everything unlocked with the owner's code (Private add-ons page). */
     static boolean owned(String product) {
-        return true;
+        if (allUnlocked()) return true;
+        return true; // until Google Play Billing is added: everything counts as owned (replace with the purchase check)
+    }
+
+    /** "Unlock all add-ons" on the Private add-ons page (needs the owner's code): no purchase needed on this box. */
+    static boolean allUnlocked() {
+        return PrivateAddons.unlocked() && Prefs.flag("addons_all_unlocked", false);
     }
 
     /** Map provider add-on ID for a provider key (osm, ofm, pmtiles, google). */

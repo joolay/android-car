@@ -95,13 +95,18 @@ final class PrivateAddons {
                 Prefs.put(SPOTIFY, on);
                 applied();
             }), SettingsPanels.top(8));
+            b.addView(Panels.switchRow(0, 0, "Unlock all add-ons", "Every widget, theme, map and the keyboard on this box, no purchase needed",
+                    Prefs.flag("addons_all_unlocked", false), on -> {
+                        Prefs.put("addons_all_unlocked", on);
+                        if (MainActivity.I != null) MainActivity.I.recreate(); // add-ons show up everywhere
+                    }), SettingsPanels.top(8));
             b.addView(Panels.item("Lock again", "Hides these until the code is typed in again", () -> {
                 Prefs.put(KEY, "");
                 Prefs.put("private_locked", true);
                 applied();
                 Panels.back();
             }), SettingsPanels.top(10));
-            return Panels.panel("Private add-ons", b, 520, 330);
+            return Panels.panel("Private add-ons", b, 540, 400);
         });
     }
 
