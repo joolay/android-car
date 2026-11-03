@@ -299,11 +299,16 @@ final class TileDrawer {
     private View tile(int index, JSONObject spec) {
         FrameLayout f = new FrameLayout(a);
         View content;
-        if ("w".equals(spec.optString("t"))) {
-            Widgets.W w = Widgets.make(a, index, spec);
-            widgets.add(w);
-            content = w.v;
-        } else content = folderView(index, spec);
+        try {
+            if ("w".equals(spec.optString("t"))) {
+                Widgets.W w = Widgets.make(a, index, spec);
+                widgets.add(w);
+                content = w.v;
+            } else content = folderView(index, spec);
+        } catch (Exception e) { // one faulty tile never stops the launcher: it shows empty, and the fault is reported
+            About.record(a, "Tile " + spec.optString("id", "folder"), e);
+            content = new View(a);
+        }
         f.addView(content, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         Maps.clip(f, 16);
 
