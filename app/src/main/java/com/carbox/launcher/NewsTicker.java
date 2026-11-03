@@ -853,13 +853,6 @@ final class NewsTicker {
         });
     }
 
-    /** The readable text of an article page: its paragraphs, or null when there's too little. */
-    /** The feed's description as plain text. */
-    private static String clean(String d) {
-        if (d == null) return "";
-        return android.text.Html.fromHtml(d, android.text.Html.FROM_HTML_MODE_COMPACT).toString().replaceAll("\\s+", " ").trim();
-    }
-
     private static java.util.Map<String, String> pageHeaders() {
         java.util.Map<String, String> h = new java.util.HashMap<>();
         h.put("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36");
