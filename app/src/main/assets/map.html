@@ -37,7 +37,7 @@ var headUp=true, rot=0, glBearing=0;
 // diagonal so no corners show). MapLibre: the map turns itself, so labels stay upright.
 function size(){
   var W=innerWidth,H=innerHeight,el=document.getElementById('m');
-  var big=headUp&&!isGl(), D=big?Math.ceil(Math.sqrt(W*W+H*H)):0;
+  var big=false, D=0; // picture-tile maps never turn (their words would turn with them)
   el.style.width=(big?D:W)+'px'; el.style.height=(big?D:H)+'px';
   el.style.left=(big?(W-D)/2:0)+'px'; el.style.top=(big?(H-D)/2:0)+'px';
   if(map) map.invalidateSize(false);
@@ -45,7 +45,7 @@ function size(){
   if(pending&&follow) centre();
 }
 window.addEventListener('resize',size);
-function setHeadingUp(b){ headUp=!!b; if(!headUp) turn(0,true); size(); }
+function setHeadingUp(b){ headUp=!!b&&isGl(); if(!headUp) turn(0,true); size(); } // only vector maps turn: their labels stay upright
 // turn to a heading the short way round (no spinning past north)
 function isGl(){ return mode==='ofm'||mode==='pmtiles'; }
 function turn(b,reset){
@@ -206,7 +206,7 @@ function gInit(){
 
 function setPos(lat,lon,bearing){
   pending=[lat,lon,bearing];
-  if(headUp&&follow&&bearing>=0&&!isGl()) turn(bearing);
+  // picture-tile maps (Standard, Google) stay north up so their labels are never sideways
   if(gmap){
     var p={lat:lat,lng:lon};
     var ic=bearing>=0?{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:6,rotation:bearing,fillColor:'#3d8bfd',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}

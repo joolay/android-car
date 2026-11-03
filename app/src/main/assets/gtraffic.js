@@ -6,7 +6,10 @@ var GTraffic=(function(){
   // lyrs: 'h,traffic' = road labels + traffic lines on a transparent background
   var LYRS='h,traffic', REFRESH=180000; // fresh traffic every 3 minutes
   var allowed=false, want=false, lf=null, stamp=Date.now(), timer=null;
-  function url(s){ return 'https://mt'+s+'.google.com/vt?lyrs='+LYRS+'&hl=en&x={x}&y={y}&z={z}&t='+stamp; }
+  // traffic lines only: Google's road names are switched off (apistyle), so on a turning map the only
+  // labels are the map's own, which stay upright
+  var NOLABELS='&apistyle='+encodeURIComponent('s.e:l|p.v:off');
+  function url(s){ return 'https://mt'+s+'.google.com/vt?lyrs='+LYRS+NOLABELS+'&hl=en&x={x}&y={y}&z={z}&t='+stamp; }
   function glDark(){ var e=document.getElementById('m'); return e&&/\bdark\b/.test(e.className); }
 
   // Leaflet (Standard): its own pane above the tiles, so the night inversion doesn't recolour the traffic

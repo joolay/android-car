@@ -8,6 +8,7 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
+import android.media.session.MediaSession;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
 import android.os.Bundle;
@@ -41,7 +42,64 @@ public class MediaListener extends NotificationListenerService {
     }
     private static final List<Runnable> mediaListeners = new ArrayList<>();
     private static MediaSessionManager msm;
-    private static final MediaSessionManager.OnActiveSessionsChangedListener sessionsChanged = MediaListener::pick;
+    private static final MediaSessionManager.OnActiveSessionsChangedListener sessionsChanged = list -> {
+        watchAll(list);
+        pick(list);
+    };
+
+    // Every music app is listened to, not just the one shown: whichever starts playing takes over
+    // Now Playing at once (before, a switch of app was only noticed later).
+    private static final java.util.Map<MediaSession.Token, MediaController.Callback> watched = new java.util.HashMap<>();
+    private static final java.util.Map<MediaSession.Token, MediaController> watchedCtl = new java.util.HashMap<>();
+
+    private static void watchAll(List<MediaController> list) {
+        if (list == null) return;
+        java.util.Set<MediaSession.Token> now = new java.util.HashSet<>();
+        for (MediaController m : list) {
+            MediaSession.Token t = m.getSessionToken();
+            now.add(t);
+            if (watched.containsKey(t)) continue;
+            MediaController.Callback w = new MediaController.Callback() {
+                @Override
+                public void onPlaybackStateChanged(PlaybackState st) {
+                    if (st != null && (st.getState() == PlaybackState.STATE_PLAYING || st.getState() == PlaybackState.STATE_BUFFERING)
+                            && (controller == null || !controller.getSessionToken().equals(t))) repick();
+                }
+
+                @Override
+                public void onMetadataChanged(MediaMetadata md) {
+                    if (controller == null) repick();
+                }
+            };
+            try {
+                m.registerCallback(w, Ui.ui);
+                watched.put(t, w);
+                watchedCtl.put(t, m);
+            } catch (Exception ignored) {
+            }
+        }
+        for (java.util.Iterator<java.util.Map.Entry<MediaSession.Token, MediaController.Callback>> it = watched.entrySet().iterator(); it.hasNext(); ) {
+            java.util.Map.Entry<MediaSession.Token, MediaController.Callback> e = it.next();
+            if (now.contains(e.getKey())) continue;
+            MediaController m = watchedCtl.remove(e.getKey());
+            try {
+                if (m != null) m.unregisterCallback(e.getValue());
+            } catch (Exception ignored) {
+            }
+            it.remove();
+        }
+    }
+
+    /** Look at every session again and show the one playing. */
+    static void repick() {
+        if (msm == null || ctx == null) return;
+        try {
+            List<MediaController> l = msm.getActiveSessions(component(ctx));
+            watchAll(l);
+            pick(l);
+        } catch (Exception ignored) {
+        }
+    }
     private static final MediaController.Callback cb = new MediaController.Callback() {
         @Override
         public void onPlaybackStateChanged(PlaybackState state) {
@@ -93,7 +151,9 @@ public class MediaListener extends NotificationListenerService {
         try {
             msm = (MediaSessionManager) ctx.getSystemService(Context.MEDIA_SESSION_SERVICE);
             msm.addOnActiveSessionsChangedListener(sessionsChanged, component(ctx), Ui.ui);
-            pick(msm.getActiveSessions(component(ctx)));
+            List<MediaController> l = msm.getActiveSessions(component(ctx));
+            watchAll(l);
+            pick(l);
         } catch (Exception e) {
             msm = null;
         }
@@ -188,6 +248,8 @@ public class MediaListener extends NotificationListenerService {
             if (Prefs.flag("call_screen", true)) Ui.ui.post(() -> CallState.fromNotification(this, key, pkg, cn));
             return;
         }
+        // a music app's "now playing" notification: check the players again straight away
+        if (cn.extras != null && cn.extras.containsKey(Notification.EXTRA_MEDIA_SESSION)) Ui.ui.post(MediaListener::repick);
         if (!isNavApp(sbn.getPackageName())) return;
         Notification n = sbn.getNotification();
         if ((n.flags & Notification.FLAG_ONGOING_EVENT) == 0) return;
