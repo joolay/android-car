@@ -123,13 +123,11 @@ public class MainActivity extends Activity {
 
     private void build() {
         root = new FrameLayout(this);
-        skyFx = new SkyFx(this); // the live sky (clouds, rain, stars) just above the wallpaper
-        root.addView(skyFx, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        liveWall = new LiveWallpaper(this); // the animated wallpaper and the lighting / weather overlays
+        root.addView(liveWall, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         applyWallpaper();
         Ui.ui.postDelayed(skyTick, 60000);
-        Weather.listen(() -> {
-            if ("road".equals(Prefs.str(Prefs.WALL, "road")) && !Themes.Sky.key().equals(skyKey)) applyWallpaper();
-        });
+        Weather.listen(() -> { if (liveWall != null) liveWall.update(Themes.Sky.now()); });
 
         LinearLayout main = Ui.row(this);
         main.setGravity(0);
@@ -305,14 +303,13 @@ public class MainActivity extends Activity {
 
     // ------------------------------------------------------------------ wallpaper
 
-    private SkyFx skyFx;
-    private String skyKey = "";
+    LiveWallpaper liveWall;
 
-    /** The Road wallpaper's sky follows the time and the weather: redrawn when either changes. */
+    /** The lighting follows the time of day: nudge the wallpaper every minute so it keeps up. */
     private final Runnable skyTick = new Runnable() {
         @Override
         public void run() {
-            if ("road".equals(Prefs.str(Prefs.WALL, "road")) && !Themes.Sky.key().equals(skyKey)) applyWallpaper();
+            if (liveWall != null) liveWall.update(Themes.Sky.now());
             Ui.ui.postDelayed(this, 60000);
         }
     };
@@ -337,25 +334,13 @@ public class MainActivity extends Activity {
                 root.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
                         new CenterCrop(d), new ColorDrawable(0x66000000)}));
             } else root.setBackground(new ColorDrawable(0xFF000000));
-        } else if ("road".equals(mode)) { // a long tarred road to the horizon, drawn for this screen
-            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
-            BitmapDrawable d = new BitmapDrawable(getResources(), Themes.road(Math.max(dm.widthPixels, dm.heightPixels), Math.min(dm.widthPixels, dm.heightPixels)));
-            android.graphics.drawable.Drawable old = root.getBackground();
-            if (old instanceof CenterCrop && Ui.ms(1) > 0) { // the sky changes slowly: fade from the old picture to the new one
-                android.graphics.drawable.TransitionDrawable tr = new android.graphics.drawable.TransitionDrawable(new android.graphics.drawable.Drawable[]{old, new CenterCrop(d)});
-                tr.setCrossFadeEnabled(true);
-                root.setBackground(tr);
-                tr.startTransition(4000);
-                Ui.ui.postDelayed(() -> {
-                    if (root.getBackground() == tr) {
-                        root.setBackground(new CenterCrop(d));
-                        Themes.refresh();
-                    }
-                }, 4200);
-            } else root.setBackground(new CenterCrop(d));
-            skyKey = Themes.Sky.key();
-            if (skyFx != null) skyFx.update(Themes.Sky.now());
+        } else if (LiveWallpaper.animated(mode)) { // an animated scene (road, fish tank, engine, flux, pistons, cogs)
+            root.setBackground(new ColorDrawable(LiveWallpaper.base(mode)));
         } else root.setBackground(new ColorDrawable(0xFF000000));
+        if (liveWall != null) {
+            liveWall.setScene(mode);
+            liveWall.update(Themes.Sky.now());
+        }
         Themes.refresh(); // glass cards show the new wallpaper
         applyInvert();
     }
@@ -653,7 +638,7 @@ public class MainActivity extends Activity {
         nowPlaying.start();
         map.start();
         rail.paused(false);
-        if (skyFx != null) skyFx.run(true);
+        if (liveWall != null) liveWall.run(true);
         dock.render();
         // back from Android's keyboard settings: show the updated steps
         if (Panels.open() && Panels.top() != null && (Panels.top() == SettingsPanels.keyboardPage || Panels.top() == SettingsPanels.setupPage || Panels.top() == SettingsPanels.floatPage || Panels.top() == Optimiser.page)) {
@@ -672,7 +657,7 @@ public class MainActivity extends Activity {
         Trace.event(this, "Home screen left (another app in front)");
         super.onPause();
         resumed = false;
-        if (skyFx != null) skyFx.run(false); // no sky animation behind other apps
+        if (liveWall != null) liveWall.run(false); // no wallpaper animation behind other apps
         ticker.stop();
         tiles.stop();
         nowPlaying.stop();

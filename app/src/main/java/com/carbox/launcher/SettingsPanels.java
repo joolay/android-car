@@ -322,20 +322,34 @@ final class SettingsPanels {
         colour.addView(Ui.gap(c, 8, 1));
         colour.addView(Ui.text(c, "Colour", 14, Ui.TEXT, false));
         colour.setOnClickListener(v -> colourPicker());
-        b.addView(Panels.row("Wallpaper",
-                Ui.seg(c, "Black", "black".equals(w), () -> {
-                    Prefs.put(Prefs.WALL, "black");
-                    if (MainActivity.I != null) MainActivity.I.applyWallpaper();
-                    Panels.refresh();
-                }), colour,
-                Ui.seg(c, "Road", "road".equals(w), () -> {
-                    Prefs.put(Prefs.WALL, "road");
-                    if (MainActivity.I != null) MainActivity.I.applyWallpaper();
-                    Panels.refresh();
-                }),
-                Ui.seg(c, "image".equals(w) ? "Image ✓" : "Image…", "image".equals(w), () -> {
-                    if (MainActivity.I != null) MainActivity.I.pickWallpaperImage();
-                })));
+        LinearLayout wr1 = Ui.row(c);
+        wr1.addView(Ui.seg(c, "Black", "black".equals(w), () -> setWall("black")));
+        wr1.addView(Ui.gap(c, 8, 1));
+        wr1.addView(colour);
+        wr1.addView(Ui.gap(c, 8, 1));
+        wr1.addView(Ui.seg(c, "image".equals(w) ? "Image \u2713" : "Image\u2026", "image".equals(w), () -> {
+            if (MainActivity.I != null) MainActivity.I.pickWallpaperImage();
+        }));
+        b.addView(Panels.row("Wallpaper", wr1));
+        // animated scenes
+        String[][] scenes = {{"road", "Moving road"}, {"fishtank", "Fish tank"}, {"engine", "Coal engine"},
+                {"flux", "Flux capacitor"}, {"pistons", "Pistons"}, {"cogs", "Time cogs"}};
+        LinearLayout sgrid = Ui.col(c);
+        LinearLayout srow = null;
+        for (int i = 0; i < scenes.length; i++) {
+            if (i % 3 == 0) { srow = Ui.row(c); sgrid.addView(srow, top(i == 0 ? 0 : 6)); }
+            final String id = scenes[i][0];
+            TextView seg = Ui.seg(c, scenes[i][1], id.equals(w), () -> setWall(id));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
+            lp.rightMargin = Ui.u(6);
+            srow.addView(seg, lp);
+        }
+        b.addView(Panels.row("Animated", sgrid));
+        // lighting + weather overlays, over any wallpaper
+        b.addView(Panels.switchRow(0, 0, "Lighting (time of day)", "Warms at dusk, darkens at night, over any wallpaper",
+                Prefs.flag(LiveWallpaper.LIGHTING, true), on -> { Prefs.put(LiveWallpaper.LIGHTING, on); if (MainActivity.I != null) MainActivity.I.applyWallpaper(); }), top(8));
+        b.addView(Panels.switchRow(0, 0, "Weather", "Clouds, rain, storms and night stars, over any wallpaper",
+                Prefs.flag(LiveWallpaper.WEATHER, true), on -> { Prefs.put(LiveWallpaper.WEATHER, on); if (MainActivity.I != null) MainActivity.I.applyWallpaper(); }), top(6));
         b.addView(Ui.hr(c));
         String tm = Themes.mode();
         LinearLayout themes = Ui.row(c);
@@ -380,7 +394,7 @@ final class SettingsPanels {
             b.addView(Ui.text(c, "Low: clear glass, the wallpaper shows through. High: frosted, text easier to read.", 12, Ui.SUB, false), top(4));
         }
 
-            return Panels.panel("Wallpaper", b, 600, 420);
+            return Panels.panel("Wallpaper", b, 640, 456);
         });
     }
 
@@ -1756,6 +1770,12 @@ final class SettingsPanels {
     private static void eqStyle(String st) {
         Prefs.put("eq_style", st);
         if (NowPlaying.I != null) NowPlaying.I.update();
+        Panels.refresh();
+    }
+
+    private static void setWall(String mode) {
+        Prefs.put(Prefs.WALL, mode);
+        if (MainActivity.I != null) MainActivity.I.applyWallpaper();
         Panels.refresh();
     }
 
