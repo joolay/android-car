@@ -157,7 +157,7 @@ public class MainActivity extends Activity {
         boolean tickerOn = Prefs.flag("ticker_on", true);
         if (tickerOn) buildChip(tickerRow);
         // the ticker sits at the top of the middle column, above the tiles / big map
-        LinearLayout.LayoutParams tl = Ui.lpu(Ui.MATCH, 30);
+        LinearLayout.LayoutParams tl = Ui.lpu(Ui.MATCH, 36); // a little taller, easier to read
         tl.bottomMargin = Ui.u(8);
         middle.addView(tickerRow, tl);
         this.tickerRow = tickerRow;

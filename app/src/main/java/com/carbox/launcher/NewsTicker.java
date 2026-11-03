@@ -34,6 +34,111 @@ final class NewsTicker {
         String title, link, desc, source;
         long date;
     }
+
+    // ---- what you've done with each headline: read (grey, at the bottom), deleted (gone), archived (kept)
+    private static final String READ = "news_read", GONE = "news_deleted", ARCH = "news_archived";
+
+    private static String key(Item it) {
+        return it.link != null && !it.link.isEmpty() ? it.link : it.title;
+    }
+
+    private static boolean in(String set, Item it) {
+        return Prefs.list(set).contains(key(it));
+    }
+
+    private static void add(String set, Item it) {
+        List<String> l = new ArrayList<>(Prefs.list(set));
+        if (l.contains(key(it))) return;
+        l.add(0, key(it));
+        while (l.size() > 400) l.remove(l.size() - 1); // old ones drop off (they're past their day anyway)
+        Prefs.putList(set, l);
+    }
+
+    static boolean read(Item it) {
+        return in(READ, it);
+    }
+
+    static boolean deleted(Item it) {
+        return in(GONE, it);
+    }
+
+    static boolean archived(Item it) {
+        for (Item a : archivedItems()) if (key(a).equals(key(it))) return true;
+        return false;
+    }
+
+    /** Published today (an undated headline counts from the day it was first fetched). */
+    static boolean today(Item it) {
+        java.util.Calendar k = java.util.Calendar.getInstance();
+        k.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        k.set(java.util.Calendar.MINUTE, 0);
+        k.set(java.util.Calendar.SECOND, 0);
+        k.set(java.util.Calendar.MILLISECOND, 0);
+        return it.date >= k.getTimeInMillis();
+    }
+
+    /** Headlines without a publish date: dated the day they were first fetched (kept from the last poll). */
+    private static void dateUndated(List<Item> fresh, List<Item> old) {
+        long now = System.currentTimeMillis();
+        for (Item it : fresh) {
+            if (it.date > 0) continue;
+            it.date = now;
+            for (Item o : old) if (key(o).equals(key(it)) && o.date > 0) it.date = o.date;
+        }
+    }
+
+    /** Archived headlines (kept until you delete them). */
+    static List<Item> archivedItems() {
+        List<Item> l = new ArrayList<>();
+        org.json.JSONArray a = Prefs.arr(ARCH);
+        for (int i = 0; i < a.length(); i++) {
+            org.json.JSONObject o = a.optJSONObject(i);
+            if (o == null) continue;
+            Item it = new Item();
+            it.title = o.optString("t", "");
+            it.link = o.optString("l", null);
+            it.source = o.optString("s", null);
+            it.date = o.optLong("d", 0);
+            it.desc = o.optString("x", null);
+            l.add(it);
+        }
+        return l;
+    }
+
+    private static void saveArchive(List<Item> l) {
+        org.json.JSONArray a = new org.json.JSONArray();
+        try {
+            for (Item it : l) {
+                org.json.JSONObject o = new org.json.JSONObject();
+                o.put("t", it.title);
+                o.put("l", it.link);
+                o.put("s", it.source);
+                o.put("d", it.date);
+                if (it.desc != null) o.put("x", it.desc);
+                a.put(o);
+            }
+        } catch (Exception ignored) {
+        }
+        Prefs.put(ARCH, a);
+    }
+
+    static void archive(Item it) {
+        List<Item> l = archivedItems();
+        for (Item a : l) if (key(a).equals(key(it))) return;
+        l.add(0, it);
+        saveArchive(l);
+    }
+
+    static void delete(Item it) {
+        List<Item> l = archivedItems();
+        boolean was = l.removeIf(a -> key(a).equals(key(it)));
+        if (was) saveArchive(l);
+        else add(GONE, it);
+    }
+
+    static void markRead(Item it) {
+        add(READ, it);
+    }
     private boolean showingNews = true;
     private long manualUntil;     // elapsedRealtime; 0 = automatic
     private long manualStart;
@@ -46,7 +151,7 @@ final class NewsTicker {
         view = Ui.row(c);
         view.setBackground(Themes.card(Ui.CARD, 12));
         Ui.pad(view, 8, 0, 12, 0);
-        tag = Ui.text(c, "NEWS", 11, Ui.TEXT, true);
+        tag = Ui.text(c, "NEWS", 12, Ui.TEXT, true);
         tag.setLetterSpacing(0.04f);
         Ui.pad(tag, 7, 3, 7, 3);
         view.addView(tag);
@@ -189,7 +294,8 @@ final class NewsTicker {
     }
 
     private void updateText() {
-        List<String> l = showingNews ? news : traffic;
+        List<String> l = new ArrayList<>();
+        for (Item it : showingNews ? newsItems : trafficItems) if (today(it) && !read(it) && !deleted(it) && !archived(it)) l.add(it.title);
         if (l.isEmpty()) {
             marquee.setItems(java.util.Collections.singletonList(Gps.has() ? "Loading headlines…" : "Waiting for location to find local headlines"));
         } else marquee.setItems(l);
@@ -211,6 +317,7 @@ final class NewsTicker {
             if (b != null) {
                 List<Item> items = parseItems(b);
                 if (items.isEmpty()) return;
+                dateUndated(items, newsItems);
                 newsItems.clear();
                 newsItems.addAll(items);
                 news.clear();
@@ -226,6 +333,7 @@ final class NewsTicker {
             if (b != null) {
                 List<Item> items = parseItems(b);
                 if (items.isEmpty() && !trafficItems.isEmpty()) return; // keep the old ones
+                dateUndated(items, trafficItems);
                 trafficItems.clear();
                 trafficItems.addAll(items);
                 traffic.clear();
@@ -406,26 +514,24 @@ final class NewsTicker {
             String src = (url.isEmpty() ? "Google News · " + place() : Uri.parse(url).getHost()) + (at > 0 ? " · updated " + ago(at) : "");
             card.addView(Ui.line(c, src, 12, Ui.MUTED, false), Widgets.top(6));
             LinearLayout list = Ui.col(c);
-            if (items.isEmpty()) list.addView(Ui.text(c, at > 0 ? "No headlines in this feed right now." : "Loading headlines…", 14, Ui.SUB, false), Widgets.top(12));
+            // today's headlines: unread first, then read ones greyed; your archive at the bottom
+            List<Item> unread = new ArrayList<>(), seen = new ArrayList<>();
             for (Item it : items) {
-                LinearLayout r = Ui.col(c);
-                Ui.pad(r, 0, 11, 0, 11);
-                r.addView(Ui.hr(c));
-                TextView t = Ui.text(c, it.title, 15, Ui.TEXT, true);
-                t.setLineSpacing(Ui.uf(2), 1);
-                r.addView(t, Widgets.top(10));
-                if (it.desc != null) {
-                    TextView d = Ui.text(c, it.desc, 12, Ui.SUB, false);
-                    d.setMaxLines(3);
-                    r.addView(d, Widgets.top(4));
-                }
-                LinearLayout meta = Ui.row(c);
-                String m = (it.source != null ? it.source : "") + (it.date > 0 ? (it.source != null ? " · " : "") + ago(it.date) : "");
-                meta.addView(Ui.line(c, m, 12, Ui.MUTED, false), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
-                r.setOnClickListener(v -> reader(it)); // tap: the story, easy to read
-                r.addView(meta, Widgets.top(6));
-                list.addView(r);
+                if (!today(it) || deleted(it) || archived(it)) continue;
+                (read(it) ? seen : unread).add(it);
             }
+            List<Item> arch = archivedItems();
+            if (unread.isEmpty() && seen.isEmpty())
+                list.addView(Ui.text(c, at > 0 ? "No new headlines today." : "Loading headlines…", 14, Ui.SUB, false), Widgets.top(12));
+            for (Item it : unread) list.addView(row(c, it, false, false));
+            for (Item it : seen) list.addView(row(c, it, true, false));
+            if (!arch.isEmpty()) {
+                TextView ah = Ui.line(c, "ARCHIVED", 11, Ui.SUB, true);
+                ah.setLetterSpacing(0.08f);
+                list.addView(ah, Widgets.top(18));
+                for (Item it : arch) list.addView(row(c, it, false, true));
+            }
+            list.addView(Ui.text(c, "Swipe left to delete · swipe right to keep it in the archive", 11, Ui.MUTED, false), Widgets.top(12));
             android.widget.ScrollView sv = new android.widget.ScrollView(c);
             sv.setVerticalScrollBarEnabled(false);
             sv.addView(list);
@@ -434,6 +540,76 @@ final class NewsTicker {
             card.addView(sv, sl);
             return card;
         });
+    }
+
+    /** A headline in the list: tap to read; swipe left to delete, right to archive (archived: left deletes). */
+    private View row(Context c, Item it, boolean wasRead, boolean inArchive) {
+        android.widget.FrameLayout holder = new android.widget.FrameLayout(c);
+        LinearLayout r = Ui.col(c);
+        Ui.pad(r, 0, 11, 0, 11);
+        r.addView(Ui.hr(c));
+        TextView t = Ui.text(c, it.title, 15, wasRead ? Ui.MUTED : Ui.TEXT, !wasRead);
+        t.setLineSpacing(Ui.uf(2), 1);
+        r.addView(t, Widgets.top(10));
+        if (it.desc != null && !wasRead) {
+            TextView d = Ui.text(c, it.desc, 12, Ui.SUB, false);
+            d.setMaxLines(3);
+            r.addView(d, Widgets.top(4));
+        }
+        String m = (it.source != null ? it.source : "") + (it.date > 0 ? (it.source != null ? " · " : "") + ago(it.date) : "");
+        r.addView(Ui.line(c, m, 12, Ui.MUTED, false), Widgets.top(6));
+        r.setAlpha(wasRead ? 0.6f : 1f);
+        holder.addView(r, new android.widget.FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP));
+        final float[] x0 = {0};
+        final boolean[] dragging = {false};
+        final int slop = android.view.ViewConfiguration.get(c).getScaledTouchSlop();
+        r.setOnTouchListener((v, e) -> {
+            switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    x0[0] = e.getRawX();
+                    dragging[0] = false;
+                    return true;
+                case android.view.MotionEvent.ACTION_MOVE:
+                    float dx = e.getRawX() - x0[0];
+                    if (!dragging[0] && Math.abs(dx) > slop * 2) {
+                        dragging[0] = true;
+                        v.getParent().requestDisallowInterceptTouchEvent(true); // a swipe, not a scroll
+                    }
+                    if (dragging[0]) {
+                        if (inArchive && dx > 0) dx = dx / 4; // archive: only left (delete) goes all the way
+                        v.setTranslationX(dx);
+                        v.setAlpha(Math.max(0.3f, 1 - Math.abs(dx) / v.getWidth()));
+                    }
+                    return true;
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    float d = v.getTranslationX();
+                    boolean far = Math.abs(d) > v.getWidth() * 0.3f && e.getActionMasked() == android.view.MotionEvent.ACTION_UP;
+                    if (far && d < 0) { // left: delete
+                        v.animate().translationX(-v.getWidth()).alpha(0).setDuration(Ui.ms(180)).withEndAction(() -> {
+                            delete(it);
+                            holder.setVisibility(View.GONE);
+                            updateText();
+                        }).start();
+                    } else if (far && !inArchive) { // right: archive
+                        v.animate().translationX(v.getWidth()).alpha(0).setDuration(Ui.ms(180)).withEndAction(() -> {
+                            archive(it);
+                            updateText();
+                            Panels.refresh(); // it shows again under Archived
+                        }).start();
+                    } else {
+                        v.animate().translationX(0).alpha(wasRead ? 0.6f : 1f).setDuration(Ui.ms(160)).start();
+                        if (!dragging[0] && e.getActionMasked() == android.view.MotionEvent.ACTION_UP) { // a tap: read it
+                            markRead(it);
+                            updateText();
+                            reader(it);
+                        }
+                    }
+                    return true;
+            }
+            return false;
+        });
+        return holder;
     }
 
     /** One story, easy to read: big headline, where it's from, the summary, then the article's text when it can be fetched. */
@@ -560,10 +736,10 @@ final class NewsTicker {
 
         Marquee(Context c) {
             super(c);
-            p.setColor(Ui.TEXT2);
-            p.setTextSize(Ui.uf(13));
-            p.setTypeface(Typeface.DEFAULT);
-            dot.setColor(Ui.SUB);
+            p.setColor(Ui.TEXT);
+            p.setTextSize(Ui.uf(15));
+            p.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            dot.setColor(Ui.TEXT2);
         }
 
         void setItems(List<String> l) {
@@ -594,7 +770,7 @@ final class NewsTicker {
             }
             if (scroll) {
                 long now = SystemClock.uptimeMillis();
-                if (on && lastFrame != 0) offset += (now - lastFrame) * Ui.uf(40) / 1000f;
+                if (on && lastFrame != 0) offset += (now - lastFrame) * Ui.uf(34) / 1000f; // a touch slower for the bigger text
                 lastFrame = now;
                 if (width > 0) offset %= width;
                 float x = -offset;
