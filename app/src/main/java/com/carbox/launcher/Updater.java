@@ -167,7 +167,14 @@ final class Updater {
     /** Asks on the home screen: Install now or Later (never while driving, on a call or over another page). */
     private static void ask(Context c, File apk, String tag, boolean byHand) {
         MainActivity a = MainActivity.I;
-        if (byHand && Panels.open()) Panels.close(); // asked for from Settings: show it straight away
+        if (byHand && !Gps.moving() && CallState.state == CallState.NONE) {
+            // asked for from Settings: no extra prompt (Settings' closing used to sweep it away), straight to
+            // Android's own "Update this app?" once Settings has gone
+            if (Panels.open()) Panels.close();
+            Trace.event(c, "Update " + tag + " downloaded by hand: installing");
+            Ui.ui.postDelayed(() -> install(c, apk, tag), 700);
+            return;
+        }
         if (a == null || MainActivity.frontAt == 0 || Gps.moving() || Panels.open() || CallState.state != CallState.NONE) {
             Ui.ui.postDelayed(() -> ask(c, apk, tag, false), 30000);
             return;
