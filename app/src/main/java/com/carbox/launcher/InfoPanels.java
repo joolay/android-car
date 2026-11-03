@@ -578,52 +578,101 @@ final class InfoPanels {
             LinearLayout card = Ui.col(c);
             card.setBackground(Themes.card(Ui.CARD2, 16)); // pop-up card: glass in the Glass theme
             Ui.pad(card, 14, 12, 14, 12);
-            card.setLayoutParams(Panels.anchored(260, -2, 88, 230));
+            card.setLayoutParams(Panels.anchored(280, -2, 88, 40));
             card.addView(Ui.line(c, "Assistants", 15, Ui.TEXT, true));
-            java.util.List<String[]> list = new java.util.ArrayList<>();
-            list.add(new String[]{"", "Default assistant"});
-            for (String[] a : Actions.ASSISTANTS) if (Apps.installed(a[0])) list.add(a);
-            for (String[] a : list) {
-                LinearLayout r = Ui.row(c);
-                r.setMinimumHeight(Ui.u(48));
-                android.graphics.drawable.Drawable icon = null;
-                try {
-                    if (!a[0].isEmpty()) icon = c.getPackageManager().getApplicationIcon(a[0]);
-                } catch (Exception ignored) {
+            card.addView(Ui.line(c, "Tap to talk · hold to make it the voice button's", 11, Ui.SUB, false), top(2));
+            boolean ext = "external".equals(Prefs.str(Prefs.ASSIST, "gemini"));
+            String cur = ext ? Prefs.str(Prefs.ASSIST_PKG, "") : "";
+            // everything on the box that can answer by voice; then the ones worth having that aren't here yet
+            java.util.List<String[]> on = new java.util.ArrayList<>();
+            on.add(new String[]{"", "Default assistant"});
+            on.addAll(Actions.installedAssistants(c));
+            java.util.List<String[]> missing = new java.util.ArrayList<>();
+            for (String[] w : Actions.WANTED) {
+                boolean have = false;
+                for (String[] a : on) {
+                    if (w[0].isEmpty() ? a[1].toLowerCase(java.util.Locale.ROOT).contains(w[1].toLowerCase(java.util.Locale.ROOT)) : w[0].equals(a[0])) have = true;
                 }
-                if (icon != null) {
-                    ImageView iv = new ImageView(c);
-                    iv.setImageDrawable(icon);
-                    r.addView(iv, Ui.lpu(30, 30));
-                } else {
-                    FrameLayout f = new FrameLayout(c);
-                    f.setBackground(Ui.oval(Ui.RED));
-                    f.addView(Ui.icon(c, R.drawable.ic_mic, Ui.TEXT), Ui.flpu(16, 16, Gravity.CENTER));
-                    r.addView(f, Ui.lpu(30, 30));
-                }
-                TextView t = Ui.line(c, a[1], 14, Ui.TEXT, false);
-                LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
-                tl.leftMargin = Ui.u(12);
-                r.addView(t, tl);
-                r.setOnClickListener(v -> {
+                if (!have) missing.add(w);
+            }
+            LinearLayout rows = Ui.col(c);
+            for (String[] a : on) {
+                boolean gem = a[0].isEmpty() || Actions.GEMINI.equals(a[0]); // the box's own way (Gemini / Google)
+                boolean chosen = ext ? a[0].equals(cur) : a[0].isEmpty();
+                LinearLayout r = assistRow(c, a[0], a[1], chosen ? "Voice button" : null);
+                r.setOnClickListener(v -> { // for this one go
                     Panels.close();
-                    if (a[0].isEmpty()) {
-                        for (String act : new String[]{Intent.ACTION_VOICE_COMMAND, Intent.ACTION_ASSIST}) {
-                            try {
-                                c.startActivity(new Intent(act).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                                return;
-                            } catch (Exception ignored) {
-                            }
-                        }
-                    } else Apps.launchPkg(c, a[0]);
+                    if (gem) Actions.boxVoice(c);
+                    else Actions.voiceStart(c, a[0]);
+                });
+                r.setOnLongClickListener(v -> { // from now on
+                    if (gem) Prefs.put(Prefs.ASSIST, "gemini");
+                    else {
+                        Prefs.put(Prefs.ASSIST, "external");
+                        Prefs.put(Prefs.ASSIST_PKG, a[0]);
+                    }
+                    android.widget.Toast.makeText(c, "The voice button now uses " + a[1], android.widget.Toast.LENGTH_SHORT).show();
+                    Panels.refresh();
+                    return true;
                 });
                 Ui.press(r);
-                card.addView(Ui.hr(c), top(4));
-                card.addView(r);
+                rows.addView(Ui.hr(c), top(4));
+                rows.addView(r);
             }
-            if (list.size() == 1) card.addView(Ui.text(c, "Install Claude, ChatGPT, Alexa or another assistant and it shows here.", 11, Ui.SUB, false), top(6));
+            for (String[] w : missing) {
+                LinearLayout r = assistRow(c, null, w[1], null);
+                r.setAlpha(0.6f);
+                TextView get = Ui.text(c, "Get", 12, Ui.TEXT, true);
+                get.setBackground(Ui.round(Ui.ACCENT, 10));
+                Ui.pad(get, 10, 4, 10, 4);
+                r.addView(get);
+                r.setOnClickListener(v -> { // its Play Store page (or a search there)
+                    Panels.close();
+                    try {
+                        c.startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(w[2])).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                    } catch (Exception e) {
+                        android.widget.Toast.makeText(c, "No app store on this box", android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                });
+                Ui.press(r);
+                rows.addView(Ui.hr(c), top(4));
+                rows.addView(r);
+            }
+            int n = on.size() + missing.size();
+            android.widget.ScrollView sv = new android.widget.ScrollView(c); // a long list scrolls instead of running off the screen
+            sv.setVerticalScrollBarEnabled(false);
+            sv.addView(rows);
+            card.addView(sv, new LinearLayout.LayoutParams(Ui.MATCH, n > 6 ? Ui.u(6 * 53) : Ui.WRAP));
             return card;
         });
+    }
+
+    /** One assistant in the voice button's list: its icon (or a mic), its name, and an optional tag on the right. */
+    private static LinearLayout assistRow(Context c, String pkg, String name, String tag) {
+        LinearLayout r = Ui.row(c);
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.setMinimumHeight(Ui.u(48));
+        android.graphics.drawable.Drawable icon = null;
+        try {
+            if (pkg != null && !pkg.isEmpty()) icon = c.getPackageManager().getApplicationIcon(pkg);
+        } catch (Exception ignored) {
+        }
+        if (icon != null) {
+            ImageView iv = new ImageView(c);
+            iv.setImageDrawable(icon);
+            r.addView(iv, Ui.lpu(30, 30));
+        } else {
+            FrameLayout f = new FrameLayout(c);
+            f.setBackground(Ui.oval(pkg == null ? Ui.CARD3 : Ui.RED)); // grey: not on the box yet
+            f.addView(Ui.icon(c, R.drawable.ic_mic, Ui.TEXT), Ui.flpu(16, 16, Gravity.CENTER));
+            r.addView(f, Ui.lpu(30, 30));
+        }
+        TextView t = Ui.line(c, name, 14, Ui.TEXT, false);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
+        tl.leftMargin = Ui.u(12);
+        r.addView(t, tl);
+        if (tag != null) r.addView(Ui.line(c, tag, 11, Ui.ACCENT_SOFT, true));
+        return r;
     }
 
     private static View quickCard(String id) {

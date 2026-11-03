@@ -31,7 +31,47 @@ final class Actions {
     static final String[][] ASSISTANTS = {
             {"com.anthropic.claude", "Claude"}, {"com.openai.chatgpt", "ChatGPT"}, {"com.microsoft.copilot", "Microsoft Copilot"},
             {"com.amazon.dee.app", "Amazon Alexa"}, {"ai.perplexity.app.android", "Perplexity"}, {"com.facebook.stella", "Meta AI"},
-            {"com.google.android.apps.bard", "Gemini"}};
+            {"com.google.android.apps.bard", "Gemini"}, {"com.google.android.googlequicksearchbox", "Google"}};
+    /** Always offered in the voice button's list, with a Get button when not on the box. {package ("" = found by name), name, store link}. */
+    static final String[][] WANTED = {
+            {"com.openai.chatgpt", "ChatGPT", "market://details?id=com.openai.chatgpt"},
+            {"", "OpenClaw", "market://search?q=OpenClaw"},
+            {"com.anthropic.claude", "Claude", "market://details?id=com.anthropic.claude"},
+            {"com.google.android.apps.bard", "Gemini", "market://details?id=com.google.android.apps.bard"}};
+
+    /**
+     * The assistants on this box, each {package, name}: the well-known ones, OpenClaw (found by its name, whatever
+     * its package), and any other app that tells Android it can be an assistant or take voice commands.
+     */
+    static java.util.List<String[]> installedAssistants(Context c) {
+        java.util.LinkedHashMap<String, String> m = new java.util.LinkedHashMap<>();
+        for (String[] a : ASSISTANTS) if (Apps.installed(a[0])) m.put(a[0], a[1]);
+        for (Apps.App a : new java.util.ArrayList<>(Apps.all)) {
+            String l = a.label.toLowerCase(java.util.Locale.ROOT);
+            if (l.contains("openclaw") || l.contains("open claw")) m.put(a.pkg, a.label);
+        }
+        android.content.pm.PackageManager pm = c.getPackageManager();
+        for (String act : new String[]{Intent.ACTION_ASSIST, Intent.ACTION_VOICE_COMMAND}) {
+            try {
+                for (android.content.pm.ResolveInfo ri : pm.queryIntentActivities(new Intent(act), 0)) {
+                    String p = ri.activityInfo.packageName;
+                    if (p.equals(c.getPackageName()) || m.containsKey(p)) continue;
+                    m.put(p, Apps.label(p));
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        java.util.List<String[]> out = new java.util.ArrayList<>();
+        for (java.util.Map.Entry<String, String> e : m.entrySet()) out.add(new String[]{e.getKey(), e.getValue()});
+        return out;
+    }
+
+    /** Start an assistant listening (its voice mode), not just its home screen; its app is the last resort. */
+    static void voiceStart(Context c, String pkg) {
+        String[][] tries = {{Intent.ACTION_VOICE_COMMAND, pkg}, {"android.intent.action.VOICE_ASSIST", pkg},
+                {Intent.ACTION_ASSIST, pkg}, {RecognizerIntent.ACTION_VOICE_SEARCH_HANDS_FREE, pkg}};
+        tryVoice(c, tries, 0, new StringBuilder(Apps.label(pkg)).append(":\n"), pkg);
+    }
     static final String[][] BRIDGES = {
             {"com.speedplay", "Speed Play"}, {"com.zjinnova.zlink", "ZLink"}, {"com.autokit.carlink", "AutoKit"},
             {"com.carbit.carlink", "CarbitLink"}, {"com.tlink.carlink", "TLink"}};
@@ -68,7 +108,7 @@ final class Actions {
         Prefs.put("assist_log", new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(new java.util.Date()) + "\n" + s);
     }
 
-    private static void tryVoice(Context c, String[][] tries, int k, StringBuilder log) {
+    private static void tryVoice(Context c, String[][] tries, int k, StringBuilder log, String fallback) {
         for (int i = k; i < tries.length; i++) {
             String[] t = tries[i];
             if ("assist".equals(t[0])) { // Android's own "start the assistant" (not an app screen)
@@ -82,7 +122,7 @@ final class Actions {
                     Boolean shown = assistShown();
                     if (Boolean.FALSE.equals(shown)) {
                         log.append("  …nothing appeared\n");
-                        tryVoice(c, tries, next, log);
+                        tryVoice(c, tries, next, log, fallback);
                     } else assistLog(log.append(shown == null ? "(can't check without the Call helper)" : "It's on screen").toString());
                 }, 1500);
                 return;
@@ -97,7 +137,7 @@ final class Actions {
                 Ui.ui.postDelayed(() -> { // came straight back to Home: that way doesn't work here
                     if (MainActivity.frontAt != 0 && android.os.SystemClock.elapsedRealtime() - MainActivity.frontAt < 1400) {
                         log.append("  …it closed at once\n");
-                        tryVoice(c, tries, next, log);
+                        tryVoice(c, tries, next, log, fallback);
                     } else assistLog(log.append("Stayed open").toString());
                 }, 1600);
                 return;
@@ -105,8 +145,10 @@ final class Actions {
                 log.append(name).append(": not available\n");
             }
         }
-        boolean ok = Apps.launchPkg(c, GEMINI);
-        assistLog(log.append(ok ? "Opened the Gemini app (tap its mic)" : "Couldn't open Gemini").toString());
+        // no voice way worked: open the app itself (tap its mic)
+        boolean ok = fallback != null && Apps.launchPkg(c, fallback);
+        String nm = fallback != null ? Apps.label(fallback) : "the assistant";
+        assistLog(log.append(ok ? "Opened the " + nm + " app (tap its mic)" : "Couldn't open " + nm).toString());
     }
 
     /** Start Android's assistant the way the system's own button does (hidden in Android, so asked by name). */
@@ -141,23 +183,30 @@ final class Actions {
     static void assistant(Context c) {
         if ("external".equals(Prefs.str(Prefs.ASSIST, "gemini"))) {
             String pkg = Prefs.str(Prefs.ASSIST_PKG, null);
-            if (pkg != null && Apps.launchPkg(c, pkg)) {
-                assistLog("Set to External: opened " + Apps.label(pkg) + " (choose Gemini in Settings → Assistant for Gemini)");
+            if (pkg != null && Apps.installed(pkg)) { // its listening mode, not just its home screen
+                voiceStart(c, pkg);
                 return;
             }
             SettingsPanels.assistantPicker();
             return;
         }
+        boxVoice(c);
+    }
+
+    /** The box's own assistant (Gemini / Google), listening: what the voice button does when set to Gemini. */
+    static void boxVoice(Context c) {
         // Gemini, step by step: each way is tried, and if it comes straight back to the home screen
         // (the log showed Google's voice screen closing at once) the next one is tried, ending with
         // simply opening the Gemini app
         if (Apps.installed(GEMINI)) {
             // first the same thing the box's own voice button does: Android's assistant (the one set as
             // Digital assistant app in Android settings, e.g. Google / Gemini), as a pop-up
-            String[][] tries = {{"assist", null}, {Intent.ACTION_VOICE_COMMAND, GEMINI}, {Intent.ACTION_ASSIST, GEMINI},
+            String[][] tries = {{"assist", null}, {Intent.ACTION_VOICE_COMMAND, GEMINI}, {"android.intent.action.VOICE_ASSIST", GEMINI},
+                    {Intent.ACTION_ASSIST, GEMINI},
                     {Intent.ACTION_VOICE_COMMAND, "com.google.android.googlequicksearchbox"},
-                    {"android.intent.action.VOICE_ASSIST", "com.google.android.googlequicksearchbox"}};
-            tryVoice(c, tries, 0, new StringBuilder());
+                    {"android.intent.action.VOICE_ASSIST", "com.google.android.googlequicksearchbox"},
+                    {RecognizerIntent.ACTION_VOICE_SEARCH_HANDS_FREE, "com.google.android.googlequicksearchbox"}};
+            tryVoice(c, tries, 0, new StringBuilder(), GEMINI);
             return;
         } else assistLog("Gemini isn't installed on this box: tried the box's own assistant");
         // no Gemini: the box's default assistant, listening straight away

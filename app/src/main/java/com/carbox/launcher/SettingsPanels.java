@@ -464,7 +464,7 @@ final class SettingsPanels {
         open(() -> {
             Context c = c();
             LinearLayout b = Ui.col(c);
-            b.addView(Ui.text(c, "The mic button opens this app. Claude and ChatGPT open their app; tap their voice button to talk.", 12, Ui.SUB, false));
+            b.addView(Ui.text(c, "The mic button starts this assistant listening (if it can't, its app opens: tap its mic). Hold the mic button for the full list, OpenClaw included.", 12, Ui.SUB, false));
             boolean any = false;
             String cur = Prefs.str(Prefs.ASSIST_PKG, null);
             for (String[] a : Actions.ASSISTANTS) {
