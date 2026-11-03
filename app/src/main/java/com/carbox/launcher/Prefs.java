@@ -18,7 +18,10 @@ final class Prefs {
     }
 
     static void init(Context c) {
-        if (sp == null) sp = c.getApplicationContext().getSharedPreferences("launcher", Context.MODE_PRIVATE);
+        if (sp == null) {
+            sp = c.getApplicationContext().getSharedPreferences("launcher", Context.MODE_PRIVATE);
+            Ui.applyAccent(); // the chosen accent colour, before anything is drawn
+        }
     }
 
     static String str(String k, String d) {

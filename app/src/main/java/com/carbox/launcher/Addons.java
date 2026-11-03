@@ -1,7 +1,7 @@
 package com.carbox.launcher;
 
 /**
- * Everything that can be sold separately later: widgets, themes, map providers and the keyboard.
+ * Everything that can be sold separately later: widgets, themes, map providers, the keyboard and faiths.
  * Each add-on has one ID; anything that offers it asks {@link #unlocked(String)} first.
  *
  * For now every add-on is unlocked. Before publishing: mark the free ones FREE, the rest PAID with
@@ -11,7 +11,7 @@ package com.carbox.launcher;
  * Not add-ons (part of the launcher, never sold separately): Now Playing and Maps.
  */
 final class Addons {
-    static final int WIDGET = 0, THEME = 1, MAP = 2, KEYBOARD = 3;
+    static final int WIDGET = 0, THEME = 1, MAP = 2, KEYBOARD = 3, FAITH = 4;
     static final boolean FREE = true, PAID = false;
 
     /** {kind, id, name, free?, Google Play product id (when paid)}. */
@@ -45,6 +45,10 @@ final class Addons {
             {MAP, "map_google", "Google Maps (your own key)", FREE, null},
             // keyboard
             {KEYBOARD, "keyboard", "Car keyboard", FREE, null},
+            // faiths: each brings its own widgets, travel prayers, calendar and announcements (Faith)
+            {FAITH, "faith_islam", "Islam", FREE, null},
+            {FAITH, "faith_christianity", "Christianity", FREE, null},
+            {FAITH, "faith_judaism", "Judaism", FREE, null},
     };
 
     private Addons() {

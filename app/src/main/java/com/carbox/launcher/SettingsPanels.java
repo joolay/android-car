@@ -160,18 +160,20 @@ final class SettingsPanels {
         for (String[] e : Rail.order()) if ("1".equals(e[1])) railOn++;
         String w = Prefs.str(Prefs.WALL, "road");
         String as = Prefs.str(Prefs.ASSIST, "gemini"), ext = Prefs.str(Prefs.ASSIST_PKG, null);
-        final int BLUE = 0xFF1F4E9A, GREEN = 0xFF1F7A46, AMBER = 0xFF8A5A10, PURPLE = 0xFF5A3A9A, GREY = Ui.CARD3;
+        final int BLUE = 0xFF1F4E9A, GREEN = 0xFF1F7A46, AMBER = 0xFF8A5A10, PURPLE = 0xFF5A3A9A, GREY = Ui.CARD3, PINK = 0xFF8A2F62, TEAL = 0xFF1C6B66;
         Object[][][] groups = {
                 {{"Home screen"},
                         {R.drawable.ic_apps, PURPLE, "Left Stages", "Now Playing " + (LeftStages.nowPlayingTop() ? "top" : "bottom") + " · " + LeftStages.list().size() + " widgets", (Runnable) () -> LeftStages.chooser(false)},
                         {R.drawable.ic_check, PURPLE, "Welcome wizard", "Theme, wallpaper, Now Playing, ticker", (Runnable) () -> { Panels.close(); Wizard.show(); }},
-                        {R.drawable.ic_photo, PURPLE, "Wallpaper", "image".equals(w) ? "Image" : "color".equals(w) ? "Colour" : "Black", (Runnable) SettingsPanels::wallpaper},
                         {R.drawable.ic_drag, PURPLE, "Rail Bar", railOn + " of " + Rail.IDS.length + " shown", (Runnable) SettingsPanels::railOrder},
                         {R.drawable.ic_apps, PURPLE, "Dock", Dock.icons() + " icons" + (Dock.dialler() ? " · dialler" : ""), (Runnable) SettingsPanels::dock},
                         {R.drawable.ic_hide, PURPLE, "Hidden from All apps", Apps.hidden().isEmpty() ? "None" : Apps.hidden().size() + " hidden", (Runnable) () -> hiddenApps(false)},
-                        {R.drawable.ic_hide, PURPLE, "Hidden from Dock", Apps.dockHidden().isEmpty() ? "None" : Apps.dockHidden().size() + " hidden", (Runnable) () -> hiddenApps(true)},
-                        {R.drawable.ic_sun, PURPLE, "Splash screen", null, (Runnable) SettingsPanels::splash, Prefs.SPLASH_ON, false},
-                        {R.drawable.ic_bolt, PURPLE, "Animations", null, null, "anim_on", true}},
+                        {R.drawable.ic_hide, PURPLE, "Hidden from Dock", Apps.dockHidden().isEmpty() ? "None" : Apps.dockHidden().size() + " hidden", (Runnable) () -> hiddenApps(true)}},
+                {{"Theme"},
+                        {R.drawable.ic_photo, PINK, "Theme", themeLabel(), (Runnable) SettingsPanels::themeSettings},
+                        {R.drawable.ic_sun, PINK, "Accent colour", accentName(), (Runnable) SettingsPanels::accentPicker},
+                        {R.drawable.ic_photo, PINK, "Wallpaper", "image".equals(w) ? "Image" : "color".equals(w) ? "Colour" : LiveWallpaper.animated(w) ? "Animated" : "Black", (Runnable) SettingsPanels::wallpaper},
+                        {R.drawable.ic_bolt, PINK, "Animations", null, null, "anim_on", true}},
                 {{"Driving"},
                         {R.drawable.ic_car, GREEN, "Driving timer", Ui.dur(Rest.limitMin() * 60000L), (Runnable) Rest::setup, Rest.ON, true},
                         {R.drawable.ic_pin, GREEN, "Car location", "Home Assistant", (Runnable) CarHA::settings, CarHA.ON, false},
@@ -190,11 +192,14 @@ final class SettingsPanels {
                         {R.drawable.ic_phone, BLUE, "Calls", Widgets.callsLabel(), (Runnable) SettingsPanels::calls},
                         {R.drawable.ic_mic, BLUE, "Assistant", "external".equals(as) && ext != null ? Apps.label(ext) : "Gemini", (Runnable) SettingsPanels::assistant},
                         {R.drawable.ic_apps, BLUE, "Keyboard", "Car keyboard" + (CarIME.isDefault(c) ? " · on" : ""), (Runnable) SettingsPanels::keyboard}},
-                {{"Time, calendar and faith"},
+                {{"Time and calendar"},
                         {R.drawable.ic_calendar, GREY, "Units and clock", (Prefs.flag(Prefs.CELSIUS, true) ? "°C" : "°F") + " · " + (Prefs.flag(Prefs.H24, true) ? "24 h" : "12 h"), (Runnable) SettingsPanels::units},
-                        {R.drawable.ic_calendar, GREY, "Calendar", Cal.altLabel(), (Runnable) SettingsPanels::calendar},
-                        {R.drawable.ic_moon, GREY, "Faith add-ons", Faith.label(), (Runnable) Faith::picker},
-                        Faith.islam() ? new Object[]{R.drawable.ic_kaaba, GREY, "Prayer times", Prayer.METHODS[Prefs.num(Prefs.PRAY_METHOD, 0)], (Runnable) SettingsPanels::prayerTimes} : null},
+                        {R.drawable.ic_calendar, GREY, "Calendar", Cal.altLabel(), (Runnable) SettingsPanels::calendar}},
+                {{"Faith"},
+                        {R.drawable.ic_moon, TEAL, "Faith add-ons", Faith.label(), (Runnable) Faith::picker},
+                        {R.drawable.ic_apps, TEAL, "Religious widgets", faithWidgetLabel(), (Runnable) SettingsPanels::faithWidgets},
+                        Faith.islam() ? new Object[]{R.drawable.ic_kaaba, TEAL, "Prayer times", Prayer.METHODS[Prefs.num(Prefs.PRAY_METHOD, 0)], (Runnable) SettingsPanels::prayerTimes} : null,
+                        {R.drawable.ic_sun, TEAL, "Splash screen", "Travel prayer or your own words", (Runnable) SettingsPanels::splash, Prefs.SPLASH_ON, false}},
                 {{"System"},
                         {R.drawable.ic_check, GREY, "Set-up checklist", null, (Runnable) SettingsPanels::setupChecklist},
                         {R.drawable.ic_bolt, GREY, "Startup optimiser", null, (Runnable) Optimiser::show},
@@ -350,7 +355,15 @@ final class SettingsPanels {
                 Prefs.flag(LiveWallpaper.LIGHTING, true), on -> { Prefs.put(LiveWallpaper.LIGHTING, on); if (MainActivity.I != null) MainActivity.I.applyWallpaper(); }), top(8));
         b.addView(Panels.switchRow(0, 0, "Weather", "Clouds, rain, storms and night stars, over any wallpaper",
                 Prefs.flag(LiveWallpaper.WEATHER, true), on -> { Prefs.put(LiveWallpaper.WEATHER, on); if (MainActivity.I != null) MainActivity.I.applyWallpaper(); }), top(6));
-        b.addView(Ui.hr(c));
+            return Panels.panel("Wallpaper", b, 640, 456);
+        });
+    }
+
+    /** Settings → Theme: the look (Modern, Glass, Simple + White) and Glass frosting. */
+    static void themeSettings() {
+        open(() -> {
+            Context c = c();
+            LinearLayout b = Ui.col(c);
         String tm = Themes.mode();
         LinearLayout themes = Ui.row(c);
         if (Addons.unlocked("theme_modern")) themes.addView(Ui.seg(c, "Modern", "modern".equals(tm), () -> theme("modern")));
@@ -394,7 +407,102 @@ final class SettingsPanels {
             b.addView(Ui.text(c, "Low: clear glass, the wallpaper shows through. High: frosted, text easier to read.", 12, Ui.SUB, false), top(4));
         }
 
-            return Panels.panel("Wallpaper", b, 640, 456);
+            b.addView(Ui.hr(c), top(12));
+            b.addView(Panels.item("Accent colour", accentName(), SettingsPanels::accentPicker), top(4));
+            b.addView(Panels.switchRow(0, 0, "Animations", "Windows and widgets slide and grow (off: lighter on the box)",
+                    Prefs.flag("anim_on", true), on -> Prefs.put("anim_on", on)), top(6));
+            return Panels.panel("Theme", b, 640, 456);
+        });
+    }
+
+    static String themeLabel() {
+        String m = Themes.mode();
+        String n = "glass".equals(m) ? "Glass · frost " + Themes.frost() : "simple".equals(m) ? (Themes.white() ? "Simple · White" : "Simple") : "Modern";
+        return n;
+    }
+
+    static String accentName() {
+        int a = Prefs.num(Ui.ACCENT_KEY, 0xFF3D8BFD);
+        for (Object[] x : Ui.ACCENTS) if ((Integer) x[0] == a) return (String) x[1];
+        return "Custom";
+    }
+
+    private static boolean accentDirty;
+
+    /** Settings → Theme → Accent colour: buttons, highlights, switches and selected tabs. */
+    static void accentPicker() {
+        open(() -> {
+            Context c = c();
+            LinearLayout b = Ui.col(c);
+            b.addView(Ui.text(c, "The colour of buttons, highlights, switches and the chosen tab. The home screen takes it on when you close Settings.", 13, Ui.SUB, false));
+            int cur = Prefs.num(Ui.ACCENT_KEY, 0xFF3D8BFD);
+            java.util.List<View> cells = new java.util.ArrayList<>();
+            for (Object[] x : Ui.ACCENTS) {
+                final int col = (Integer) x[0];
+                LinearLayout cell = Ui.col(c);
+                cell.setGravity(Gravity.CENTER);
+                FrameLayout dotv = new FrameLayout(c);
+                dotv.setBackground(col == cur ? Ui.outline(col, Ui.TEXT, 3, 22) : Ui.oval(col));
+                if (col == cur) dotv.addView(Ui.icon(c, R.drawable.ic_check, Ui.TEXT), Ui.flpu(20, 20, Gravity.CENTER));
+                cell.addView(dotv, Ui.lpu(44, 44));
+                cell.addView(Ui.line(c, (String) x[1], 12, col == cur ? Ui.TEXT : Ui.SUB, col == cur), top(6));
+                cell.setContentDescription((String) x[1]);
+                cell.setOnClickListener(v -> {
+                    Prefs.put(Ui.ACCENT_KEY, col);
+                    Ui.applyAccent();
+                    Panels.refresh(); // Settings shows it straight away
+                    if (!accentDirty) { // the rest of the home screen is redrawn once Settings closes
+                        accentDirty = true;
+                        Panels.whenClosed(() -> {
+                            accentDirty = false;
+                            if (MainActivity.I != null) MainActivity.I.recreate();
+                        });
+                    }
+                });
+                Ui.press(cell);
+                cells.add(cell);
+            }
+            b.addView(AppPanels.grid(c, cells, 4, 12), top(16));
+            return Panels.panel("Accent colour", b, 560, 360);
+        });
+    }
+
+    static String faithWidgetLabel() {
+        int n = 0;
+        for (String[] w : FAITH_WIDGETS) if (Faith.on(w[0]) && AppPanels.onHome(w[1])) n++;
+        return Faith.label().equals("None") ? "Switch a faith on first" : n + " on the home screen";
+    }
+
+    /** {faith, widget id} for the religious widgets. */
+    private static final String[][] FAITH_WIDGETS = {{"Islam", "nextprayer"}, {"Islam", "prayertimes"}, {"Islam", "qibla"}};
+
+    /** Settings → Faith → Religious widgets: each faith's widgets, on or off the home screen. */
+    static void faithWidgets() {
+        open(() -> {
+            Context c = c();
+            LinearLayout b = Ui.col(c);
+            boolean any = false;
+            for (String[] f : Faith.FAITHS) {
+                if (!Faith.on(f[0])) continue;
+                b.addView(Ui.line(c, f[0].toUpperCase(java.util.Locale.ROOT), 11, Ui.SUB, true), top(any ? 14 : 0));
+                boolean has = false;
+                for (String[] w : FAITH_WIDGETS) {
+                    if (!w[0].equals(f[0]) || !Addons.unlocked(w[1])) continue;
+                    has = true;
+                    b.addView(Panels.switchRow(R.drawable.ic_kaaba, Ui.ACCENT_SOFT, Widgets.name(w[1]), "On the home screen (Tile Drawer)",
+                            AppPanels.onHome(w[1]), on -> {
+                                AppPanels.homeTile(w[1], on);
+                                Panels.refresh();
+                            }), top(6));
+                }
+                if (!has) b.addView(Ui.text(c, "No widgets for " + f[0] + " yet. Its travel prayers are under Splash screen.", 12, Ui.SUB, false), top(6));
+                any = true;
+            }
+            if (!any) {
+                b.addView(Ui.text(c, "Switch on a faith add-on first; its widgets show here.", 13, Ui.SUB, false));
+                b.addView(Panels.item("Faith add-ons", Faith.label(), Faith::picker), top(10));
+            } else b.addView(Ui.text(c, "To put one on a left stage instead, hold that stage and choose it.", 12, Ui.SUB, false), top(14));
+            return Panels.panel("Religious widgets", b, 600, 420);
         });
     }
 

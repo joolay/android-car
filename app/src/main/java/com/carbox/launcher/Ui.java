@@ -39,8 +39,22 @@ final class Ui {
     static final int TEXT2 = 0xFFD6DBE3;
     static final int SUB = 0xFF9AA4B2;
     static final int MUTED = 0xFF5C6675;
-    static final int ACCENT = 0xFF3D8BFD;
-    static final int ACCENT_SOFT = 0xFF85B7EB;
+    // the accent colour: chosen in Settings → Theme (blue by default); ACCENT_SOFT is a lighter tint of it
+    static int ACCENT = 0xFF3D8BFD;
+    static int ACCENT_SOFT = 0xFF85B7EB;
+    static final String ACCENT_KEY = "accent_colour";
+    /** {colour, name} offered in Settings → Theme. */
+    static final Object[][] ACCENTS = {{0xFF3D8BFD, "Blue"}, {0xFF2BB5A0, "Teal"}, {0xFF3FB950, "Green"}, {0xFFF0A020, "Amber"},
+            {0xFFF26B3A, "Orange"}, {0xFFE5484D, "Red"}, {0xFFE0559B, "Pink"}, {0xFF8B6CF0, "Purple"}};
+
+    /** Load the chosen accent (called once Prefs is ready). */
+    static void applyAccent() {
+        int a = Prefs.num(ACCENT_KEY, 0xFF3D8BFD);
+        ACCENT = a;
+        // the soft tint: the accent mixed half way towards white, for icons and secondary text on dark cards
+        int r = (a >> 16) & 0xFF, g = (a >> 8) & 0xFF, b = a & 0xFF;
+        ACCENT_SOFT = a == 0xFF3D8BFD ? 0xFF85B7EB : 0xFF000000 | ((r + (255 - r) * 45 / 100) << 16) | ((g + (255 - g) * 45 / 100) << 8) | (b + (255 - b) * 45 / 100);
+    }
     static final int GREEN = 0xFF34C759;
     static final int DGREEN = 0xFF1F7A46;
     static final int TEAL = 0xFF5DCAA5;

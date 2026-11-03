@@ -1039,6 +1039,21 @@ final class AppPanels {
         return l;
     }
 
+    /** Is this widget on the home screen (in the Tile Drawer)? */
+    static boolean onHome(String id) {
+        JSONArray s = TileDrawer.specs();
+        for (int i = 0; i < s.length(); i++) {
+            JSONObject o = s.optJSONObject(i);
+            if (o != null && id.equals(o.optString("id")) && "w".equals(o.optString("t"))) return true;
+        }
+        return false;
+    }
+
+    /** Put a widget on the home screen or take it off (Settings → Faith). */
+    static void homeTile(String id, boolean on) {
+        if (on != onHome(id)) pick(-1, id, !on);
+    }
+
     /** Act on a choice: replace the tile, or (manage) add it / take it off the home screen. */
     private static void pick(int index, String id, boolean takeOff) {
         boolean folder = "folder".equals(id);
