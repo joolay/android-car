@@ -89,7 +89,7 @@ final class Maps {
             web.loadUrl("file:///android_asset/map.html");
             mapLayer.addView(web, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             // the map shows as a round radar; around it, the stage (themed). Above the map, below the buttons
-            View mask = new View(c);
+            mask = new View(c);
             mask.setBackground(radar());
             mapLayer.addView(mask, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             if (GoogleTraffic.available()) { // traffic on/off on the small map too (the big map has its own)
@@ -319,6 +319,7 @@ final class Maps {
 
             @Override
             public void draw(android.graphics.Canvas cv) {
+                if (bigHolder == null) return; // small map: a square widget, no crop
                 android.graphics.Rect b = getBounds();
                 float cx = b.exactCenterX(), cy = b.exactCenterY(), r = Math.min(b.width(), b.height()) / 2f - Ui.uf(6);
                 out.reset();
@@ -463,6 +464,7 @@ final class Maps {
 
     /** Swipe the Top Left Widget: the next (or previous) chosen widget slides in. */
     private SwipeBox catcher;
+    private View mask; // the round radar crop: only on the Centre Stage (the small map stays a square widget)
     private boolean miniOverMap; // the alternate widgets shown over the small map (Tile Drawer locked open)
 
     /** Swipe on the small map: with the Tile Drawer locked open, its widgets come in (swipe on through them, back to the map). */
@@ -543,6 +545,7 @@ final class Maps {
             view.removeView(mapLayer);
             bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             if (catcher != null) catcher.setVisibility(View.GONE); // big: the map takes the touches
+            if (mask != null) mask.invalidate(); // round on the Centre Stage
             mapLayer.setVisibility(View.VISIBLE);
             bigHolder.addView(controls(a), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             trafficLook(); // the big map has its own traffic button
@@ -560,6 +563,7 @@ final class Maps {
             bigHolder = null;
             view.addView(mapLayer, 0, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             if (catcher != null) catcher.setVisibility(View.VISIBLE);
+            if (mask != null) mask.invalidate(); // square again
             trafficLook();
         }
     }
