@@ -1,3 +1,4 @@
+0.34: Rebuilt launcher: Top-Left, Bottom-Left and Centre Stages; Now Playing always on a left stage, Maps on the Centre Stage; Glass theme and Road wallpaper by default; bigger News Ticker; news: today only, swipe left to delete, right to archive; predictive keyboard; map labels always upright; Now Playing updates instantly; icon buttons
 0.33: Glass theme (Settings → Wallpaper → Theme); Road wallpaper; App icon with a blue border, also on the All apps button
 0.32: Drag the dot on the progress bar; WhatsApp stays open; Traffic on by default; Weather and calendar open over the grid
 0.31: Tap the map to minimise lyrics; Progress bar on Now playing; Lyrics stay open for the next song; Bigger Lyrics and traffic buttons; Animation choice moved to Music settings; Equaliser centred; Album art while lyrics are open
