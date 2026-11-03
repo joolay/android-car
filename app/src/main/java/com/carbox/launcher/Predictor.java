@@ -20,6 +20,7 @@ import java.util.Map;
 final class Predictor {
     private static List<String> words;           // dictionary, most common first
     private static String[] lower;               // the same, in lower case (no work per key press)
+    private static Map<String, List<Integer>> index; // first two letters → positions, commonest first
     private static Map<String, Integer> rank;     // word (lower case) → position
     private static Map<String, Integer> used;     // learned: word → times used
     private static Map<String, Map<String, Integer>> next; // learned: word → following word → times
@@ -73,7 +74,13 @@ final class Predictor {
         } catch (Exception ignored) {
         }
         String[] lo = new String[w.size()];
-        for (int i = 0; i < lo.length; i++) lo[i] = w.get(i).toLowerCase(Locale.ROOT);
+        Map<String, List<Integer>> ix = new HashMap<>();
+        for (int i = 0; i < lo.length; i++) {
+            lo[i] = w.get(i).toLowerCase(Locale.ROOT);
+            String k = lo[i].length() >= 2 ? lo[i].substring(0, 2) : lo[i];
+            ix.computeIfAbsent(k, x -> new ArrayList<>()).add(i); // in order, so the commonest come first
+        }
+        index = ix;
         lower = lo;
         rank = r;
         words = w;
@@ -97,7 +104,7 @@ final class Predictor {
     }
 
     /** Up to 3 suggestions for the text before the cursor. */
-    static List<String> suggest(CharSequence before) {
+    static synchronized List<String> suggest(CharSequence before) { // synchronized: worked out in the background while learning happens on the main thread
         List<String> out = new ArrayList<>();
         if (words == null) return out;
         String cur = current(before), prev = previous(before);
@@ -112,7 +119,13 @@ final class Predictor {
             if (!p.isEmpty() && e.getKey().startsWith(p) && !e.getKey().equals(p)) scored.add(new String[]{e.getKey(), String.valueOf(500_000 + e.getValue() * 1000)});
         if (!p.isEmpty()) {
             int found = 0;
-            for (int i = 0; i < lower.length; i++) {
+            List<Integer> cand;
+            if (p.length() >= 2) cand = index.getOrDefault(p.substring(0, 2), new ArrayList<>());
+            else {
+                cand = new ArrayList<>();
+                for (int i = 0; i < Math.min(lower.length, 4000); i++) cand.add(i); // one letter: the commonest words are enough
+            }
+            for (int i : cand) {
                 String lw = lower[i];
                 if (lw.startsWith(p) && !lw.equals(p)) {
                     scored.add(new String[]{words.get(i), String.valueOf(400_000 - i)});
@@ -141,7 +154,7 @@ final class Predictor {
     }
 
     /** A word was finished (space, punctuation or a suggestion): learn it, and which word it followed. */
-    static void learn(String word, String prev) {
+    static synchronized void learn(String word, String prev) {
         if (words == null || word == null) return;
         String w = word.toLowerCase(Locale.ROOT).replaceAll("[^a-z']", "");
         if (w.length() < 2) return;
@@ -156,7 +169,7 @@ final class Predictor {
         }
     }
 
-    private static void save() {
+    private static synchronized void save() {
         dirty = false;
         try {
             org.json.JSONObject u = new org.json.JSONObject();

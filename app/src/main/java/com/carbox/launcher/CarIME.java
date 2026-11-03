@@ -49,12 +49,8 @@ public class CarIME extends InputMethodService {
     public View onCreateInputView() {
         Ui.init((Context) this);
         Predictor.warm(this);
-        // glass: blur what's behind the keyboard where the box can (Android 12+, if the box supports it)
-        if (Themes.on() && android.os.Build.VERSION.SDK_INT >= 31) try {
-            android.view.Window w = getWindow().getWindow();
-            if (w != null) w.setBackgroundBlurRadius(Ui.u(40));
-        } catch (Throwable ignored) {
-        }
+        // (no live blur behind the keyboard: on this box it was redone on every key press and made typing slow;
+        // the glass keyboard uses a tinted frost instead)
         root = new FrameLayout(this);
         root.setClipChildren(false);
         render();

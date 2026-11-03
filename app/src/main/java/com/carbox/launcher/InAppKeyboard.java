@@ -246,17 +246,30 @@ final class InAppKeyboard {
     /** The keyboard's own background for the theme (the launcher's glass card inside it, frosted over other apps). */
     static android.graphics.drawable.Drawable kbBackground(boolean inLauncher) {
         if (!Themes.on()) return new android.graphics.drawable.ColorDrawable(Ui.CARD);
-        if (inLauncher) return Themes.card(Ui.CARD, 0);
-        return new android.graphics.drawable.ColorDrawable(0xC0141A24);
+        return new android.graphics.drawable.ColorDrawable(0xD9141A24); // frosted, cheap to draw on every key press
     }
 
     // ---- predictive text: up to 3 suggestions above the keys
     private static LinearLayout suggestRow;
 
     /** Fill a row with suggestion chips for the text so far; tapping one swaps it in for the word being typed. */
+    private static final java.util.concurrent.ExecutorService guess = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private static int asked;
+
+    /** Suggestions are worked out in the background (keys never wait for them); only the newest are shown. */
     static void fillSuggestions(LinearLayout row, CharSequence before, U2 pick) {
+        final int n = ++asked;
+        final String text = before == null ? "" : before.toString();
+        guess.execute(() -> {
+            java.util.List<String> l = Predictor.suggest(text);
+            Ui.ui.post(() -> {
+                if (n == asked) showSuggestions(row, l, pick);
+            });
+        });
+    }
+
+    private static void showSuggestions(LinearLayout row, java.util.List<String> l, U2 pick) {
         row.removeAllViews();
-        java.util.List<String> l = Predictor.suggest(before);
         for (int i = 0; i < 3; i++) {
             final String w = i < l.size() ? l.get(i) : null;
             TextView t = Ui.line(row.getContext(), w == null ? "" : w, 17, Ui.TEXT, i == 0 && w != null);
