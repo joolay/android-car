@@ -136,6 +136,12 @@ final class NewsTicker {
         else add(GONE, it);
     }
 
+    /** Out of the bin: back in today's list. */
+    static void restore(Item it) {
+        List<String> l = new ArrayList<>(Prefs.list(GONE));
+        if (l.remove(key(it))) Prefs.putList(GONE, l);
+    }
+
     static void markRead(Item it) {
         add(READ, it);
     }
@@ -497,11 +503,15 @@ final class NewsTicker {
         if (MainActivity.I != null) MainActivity.I.resetIdle();
     }
 
+    private boolean feedNews = true; // which feed the open window shows (the NEWS / TRAFFIC label switches it)
+    private int feedView; // 0 today's headlines, 1 archive, 2 bin
+
     private void openFeed() {
-        final boolean wasNews = showingNews;
+        feedNews = showingNews;
+        feedView = 0;
         Panels.showSlide(() -> { // slides down out of the ticker, back up when closed
             Context c = Panels.ctx();
-            boolean n = wasNews;
+            boolean n = feedNews;
             List<Item> items = n ? newsItems : trafficItems;
             LinearLayout card = Ui.col(c);
             card.setBackground(Themes.card(Ui.CARD, 16));
@@ -512,8 +522,15 @@ final class NewsTicker {
             TextView tg = Ui.text(c, n ? "NEWS" : "TRAFFIC", 12, n ? Ui.TEXT : 0xFF3A2600, true);
             tg.setBackground(Ui.round(n ? Ui.ACCENT : Ui.AMBER, 6));
             Ui.pad(tg, 9, 3, 9, 3);
+            tg.setContentDescription(n ? "Switch to traffic" : "Switch to news");
+            tg.setOnClickListener(v -> { // switch feeds right here
+                feedNews = !feedNews;
+                feedView = 0;
+                Panels.refresh();
+            });
+            Ui.press(tg);
             head.addView(tg);
-            TextView title = Ui.line(c, n ? "Local news" : "Traffic", 20, Ui.TEXT, true);
+            TextView title = Ui.line(c, feedView == 1 ? "Archive" : feedView == 2 ? "Bin" : n ? "Local news" : "Traffic", 20, Ui.TEXT, true);
             LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
             tl.leftMargin = Ui.u(12);
             head.addView(title, tl);
@@ -523,7 +540,22 @@ final class NewsTicker {
             ed.setOnClickListener(v -> SettingsPanels.news());
             Ui.press(ed);
             head.addView(ed, Ui.lpu(28, 28));
-            head.addView(Ui.gap(c, 14, 1));
+            head.addView(Ui.gap(c, 12, 1));
+            // archive and bin: tap to see them, tap again for today's headlines (lit while open)
+            for (int k = 1; k <= 2; k++) {
+                final int mode = k;
+                View ic = Ui.icon(c, k == 1 ? R.drawable.ic_archive : R.drawable.ic_trash, feedView == k ? Ui.TEXT : Ui.ACCENT_SOFT);
+                Ui.pad(ic, 4, 4, 4, 4);
+                if (feedView == k) ic.setBackground(Ui.oval(Ui.ACCENT));
+                ic.setContentDescription(k == 1 ? "Archive" : "Bin");
+                ic.setOnClickListener(v -> {
+                    feedView = feedView == mode ? 0 : mode;
+                    Panels.refresh();
+                });
+                Ui.press(ic);
+                head.addView(ic, Ui.lpu(30, 30));
+                head.addView(Ui.gap(c, 12, 1));
+            }
             View x = Ui.icon(c, R.drawable.ic_x, Ui.SUB);
             x.setOnClickListener(v -> Panels.close());
             head.addView(x, Ui.lpu(28, 28));
@@ -535,24 +567,30 @@ final class NewsTicker {
             String src = (url.isEmpty() ? "Google News · " + place() : Uri.parse(url).getHost()) + (at > 0 ? " · updated " + ago(at) : "");
             card.addView(Ui.line(c, src, 12, Ui.MUTED, false), Widgets.top(6));
             LinearLayout list = Ui.col(c);
-            // today's headlines: unread first, then read ones greyed; your archive at the bottom
-            List<Item> unread = new ArrayList<>(), seen = new ArrayList<>();
-            for (Item it : items) {
-                if (!today(it) || deleted(it) || archived(it)) continue;
-                (read(it) ? seen : unread).add(it);
+            if (feedView == 1) { // archive: kept until deleted (swipe left)
+                List<Item> arch = archivedItems();
+                if (arch.isEmpty()) list.addView(Ui.text(c, "Nothing archived. Swipe a headline right to keep it here.", 14, Ui.SUB, false), Widgets.top(12));
+                for (Item it : arch) list.addView(row(c, it, false, 1));
+                if (!arch.isEmpty()) list.addView(Ui.text(c, "Swipe left to delete", 11, Ui.MUTED, false), Widgets.top(12));
+            } else if (feedView == 2) { // bin: today's deleted headlines (both feeds), swipe right to put one back
+                List<Item> gone = new ArrayList<>();
+                for (Item it : newsItems) if (deleted(it) && today(it)) gone.add(it);
+                for (Item it : trafficItems) if (deleted(it) && today(it)) gone.add(it);
+                if (gone.isEmpty()) list.addView(Ui.text(c, "The bin is empty.", 14, Ui.SUB, false), Widgets.top(12));
+                for (Item it : gone) list.addView(row(c, it, true, 2));
+                if (!gone.isEmpty()) list.addView(Ui.text(c, "Swipe right to put it back · emptied at midnight", 11, Ui.MUTED, false), Widgets.top(12));
+            } else { // today's headlines: unread first, then read ones greyed
+                List<Item> unread = new ArrayList<>(), seen = new ArrayList<>();
+                for (Item it : items) {
+                    if (!today(it) || deleted(it) || archived(it)) continue;
+                    (read(it) ? seen : unread).add(it);
+                }
+                if (unread.isEmpty() && seen.isEmpty())
+                    list.addView(Ui.text(c, at > 0 ? "No new headlines today." : "Loading headlines…", 14, Ui.SUB, false), Widgets.top(12));
+                for (Item it : unread) list.addView(row(c, it, false, 0));
+                for (Item it : seen) list.addView(row(c, it, true, 0));
+                list.addView(Ui.text(c, "Swipe left to delete · swipe right to archive", 11, Ui.MUTED, false), Widgets.top(12));
             }
-            List<Item> arch = archivedItems();
-            if (unread.isEmpty() && seen.isEmpty())
-                list.addView(Ui.text(c, at > 0 ? "No new headlines today." : "Loading headlines…", 14, Ui.SUB, false), Widgets.top(12));
-            for (Item it : unread) list.addView(row(c, it, false, false));
-            for (Item it : seen) list.addView(row(c, it, true, false));
-            if (!arch.isEmpty()) {
-                TextView ah = Ui.line(c, "ARCHIVED", 11, Ui.SUB, true);
-                ah.setLetterSpacing(0.08f);
-                list.addView(ah, Widgets.top(18));
-                for (Item it : arch) list.addView(row(c, it, false, true));
-            }
-            list.addView(Ui.text(c, "Swipe left to delete · swipe right to keep it in the archive", 11, Ui.MUTED, false), Widgets.top(12));
             android.widget.ScrollView sv = new android.widget.ScrollView(c);
             sv.setVerticalScrollBarEnabled(false);
             sv.addView(list);
@@ -564,7 +602,8 @@ final class NewsTicker {
     }
 
     /** A headline in the list: tap to read; swipe left to delete, right to archive (archived: left deletes). */
-    private View row(Context c, Item it, boolean wasRead, boolean inArchive) {
+    private View row(Context c, Item it, boolean wasRead, int mode) {
+        final boolean inArchive = mode == 1, inBin = mode == 2;
         android.widget.FrameLayout holder = new android.widget.FrameLayout(c);
         LinearLayout r = Ui.col(c);
         Ui.pad(r, 0, 11, 0, 11);
@@ -598,6 +637,7 @@ final class NewsTicker {
                     }
                     if (dragging[0]) {
                         if (inArchive && dx > 0) dx = dx / 4; // archive: only left (delete) goes all the way
+                        if (inBin && dx < 0) dx = dx / 4; // bin: only right (put back)
                         v.setTranslationX(dx);
                         v.setAlpha(Math.max(0.3f, 1 - Math.abs(dx) / v.getWidth()));
                     }
@@ -606,7 +646,15 @@ final class NewsTicker {
                 case android.view.MotionEvent.ACTION_CANCEL:
                     float d = v.getTranslationX();
                     boolean far = Math.abs(d) > v.getWidth() * 0.3f && e.getActionMasked() == android.view.MotionEvent.ACTION_UP;
-                    if (far && d < 0) { // left: delete
+                    if (far && inBin && d > 0) { // bin, right: put it back
+                        v.animate().translationX(v.getWidth()).alpha(0).setDuration(Ui.ms(180)).withEndAction(() -> {
+                            restore(it);
+                            holder.setVisibility(View.GONE);
+                            updateText();
+                        }).start();
+                    } else if (inBin && dragging[0]) {
+                        v.animate().translationX(0).alpha(wasRead ? 0.6f : 1f).setDuration(Ui.ms(160)).start();
+                    } else if (far && d < 0) { // left: delete
                         v.animate().translationX(-v.getWidth()).alpha(0).setDuration(Ui.ms(180)).withEndAction(() -> {
                             delete(it);
                             holder.setVisibility(View.GONE);
