@@ -34,7 +34,7 @@ final class Maps {
     Maps(Context c) {
         this.c = c;
         view = new FrameLayout(c);
-        view.setBackground(Ui.round(Ui.CARD, 16));
+        view.setBackground(Themes.card(Ui.CARD, 16));
         clip(view, 16);
 
         mapLayer = new FrameLayout(c);
@@ -88,6 +88,10 @@ final class Maps {
             }, "Android");
             web.loadUrl("file:///android_asset/map.html");
             mapLayer.addView(web, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            // the map shows as a round radar; around it, the stage (themed). Above the map, below the buttons
+            View mask = new View(c);
+            mask.setBackground(radar());
+            mapLayer.addView(mask, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             if (GoogleTraffic.available()) { // traffic on/off on the small map too (the big map has its own)
                 smallTraffic = Ui.icon(c, R.drawable.ic_traffic, Ui.TEXT);
                 Ui.pad(smallTraffic, 9, 9, 9, 9);
@@ -294,6 +298,64 @@ final class Maps {
         };
     }
 
+    /**
+     * The map cropped to a circle, like a radar screen: outside it the stage shows (glass in the Glass theme,
+     * solid in Modern), with a rim and two faint range rings. Painted over the map (the map page doesn't
+     * always respect a clip). The buttons and labels keep their places in the corners.
+     */
+    private android.graphics.drawable.Drawable radar() {
+        return new android.graphics.drawable.Drawable() {
+            final android.graphics.Paint fill = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG),
+                    line = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            final android.graphics.Path out = new android.graphics.Path();
+            android.graphics.drawable.Drawable glass;
+
+            @Override
+            public void draw(android.graphics.Canvas cv) {
+                android.graphics.Rect b = getBounds();
+                float cx = b.exactCenterX(), cy = b.exactCenterY(), r = Math.min(b.width(), b.height()) / 2f - Ui.uf(6);
+                out.reset();
+                out.setFillType(android.graphics.Path.FillType.INVERSE_WINDING);
+                out.addCircle(cx, cy, r, android.graphics.Path.Direction.CW);
+                cv.save();
+                cv.clipPath(out);
+                if (Themes.on()) {
+                    if (glass == null) {
+                        glass = Themes.card(Ui.CARD, 0);
+                        glass.setCallback(getCallback());
+                    }
+                    glass.setBounds(b);
+                    glass.draw(cv);
+                } else {
+                    fill.setColor(Ui.CARD);
+                    cv.drawRect(b, fill);
+                }
+                cv.restore();
+                line.setStyle(android.graphics.Paint.Style.STROKE);
+                line.setStrokeWidth(Ui.uf(1));
+                line.setColor(0x24FFFFFF); // range rings
+                cv.drawCircle(cx, cy, r * 0.33f, line);
+                cv.drawCircle(cx, cy, r * 0.66f, line);
+                line.setStrokeWidth(Ui.uf(3));
+                line.setColor(Themes.on() ? 0x66FFFFFF : 0xFF2A3344); // rim
+                cv.drawCircle(cx, cy, r, line);
+            }
+
+            @Override
+            public void setAlpha(int a) {
+            }
+
+            @Override
+            public void setColorFilter(android.graphics.ColorFilter f) {
+            }
+
+            @Override
+            public int getOpacity() {
+                return android.graphics.PixelFormat.TRANSLUCENT;
+            }
+        };
+    }
+
     static void clip(View v, float r) {
         v.setOutlineProvider(new ViewOutlineProvider() {
             @Override
@@ -432,7 +494,7 @@ final class Maps {
             bigHolder = new FrameLayout(a);
             Maps.clip(bigHolder, 16);
             // a thin card-coloured rim, like the dark cards beside it, so the bright map doesn't look taller than them
-            bigHolder.setForeground(rim(16, 2.5f));
+            bigHolder.setBackground(Themes.card(Ui.CARD, 16)); // the stage around the round map
             view.removeView(mapLayer);
             bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             mapLayer.setVisibility(View.VISIBLE);
@@ -478,7 +540,7 @@ final class Maps {
     private void trafficLook() {
         if (smallTraffic == null) return;
         boolean on = Prefs.flag("map_traffic", true);
-        smallTraffic.setBackground(on ? Ui.oval(Ui.ACCENT) : Ui.outline(0xD10B0E13, 0x2EFFFFFF, 1, 20));
+        smallTraffic.setBackground(on ? Ui.oval(Ui.ACCENT) : btn(20));
         smallTraffic.setVisibility(bigHolder == null ? View.VISIBLE : View.GONE);
     }
 
@@ -499,9 +561,14 @@ final class Maps {
 
     private static final int BTN_BG = 0xEB141922, BTN_EDGE = 0x33FFFFFF;
 
+    /** A map button's background: glass in the Glass theme (like the stage around the map), else dark. */
+    private static android.graphics.drawable.Drawable btn(float r) {
+        return Themes.on() ? Themes.card(Ui.CARD, r) : Ui.outline(BTN_BG, BTN_EDGE, 1, r);
+    }
+
     private View round(Context a, int icon, boolean tint, Runnable r) {
         FrameLayout f = new FrameLayout(a);
-        f.setBackground(Ui.outline(BTN_BG, BTN_EDGE, 1, 24));
+        f.setBackground(btn(24));
         f.setElevation(Ui.uf(4));
         ImageView iv = tint ? Ui.icon(a, icon, Ui.TEXT) : new ImageView(a);
         if (!tint) iv.setImageResource(icon);
@@ -515,7 +582,7 @@ final class Maps {
         FrameLayout o = new FrameLayout(a);
         // street you're on
         street = Ui.line(a, "", 13, Ui.TEXT, true);
-        street.setBackground(Ui.outline(BTN_BG, BTN_EDGE, 1, 12));
+        street.setBackground(btn(12));
         Ui.pad(street, 12, 6, 12, 6);
         street.setElevation(Ui.uf(4));
         FrameLayout.LayoutParams rl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.TOP | Gravity.START);
@@ -558,7 +625,7 @@ final class Maps {
         o.addView(col, cl);
         // zoom
         LinearLayout zoom = Ui.col(a);
-        zoom.setBackground(Ui.outline(BTN_BG, BTN_EDGE, 1, 24));
+        zoom.setBackground(btn(24));
         zoom.setElevation(Ui.uf(4));
         View zin = Ui.icon(a, R.drawable.ic_plus, Ui.TEXT), zout = Ui.icon(a, R.drawable.ic_minus, Ui.TEXT);
         Ui.pad(zin, 11, 11, 11, 11);
@@ -592,7 +659,7 @@ final class Maps {
         limit.setBackground(sign);
         bl.addView(limit, Ui.lpu(40, 40));
         spd = Ui.line(a, "", 13, Ui.TEXT, true);
-        spd.setBackground(Ui.outline(BTN_BG, BTN_EDGE, 1, 12));
+        spd.setBackground(btn(12));
         Ui.pad(spd, 12, 6, 12, 6);
         spd.setElevation(Ui.uf(4));
         LinearLayout.LayoutParams pl = Ui.lp(Ui.WRAP, Ui.WRAP);
@@ -658,7 +725,7 @@ final class Maps {
         boolean hu = headingUp() && following && !Float.isNaN(Gps.bearing);
         compass.animate().rotation(hu ? -Gps.bearing : 0).setDuration(Ui.ms(600)).start();
         View tb = bigHolder.findViewWithTag("traffic");
-        if (tb != null) tb.setBackground(Prefs.flag("map_traffic", true) ? Ui.oval(Ui.ACCENT) : Ui.outline(0xD10B0E13, 0x2EFFFFFF, 1, 19));
+        if (tb != null) tb.setBackground(Prefs.flag("map_traffic", true) ? Ui.oval(Ui.ACCENT) : btn(19));
     }
 
     private void updateNav() {
