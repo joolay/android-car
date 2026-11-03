@@ -186,7 +186,7 @@ public class MainActivity extends Activity {
         // a video's picture-in-picture window keeps off the map, Now playing, ticker, dock and Rail Bar,
         // so it settles over the tiles (Android 13+)
         if (android.os.Build.VERSION.SDK_INT >= 33) {
-            for (View k : new View[]{left, tickerRow, dockRow, rail.view}) k.setPreferKeepClear(true);
+            for (View k : new View[]{leftCol, tickerRow, dockRow, rail.view}) k.setPreferKeepClear(true);
         }
 
         overlay = new FrameLayout(this);
