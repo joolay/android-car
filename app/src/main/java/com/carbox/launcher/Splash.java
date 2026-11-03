@@ -19,6 +19,36 @@ final class Splash {
     private Splash() {
     }
 
+    // Themed splash colours. The splash is an overlay above the Inverted colour layer, so it never flips
+    // on its own — Inverted is handled here by hand (light background, dark text).
+    private static boolean inv() {
+        return Themes.inverted();
+    }
+
+    private static int bg() {
+        return inv() ? 0xFFF4F6F9 : 0xFF05080C;
+    }
+
+    private static int cText() {
+        return inv() ? 0xFF0B0E13 : Ui.TEXT;
+    }
+
+    private static int cText2() {
+        return inv() ? 0xFF2A2F38 : Ui.TEXT2;
+    }
+
+    private static int cSub() {
+        return inv() ? 0xB3000000 : Ui.SUB;
+    }
+
+    private static int cMuted() {
+        return inv() ? 0x73000000 : Ui.MUTED;
+    }
+
+    private static int accent() {
+        return inv() ? 0xFF0A7A57 : Ui.TEAL;
+    }
+
     private static FrameLayout shown;
     private static Ui.Ring ring;
     private static long endsAt, startedAt;
@@ -150,7 +180,7 @@ final class Splash {
             }
             if (ring != null && endsAt != 0) {
                 long left = endsAt - now;
-                ring.set(1f - left / (float) (endsAt - startedAt), String.valueOf((left + 999) / 1000), Ui.TEAL);
+                ring.set(1f - left / (float) (endsAt - startedAt), String.valueOf((left + 999) / 1000), accent());
             }
             Ui.ui.postDelayed(this, 100);
         }
@@ -180,7 +210,7 @@ final class Splash {
     private static Ui.Ring newRing(Context c) {
         Ui.Ring r = new Ui.Ring(c);
         int secs = Prefs.num(Prefs.SPLASH_SECS, 10);
-        r.set(0, secs > 0 ? String.valueOf(secs) : null, Ui.TEAL);
+        r.set(0, secs > 0 ? String.valueOf(secs) : null, accent());
         if (secs <= 0) r.setVisibility(View.GONE);
         ring = r;
         return r;
@@ -214,7 +244,7 @@ final class Splash {
 
     private static LinearLayout topRow(Context c, String label) {
         LinearLayout top = Ui.row(c);
-        TextView l = Ui.line(c, label, 13, Ui.TEAL, true);
+        TextView l = Ui.line(c, label, 13, accent(), true);
         l.setLetterSpacing(0.08f);
         top.addView(l, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
         top.addView(newRing(c), Ui.lpu(34, 34));
@@ -223,20 +253,20 @@ final class Splash {
 
     private static View stacked(Context c, String label, String orig, String tl, String main, String sub, boolean rtl, boolean full) {
         LinearLayout l = Ui.col(c);
-        if (full) l.setBackgroundColor(0xFF05080C);
+        if (full) l.setBackgroundColor(bg());
         Ui.pad(l, 44, 34, 44, 34);
         l.addView(topRow(c, label));
         LinearLayout mid = Ui.col(c);
         mid.setGravity(Gravity.CENTER);
         if (orig != null) {
-            TextView o = Ui.text(c, orig, orig.length() < 40 ? 56 : 46, Ui.TEXT, false);
+            TextView o = Ui.text(c, orig, orig.length() < 40 ? 56 : 46, cText(), false);
             o.setGravity(Gravity.CENTER);
             o.setTextDirection(rtl ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
             o.setLineSpacing(Ui.uf(8), 1);
             mid.addView(o, Ui.lp(Ui.MATCH, Ui.WRAP));
         }
         if (tl != null) {
-            TextView t = Ui.text(c, tl, 17, Ui.SUB, false);
+            TextView t = Ui.text(c, tl, 17, cSub(), false);
             t.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.ITALIC));
             t.setGravity(Gravity.CENTER);
             LinearLayout.LayoutParams tl2 = Ui.lp(Ui.MATCH, Ui.WRAP);
@@ -244,7 +274,7 @@ final class Splash {
             mid.addView(t, tl2);
         }
         if (main != null) {
-            TextView m = Ui.text(c, main, orig == null ? 32 : 25, Ui.TEXT2, false);
+            TextView m = Ui.text(c, main, orig == null ? 32 : 25, cText2(), false);
             m.setGravity(Gravity.CENTER);
             m.setLineSpacing(Ui.uf(5), 1);
             LinearLayout.LayoutParams ml = Ui.lp(Ui.MATCH, Ui.WRAP);
@@ -253,7 +283,7 @@ final class Splash {
         }
         l.addView(mid, Ui.weight(1, false));
         if (sub != null && !sub.isEmpty()) {
-            TextView s = Ui.text(c, sub, 13, Ui.MUTED, false);
+            TextView s = Ui.text(c, sub, 13, cMuted(), false);
             s.setGravity(Gravity.CENTER);
             l.addView(s, Ui.lp(Ui.MATCH, Ui.WRAP));
         }
@@ -262,12 +292,12 @@ final class Splash {
 
     private static View split(Context c, String label, String orig, String tl, String main, String sub) {
         LinearLayout l = Ui.row(c);
-        l.setBackgroundColor(0xFF05080C);
+        l.setBackgroundColor(bg());
         LinearLayout left = Ui.col(c);
         left.setGravity(Gravity.CENTER);
-        left.setBackgroundColor(0xFF0F3D26);
+        left.setBackgroundColor(inv() ? 0xFFD7EEE1 : 0xFF0F3D26);
         Ui.pad(left, 34, 30, 34, 30);
-        TextView o = Ui.text(c, orig, orig.length() < 40 ? 50 : 40, Ui.TEXT, false);
+        TextView o = Ui.text(c, orig, orig.length() < 40 ? 50 : 40, inv() ? 0xFF0B2E1E : Ui.TEXT, false);
         o.setGravity(Gravity.CENTER);
         o.setTextDirection(View.TEXT_DIRECTION_RTL);
         o.setLineSpacing(Ui.uf(8), 1);
@@ -279,28 +309,28 @@ final class Splash {
         LinearLayout mid = Ui.col(c);
         mid.setGravity(Gravity.CENTER_VERTICAL);
         if (main != null) {
-            TextView m = Ui.text(c, main, 24, Ui.TEXT, false);
+            TextView m = Ui.text(c, main, 24, cText(), false);
             m.setLineSpacing(Ui.uf(5), 1);
             mid.addView(m);
         }
         if (tl != null) {
-            TextView t = Ui.text(c, tl, 15, Ui.SUB, false);
+            TextView t = Ui.text(c, tl, 15, cSub(), false);
             t.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.ITALIC));
             LinearLayout.LayoutParams tll = Ui.lp(Ui.MATCH, Ui.WRAP);
             tll.topMargin = Ui.u(16);
             mid.addView(t, tll);
         }
         right.addView(mid, Ui.weight(1, false));
-        if (sub != null) right.addView(Ui.text(c, sub, 13, Ui.MUTED, false));
+        if (sub != null) right.addView(Ui.text(c, sub, 13, cMuted(), false));
         l.addView(right, Ui.weight(1, true));
         return l;
     }
 
     private static View card(Context c, String label, String orig, String tl, String main, String sub, boolean rtl) {
         FrameLayout f = new FrameLayout(c);
-        f.setBackgroundColor(0xB3000000);
+        f.setBackgroundColor(inv() ? 0x44000000 : 0xB3000000);
         View inner = stacked(c, label, orig, tl, main, sub, rtl, false);
-        inner.setBackground(Ui.round(Ui.CARD, 24));
+        inner.setBackground(inv() ? Ui.round(0xFFFFFFFF, 24) : Themes.card(Ui.CARD, 24));
         Ui.pad(inner, 34, 26, 34, 26);
         // shrink fonts slightly for the card
         f.addView(inner, Panels.centered(640, 380));
