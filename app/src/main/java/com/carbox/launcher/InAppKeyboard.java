@@ -97,8 +97,9 @@ final class InAppKeyboard {
 
         LinearLayout kb = Ui.col(c);
         kb.setClickable(true);
-        kb.setBackgroundColor(Ui.CARD);
+        kb.setBackground(kbBackground(true));
         Ui.pad(kb, 8, 10, 8, 6);
+        Predictor.warm(c);
 
         // the field being edited, with Paste / Clear
         LinearLayout top = Ui.row(c);
@@ -139,6 +140,9 @@ final class InAppKeyboard {
             commit();
         }));
         kb.addView(top, Ui.lp(Ui.MATCH, Ui.WRAP));
+        suggestRow = Ui.row(c);
+        if (!secret) kb.addView(suggestRow, Ui.lpu(Ui.MATCH, 44)); // no guessing passwords
+        suggest();
 
         String[][] rows = symbols
                 ? new String[][]{"1234567890".split(""), {"@", "#", "&", "_", "-", "/", ":", ";", "(", ")"}, {"=", ",", "+", "%", "'", "\"", "!", "?"}}
@@ -187,7 +191,10 @@ final class InAppKeyboard {
     }
 
     private static void type(String s) {
+        if (!secret && !s.isEmpty() && !Character.isLetter(s.charAt(0)) && s.charAt(0) != '\'')
+            Predictor.learn(Predictor.current(text), Predictor.previous(text)); // a word was finished
         text.append(s);
+        suggest();
         if (shift) {
             shift = false;
             commit();
@@ -201,6 +208,7 @@ final class InAppKeyboard {
         if (text.length() > 0) {
             text.setLength(text.length() - 1);
             commit();
+            suggest();
         }
     }
 
@@ -229,6 +237,57 @@ final class InAppKeyboard {
         });
     }
 
+    /** Key colour for the theme: solid in Modern, see-through glass in Glass. */
+    static int keyColor(boolean pressed) {
+        if (Themes.on()) return pressed ? 0x66FFFFFF : 0x33FFFFFF;
+        return pressed ? 0xFF55627A : 0xFF3A4456;
+    }
+
+    /** The keyboard's own background for the theme (the launcher's glass card inside it, frosted over other apps). */
+    static android.graphics.drawable.Drawable kbBackground(boolean inLauncher) {
+        if (!Themes.on()) return new android.graphics.drawable.ColorDrawable(Ui.CARD);
+        if (inLauncher) return Themes.card(Ui.CARD, 0);
+        return new android.graphics.drawable.ColorDrawable(0xC0141A24);
+    }
+
+    // ---- predictive text: up to 3 suggestions above the keys
+    private static LinearLayout suggestRow;
+
+    /** Fill a row with suggestion chips for the text so far; tapping one swaps it in for the word being typed. */
+    static void fillSuggestions(LinearLayout row, CharSequence before, U2 pick) {
+        row.removeAllViews();
+        java.util.List<String> l = Predictor.suggest(before);
+        for (int i = 0; i < 3; i++) {
+            final String w = i < l.size() ? l.get(i) : null;
+            TextView t = Ui.line(row.getContext(), w == null ? "" : w, 17, Ui.TEXT, i == 0 && w != null);
+            t.setGravity(Gravity.CENTER);
+            if (w != null) {
+                t.setBackground(Ui.round(Themes.on() ? 0x1FFFFFFF : Ui.CARD2, 10));
+                t.setOnClickListener(v -> pick.run(w));
+                Ui.press(t);
+            }
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.MATCH, 1);
+            lp.setMargins(Ui.u(4), Ui.u(2), Ui.u(4), Ui.u(2));
+            row.addView(t, lp);
+        }
+    }
+
+    interface U2 {
+        void run(String word);
+    }
+
+    private static void suggest() {
+        if (suggestRow == null || secret) return;
+        fillSuggestions(suggestRow, text, w -> {
+            String cur = Predictor.current(text), prev = Predictor.previous(text);
+            text.setLength(text.length() - cur.length());
+            text.append(w).append(' ');
+            Predictor.learn(w, prev);
+            commit();
+            suggest();
+        });
+    }
+
     static final float KEY_H = 66; // 58 du key + 8 du gap, and the gap is touchable too
 
     static LinearLayout.LayoutParams weightLp(float w) {
@@ -250,13 +309,13 @@ final class InAppKeyboard {
     static View key(Context c, String s, Runnable r) {
         TextView face = Ui.text(c, s, s.length() > 1 ? 17 : 25, Ui.TEXT, false);
         face.setGravity(Gravity.CENTER);
-        FrameLayout f = cell(c, face, 0xFF3A4456);
+        FrameLayout f = cell(c, face, keyColor(false));
         f.setOnTouchListener((v, e) -> {
             if (e.getAction() == MotionEvent.ACTION_DOWN) {
-                face.setBackground(Ui.round(0xFF55627A, 11));
+                face.setBackground(Ui.round(keyColor(true), 11));
                 if (s.length() == 1) bubble(v, s);
             } else if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL) {
-                face.setBackground(Ui.round(0xFF3A4456, 11));
+                face.setBackground(Ui.round(keyColor(false), 11));
                 hideBubble();
             }
             return false;
@@ -305,7 +364,7 @@ final class InAppKeyboard {
             t.setGravity(Gravity.CENTER);
             face = t;
         }
-        FrameLayout f = cell(c, face, on ? Ui.ACCENT : Ui.CARD3);
+        FrameLayout f = cell(c, face, on ? Ui.ACCENT : Themes.on() ? 0x24FFFFFF : Ui.CARD3);
         f.setOnClickListener(v -> r.run());
         return f;
     }

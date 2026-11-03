@@ -48,6 +48,13 @@ public class CarIME extends InputMethodService {
     @Override
     public View onCreateInputView() {
         Ui.init((Context) this);
+        Predictor.warm(this);
+        // glass: blur what's behind the keyboard where the box can (Android 12+, if the box supports it)
+        if (Themes.on() && android.os.Build.VERSION.SDK_INT >= 31) try {
+            android.view.Window w = getWindow().getWindow();
+            if (w != null) w.setBackgroundBlurRadius(Ui.u(40));
+        } catch (Throwable ignored) {
+        }
         root = new FrameLayout(this);
         root.setClipChildren(false);
         render();
@@ -97,7 +104,7 @@ public class CarIME extends InputMethodService {
         root.removeAllViews();
         InAppKeyboard.bubbleHost = root;
         LinearLayout kb = Ui.col(c);
-        kb.setBackgroundColor(Ui.CARD);
+        kb.setBackground(InAppKeyboard.kbBackground(false));
         Ui.pad(kb, 8, 8, 8, 6);
 
         // strip: voice, paste, hide
@@ -117,10 +124,9 @@ public class CarIME extends InputMethodService {
         View paste = Ui.button(c, "Paste", false, this::paste);
         fit(paste);
         strip.addView(paste, Ui.lp(Ui.WRAP, Ui.u(38)));
-        TextView name = Ui.line(c, "CAR KEYBOARD", 11, Ui.MUTED, false);
-        name.setGravity(Gravity.CENTER);
-        name.setLetterSpacing(0.05f);
-        strip.addView(name, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+        sugg = Ui.row(c); // predictive text: up to 3 words
+        strip.addView(sugg, new LinearLayout.LayoutParams(0, Ui.u(38), 1));
+        suggest();
         TextView hide = Ui.textButton(c, "⌄  Hide", false, () -> requestHideSelf(0));
         fit(hide);
         LinearLayout.LayoutParams hl = Ui.lp(Ui.WRAP, Ui.u(38));
@@ -171,9 +177,36 @@ public class CarIME extends InputMethodService {
 
     // ------------------------------------------------------------------ typing
 
+    private LinearLayout sugg;
+
+    private CharSequence before() {
+        InputConnection ic = getCurrentInputConnection();
+        return ic == null ? "" : ic.getTextBeforeCursor(80, 0);
+    }
+
+    /** Suggestions for the text before the cursor; a tap swaps the word being typed for it. */
+    private void suggest() {
+        if (sugg == null) return;
+        InAppKeyboard.fillSuggestions(sugg, before(), w -> {
+            InputConnection ic = getCurrentInputConnection();
+            if (ic == null) return;
+            CharSequence b = before();
+            String cur = Predictor.current(b), prev = Predictor.previous(b);
+            if (!cur.isEmpty()) ic.deleteSurroundingText(cur.length(), 0);
+            ic.commitText(w + " ", 1);
+            Predictor.learn(w, prev);
+            suggest();
+        });
+    }
+
     private void type(String s) {
         InputConnection ic = getCurrentInputConnection();
+        if (!s.isEmpty() && !Character.isLetter(s.charAt(0)) && s.charAt(0) != '\'') { // a word was finished
+            CharSequence b = before();
+            Predictor.learn(Predictor.current(b), Predictor.previous(b));
+        }
         if (ic != null) ic.commitText(s, 1);
+        suggest();
         if (shift) {
             shift = false;
             render();
@@ -186,6 +219,7 @@ public class CarIME extends InputMethodService {
         CharSequence sel = ic.getSelectedText(0);
         if (sel != null && sel.length() > 0) ic.commitText("", 1);
         else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
+        Ui.ui.post(this::suggest);
     }
 
     private void enter() {
@@ -298,10 +332,11 @@ public class CarIME extends InputMethodService {
     }
 
     /** The usual buttons are 44 tall with roomy padding; in the 38-high strip that crops the label. */
-    private static void fit(TextView b) {
-        b.setMinHeight(0);
+    private static void fit(View b) {
+        if (b instanceof TextView) ((TextView) b).setMinHeight(0);
         b.setMinimumHeight(0);
-        Ui.pad(b, 16, 0, 16, 0);
-        b.setBackground(Ui.round(Ui.CARD2, 10));
+        b.setMinimumWidth(Ui.u(44));
+        Ui.pad(b, 12, 0, 12, 0);
+        b.setBackground(Ui.round(Themes.on() ? 0x24FFFFFF : Ui.CARD2, 10));
     }
 }
