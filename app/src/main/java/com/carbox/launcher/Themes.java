@@ -225,8 +225,31 @@ final class Themes {
             MainActivity a = MainActivity.I;
             View root = a != null ? a.root : null;
             Bitmap b = on() && host != null && root != null ? blurred(root) : null;
-            if (b == null) { // solid, as before
+            if (b == null) { // Modern (and Simple): solid
                 c.drawRoundRect(box, r, r, fill);
+                // Modern only: a soft gloss, plus a slow light that travels across the bigger cards (a glisten)
+                if (!simple() && (color == Ui.CARD || color == Ui.CARD2 || color == Ui.CARD3)) {
+                    c.save();
+                    clip.reset();
+                    clip.addRoundRect(box, r, r, Path.Direction.CW);
+                    c.clipPath(clip);
+                    shine.setShader(new LinearGradient(0, box.top, 0, box.top + box.height() * 0.5f, 0x14FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
+                    c.drawRect(box, shine);
+                    boolean big = box.width() > Ui.uf(120) && box.height() > Ui.uf(70);
+                    if (big && Ui.ms(1) > 0 && host != null) {
+                        long cycle = 7000, t = android.os.SystemClock.uptimeMillis() % cycle;
+                        if (t < 1800) { // the sheen crosses in the first 1.8 s, then rests
+                            float span = box.width() * 2.4f;
+                            float x = box.left - box.width() * 0.7f + span * (t / 1800f);
+                            float w = box.width() * 0.16f;
+                            shine.setShader(new LinearGradient(x - w, box.top, x + w, box.bottom,
+                                    new int[]{0x00FFFFFF, 0x3CFFFFFF, 0x00FFFFFF}, new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
+                            c.drawRect(box, shine);
+                            host.postInvalidateDelayed(40);
+                        } else host.postInvalidateDelayed(cycle - t + 20);
+                    }
+                    c.restore();
+                }
                 return;
             }
             clip.reset();
