@@ -67,7 +67,7 @@ Ticker at the top of the middle column (hidden: map/tiles take its space, tiles 
   `carlauncher-crash-4d6dd33614e4914e`. `.github/workflows/crashes.yml` (hourly, or run it by hand)
   copies them into branch `crashes`, file `crashes.jsonl` (id, time, title, message).
 - To read them: `gh api -X POST repos/joolay/CarLauncher/actions/workflows/crashes.yml/dispatches -f ref=main` (gh workflow run fails here: no GraphQL), wait ~40 s, then
-  `git fetch origin crashes && git show origin/crashes:crashes.jsonl`.
+  `git fetch origin +crashes:refs/remotes/origin/crashes && git show origin/crashes:crashes.jsonl` (the `+` matters: the branch is rewritten, without it the fetch silently keeps an old copy).
 - Logs (`Trace`, Settings → System → Logs, on by default): the last 3 days are always kept on the box
   (events-<day>.log + the app's own logcat per start, pruned at each start). "Send the last 3 days" zips and PUTs
   them to the same topic as an attachment (kept ~3 h on ntfy; crashes.yml runs hourly and saves it to
