@@ -345,6 +345,13 @@ final class SettingsPanels {
         themes.addView(Ui.seg(c, "Simple", "simple".equals(tm), () -> theme("simple")));
         b.addView(Panels.row("Theme", themes));
         b.addView(Ui.text(c, "Glass: see-through cards, like iOS (best with a wallpaper). Simple: plain black with no animations, lightest on the box.", 12, Ui.SUB, false), top(4));
+        if ("simple".equals(tm)) { // Simple: a light, inverted (white) option
+            b.addView(Panels.switchRow(0, 0, "Inverted", "White background, black text, all colours flipped — easier to read in bright light",
+                    Prefs.flag("simple_inverted", false), on -> {
+                        Prefs.put("simple_inverted", on);
+                        if (MainActivity.I != null) MainActivity.I.applyInvert();
+                    }), top(8));
+        }
         if ("glass".equals(tm)) { // how frosted the glass is: live as you slide
             TextView fl = Ui.text(c, frostLabel(Themes.frost()), 13, Ui.SUB, false);
             b.addView(fl, top(14));

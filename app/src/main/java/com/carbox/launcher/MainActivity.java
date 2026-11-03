@@ -357,6 +357,23 @@ public class MainActivity extends Activity {
             if (skyFx != null) skyFx.update(Themes.Sky.now());
         } else root.setBackground(new ColorDrawable(0xFF000000));
         Themes.refresh(); // glass cards show the new wallpaper
+        applyInvert();
+    }
+
+    private static final android.graphics.Paint INVERT = new android.graphics.Paint();
+    static {
+        INVERT.setColorFilter(new android.graphics.ColorMatrixColorFilter(new float[]{
+                -1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0}));
+    }
+
+    /** Simple Inverted: invert the whole home (white background, black text, colours flipped); the map is
+     *  inverted a second time so it stays normal and readable. */
+    void applyInvert() {
+        if (root == null) return;
+        boolean inv = Themes.inverted();
+        root.setLayerType(inv ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE, inv ? INVERT : null);
+        if (map != null && map.view != null)
+            map.view.setLayerType(inv ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE, inv ? INVERT : null);
     }
 
     /** Draws a bitmap like ImageView's centerCrop. */

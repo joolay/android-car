@@ -65,6 +65,11 @@ final class Themes {
         return "simple".equals(mode());
     }
 
+    /** Simple, Inverted: a white background with everything else inverted too (a light, high-contrast look). */
+    static boolean inverted() {
+        return simple() && Prefs.flag("simple_inverted", false);
+    }
+
     static void setMode(String m) {
         Prefs.put(THEME, m);
         Prefs.put(KEY, "glass".equals(m)); // keep the old flag in step
