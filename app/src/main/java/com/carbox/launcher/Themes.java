@@ -28,6 +28,9 @@ final class Themes {
     }
 
     /** The Glass theme is on (the default; Modern is the other). Locked: Modern. */
+    /** The frosting we suggest: clear enough to see the wallpaper, solid enough to read. */
+    static final int FROST_RECOMMENDED = 30;
+
     /** How frosted the glass is, 0 (clear) to 100 (almost solid). 30 to start. */
     static int frost() {
         return Math.max(0, Math.min(100, Prefs.num("glass_frost", 30)));

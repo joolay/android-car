@@ -243,7 +243,7 @@ final class Wizard {
     }
 
     private static void frosting(Context c, LinearLayout body) {
-        TextView fl = Ui.text(c, "Frosting · " + Themes.frost() + "%", 13, Ui.SUB, false);
+        TextView fl = Ui.text(c, frostLabel(Themes.frost()), 13, Ui.SUB, false);
         body.addView(fl, SettingsPanels.top(16));
         SeekBar fs = new SeekBar(c);
         fs.setMax(100);
@@ -254,7 +254,7 @@ final class Wizard {
             @Override
             public void onProgressChanged(SeekBar s, int v, boolean user) {
                 if (!user) return;
-                fl.setText("Frosting · " + v + "%");
+                fl.setText(frostLabel(v));
                 Themes.setFrost(v);
             }
 
@@ -267,6 +267,10 @@ final class Wizard {
             }
         });
         body.addView(fs, SettingsPanels.top(4));
+    }
+
+    static String frostLabel(int v) {
+        return "Frosting \u00b7 " + v + "%" + (Math.abs(v - Themes.FROST_RECOMMENDED) <= 3 ? "  \u00b7 recommended" : "  (recommended " + Themes.FROST_RECOMMENDED + "%)");
     }
 
     private static void wall(String mode) {

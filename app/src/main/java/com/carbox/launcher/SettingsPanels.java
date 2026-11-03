@@ -344,7 +344,7 @@ final class SettingsPanels {
         b.addView(Panels.row("Theme", themes));
         b.addView(Ui.text(c, "Glass: the dock, Rail Bar, Now playing, left widgets and tiles see-through, like iOS (best with a wallpaper)", 12, Ui.SUB, false), top(4));
         if (glass) { // how frosted the glass is: live as you slide
-            TextView fl = Ui.text(c, "Frosting · " + Themes.frost() + "%", 13, Ui.SUB, false);
+            TextView fl = Ui.text(c, frostLabel(Themes.frost()), 13, Ui.SUB, false);
             b.addView(fl, top(14));
             SeekBar fs = new SeekBar(c);
             fs.setMax(100);
@@ -355,7 +355,7 @@ final class SettingsPanels {
                 @Override
                 public void onProgressChanged(SeekBar sb, int v, boolean user) {
                     if (!user) return;
-                    fl.setText("Frosting · " + v + "%");
+                    fl.setText(frostLabel(v));
                     Themes.setFrost(v);
                 }
 
@@ -1738,6 +1738,10 @@ final class SettingsPanels {
             if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_MOVE) cb.on(Color.HSVToColor(hsv));
             return true;
         }
+    }
+
+    static String frostLabel(int v) {
+        return "Frosting \u00b7 " + v + "%" + (Math.abs(v - Themes.FROST_RECOMMENDED) <= 3 ? "  \u00b7 recommended" : "  (recommended " + Themes.FROST_RECOMMENDED + "%)");
     }
 
     private static void eqStyle(String st) {
