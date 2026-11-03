@@ -330,7 +330,7 @@ final class PhoneScreen {
 
     private static void permission(Context c, LinearLayout results, String s, String perm) {
         note(c, results, s);
-        TextView b = Ui.button(c, "Allow", true, () -> {
+        TextView b = Ui.textButton(c, "Allow", true, () -> {
             if (MainActivity.I != null) MainActivity.I.requestPermissions(new String[]{perm}, 61);
         });
         LinearLayout.LayoutParams lp = Ui.lp(Ui.WRAP, Ui.WRAP);

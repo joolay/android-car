@@ -199,7 +199,7 @@ final class AppPanels {
     }
 
     private static View action(Context c, String label, boolean enabled, Runnable r) {
-        TextView t = Ui.button(c, label, enabled, enabled ? r : null);
+        TextView t = Ui.textButton(c, label, enabled, enabled ? r : null);
         t.setAlpha(enabled ? 1f : 0.45f);
         LinearLayout.LayoutParams lp = Ui.lp(Ui.WRAP, Ui.WRAP);
         lp.setMargins(Ui.u(5), 0, Ui.u(5), 0);
@@ -280,7 +280,7 @@ final class AppPanels {
                 final int idx = i;
                 JSONObject s = specs.optJSONObject(i);
                 String label = s == null ? "Empty" : "f".equals(s.optString("t")) ? s.optString("name") + " folder" : Widgets.name(s.optString("id"));
-                TextView t = Ui.button(c, (i + 1) + ". " + label, false, () -> {
+                TextView t = Ui.textButton(c, (i + 1) + ". " + label, false, () -> {
                     JSONArray apps = new JSONArray();
                     for (String k : keys) apps.put(k);
                     TileDrawer.setSpec(idx, TileDrawer.folder(name[0], apps));

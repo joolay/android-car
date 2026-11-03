@@ -209,7 +209,36 @@ final class Ui {
         return t;
     }
 
-    static TextView button(Context c, String label, boolean primary, Runnable click) {
+    /** Buttons whose meaning an icon says on its own: shown as the icon only (the label stays for screen readers). */
+    private static final Object[][] ICON_ONLY = {{"Save", R.drawable.ic_check}, {"Done", R.drawable.ic_check}, {"Done editing", R.drawable.ic_check},
+            {"Cancel", R.drawable.ic_x}, {"Close", R.drawable.ic_x}, {"Clear", R.drawable.ic_x}, {"Add folder", R.drawable.ic_plus},
+            {"Reload headlines now", R.drawable.ic_refresh}, {"Check now", R.drawable.ic_refresh}, {"Start again", R.drawable.ic_refresh},
+            {"Filter", R.drawable.ic_search}, {"Paste", R.drawable.ic_enter}};
+
+    /** A round icon button (finger-sized) with a hidden name for screen readers and voice control. */
+    static View iconButton(Context c, int icon, String name, Runnable click) {
+        return iconButton(c, icon, name, false, click);
+    }
+
+    static View iconButton(Context c, int icon, String name, boolean primary, Runnable click) {
+        android.widget.FrameLayout f = new android.widget.FrameLayout(c);
+        f.setBackground(primary ? oval(ACCENT) : Themes.inner(CARD2, 22));
+        f.addView(icon(c, icon, TEXT), flpu(22, 22, Gravity.CENTER));
+        f.setContentDescription(name);
+        f.setMinimumWidth(u(44));
+        f.setMinimumHeight(u(44));
+        if (click != null) f.setOnClickListener(v -> click.run());
+        press(f);
+        return f;
+    }
+
+    static View button(Context c, String label, boolean primary, Runnable click) {
+        for (Object[] o : ICON_ONLY) if (o[0].equals(label)) return iconButton(c, (int) o[1], label, primary, click);
+        return textButton(c, label, primary, click);
+    }
+
+    /** A button that keeps its words (where an icon couldn't say it clearly). */
+    static TextView textButton(Context c, String label, boolean primary, Runnable click) {
         TextView t = text(c, label, 14, TEXT, primary);
         t.setGravity(Gravity.CENTER);
         t.setSingleLine(true);

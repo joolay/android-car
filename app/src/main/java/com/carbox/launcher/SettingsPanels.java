@@ -163,7 +163,7 @@ final class SettingsPanels {
         final int BLUE = 0xFF1F4E9A, GREEN = 0xFF1F7A46, AMBER = 0xFF8A5A10, PURPLE = 0xFF5A3A9A, GREY = Ui.CARD3;
         Object[][][] groups = {
                 {{"Home screen"},
-                        {R.drawable.ic_apps, PURPLE, "Left Widgets", "Top: " + LeftStages.list().size() + " · Bottom: " + Widgets.name(LeftStages.bottom()), (Runnable) () -> LeftStages.chooser(false)},
+                        {R.drawable.ic_apps, PURPLE, "Left Stages", "Now Playing " + (LeftStages.nowPlayingTop() ? "top" : "bottom") + " · " + LeftStages.list().size() + " widgets", (Runnable) () -> LeftStages.chooser(false)},
                         {R.drawable.ic_photo, PURPLE, "Wallpaper", "image".equals(w) ? "Image" : "color".equals(w) ? "Colour" : "Black", (Runnable) SettingsPanels::wallpaper},
                         {R.drawable.ic_drag, PURPLE, "Rail Bar", railOn + " of " + Rail.IDS.length + " shown", (Runnable) SettingsPanels::railOrder},
                         {R.drawable.ic_apps, PURPLE, "Dock", Dock.icons() + " icons" + (Dock.dialler() ? " · dialler" : ""), (Runnable) SettingsPanels::dock},
@@ -513,7 +513,7 @@ final class SettingsPanels {
             app.addView(Ui.text(c, Music.label() + " ›", 14, Ui.ACCENT_SOFT, true));
             app.setOnClickListener(v -> musicAppPicker());
             b.addView(app);
-            b.addView(Panels.item("Bottom Left Widget", Widgets.name(LeftStages.bottom()) + " · change it", () -> LeftStages.chooser(true)));
+            b.addView(Panels.item("Now Playing's stage", LeftStages.nowPlayingTop() ? "Top-Left · change it" : "Bottom-Left · change it", () -> LeftStages.chooser(false)));
             String st = EqView.style(); // the animation on Now playing (and where the art would be)
             b.addView(Panels.row("Animation", Ui.seg(c, "Equaliser", "bars".equals(st), () -> eqStyle("bars")),
                     Ui.seg(c, "Wave", "wave".equals(st), () -> eqStyle("wave")), Ui.seg(c, "Pulse", "pulse".equals(st), () -> eqStyle("pulse"))), top(8));
@@ -893,10 +893,8 @@ final class SettingsPanels {
             boolean hu = Maps.headingUp();
             b.addView(Panels.row("Map faces", Ui.seg(c, "Direction of travel", hu, () -> { Prefs.put("map_heading_up", true); if (MainActivity.I != null) MainActivity.I.map.applyHeading(); Panels.refresh(); }),
                     Ui.seg(c, "North up", !hu, () -> { Prefs.put("map_heading_up", false); if (MainActivity.I != null) MainActivity.I.map.applyHeading(); Panels.refresh(); })), top(8));
-            b.addView(Panels.switchRow(0, 0, "Map is the home view", "The big map with Go to beside it; the All apps button slides your tiles in",
-                    Prefs.flag("map_start_big", true), on -> Prefs.put("map_start_big", on)), top(8));
-            b.addView(Panels.item("Top Left Widget", LeftStages.list().size() + " widgets · swipe it to go through them", LeftStages::chooser), top(8));
-            b.addView(Ui.text(c, "Tap the map to make it fill the tiles; ✕ on the big map makes it small again. The Top Left Widget shows above the Bottom Left one: swipe it for the next widget, hold it to choose them.", 12, Ui.SUB, false), top(6));
+            b.addView(Panels.item("Alternate stage", LeftStages.list().size() + " widgets · swipe it to go through them", LeftStages::chooser), top(8));
+            b.addView(Ui.text(c, "Maps lives on the Centre Stage. When something else opens there, or the Tile Drawer slides in, it shrinks into the alternate stage, never Now Playing's.", 12, Ui.SUB, false), top(6));
         }
     }
 

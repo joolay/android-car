@@ -426,7 +426,7 @@ final class InAppKeyboard {
     }
 
     private static TextView action(Context c, String s, Runnable r) {
-        TextView t = Ui.button(c, s, false, r);
+        TextView t = Ui.textButton(c, s, false, r);
         t.setMinHeight(Ui.u(48));
         t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.uf(15));
         LinearLayout.LayoutParams lp = Ui.lp(Ui.WRAP, Ui.u(48));

@@ -129,17 +129,15 @@ public class MainActivity extends Activity {
         Ui.pad(main, 8);
         root.addView(main, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
 
-        // left column: map over now playing
-        LinearLayout left = Ui.col(this);
+        // left column: the two left stages. Now Playing (a fixture) on one, the alternate stage on the other
+        // (its widgets, and Maps when it minimises out of the Centre Stage)
+        leftCol = Ui.col(this);
         map = new Maps(this);
-        left.addView(map.view, Ui.weight(1, false));
         nowPlaying = new NowPlaying(this);
-        LinearLayout.LayoutParams np = Ui.weight(1, false);
-        np.topMargin = Ui.u(8);
-        bottomSlot = new FrameLayout(this); // the Bottom Left Widget: Music (Now playing) or another widget
-        left.addView(bottomSlot, np);
+        bottomSlot = new FrameLayout(this); // Now Playing's stage
         bottomLeft();
-        main.addView(left, Ui.lpu(200, Ui.MATCH));
+        placeStages();
+        main.addView(leftCol, Ui.lpu(200, Ui.MATCH));
 
         // middle: tiles, ticker, dock
         middle = Ui.col(this);
@@ -218,28 +216,29 @@ public class MainActivity extends Activity {
         }
     };
 
-    /** Show the chosen Bottom Left Widget (Music is the one Now playing; others in their Left Widget design). */
+    private LinearLayout leftCol;
+
+    /** Now Playing's stage always holds the one Now Playing. */
     void bottomLeft() {
         if (bottomSlot == null) return;
         Ui.ui.removeCallbacks(bottomTick);
         bottomW = null;
-        bottomSlot.removeAllViews();
-        String id = LeftStages.bottom();
-        if (LeftStages.MUSIC.equals(id)) {
-            View np = nowPlaying.view;
-            if (np.getParent() != null) ((android.view.ViewGroup) np.getParent()).removeView(np);
-            bottomSlot.addView(np, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-            return;
-        }
-        SwipeBox box = new SwipeBox(this, () -> { });
-        box.onHold(() -> LeftStages.chooser(true)); // hold: change it
-        try {
-            bottomW = LeftStages.make(this, id);
-            if (bottomW != null && bottomW.v != null) box.addView(bottomW.v, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-        } catch (Exception ignored) {
-        }
-        bottomSlot.addView(box, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-        Ui.ui.post(bottomTick);
+        View np = nowPlaying.view;
+        if (np.getParent() == bottomSlot) return;
+        if (np.getParent() != null) ((android.view.ViewGroup) np.getParent()).removeView(np);
+        bottomSlot.addView(np, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+    }
+
+    /** Order the left stages: Now Playing on top or below, the alternate stage (with Maps when minimised) on the other. */
+    void placeStages() {
+        if (leftCol == null) return;
+        leftCol.removeAllViews();
+        boolean npTop = LeftStages.nowPlayingTop();
+        View first = npTop ? bottomSlot : map.view, second = npTop ? map.view : bottomSlot;
+        leftCol.addView(first, Ui.weight(1, false));
+        LinearLayout.LayoutParams lp = Ui.weight(1, false);
+        lp.topMargin = Ui.u(8);
+        leftCol.addView(second, lp);
     }
 
     /**
@@ -794,8 +793,9 @@ public class MainActivity extends Activity {
     // ---- tile drawer (when the map is the home view)
     boolean drawerOpen;
 
+    /** Maps always lives on the Centre Stage (a fixture); it only minimises into the alternate stage. */
     static boolean mapHome() {
-        return Prefs.flag("map_start_big", true);
+        return true;
     }
 
     /** All apps button: the tiles rise out of the news ticker, the map lifts away. */

@@ -114,14 +114,14 @@ public class CarIME extends InputMethodService {
         LinearLayout.LayoutParams vl = Ui.lp(Ui.WRAP, Ui.u(38));
         vl.setMargins(Ui.u(4), 0, Ui.u(8), 0);
         strip.addView(voice, vl);
-        TextView paste = Ui.button(c, "Paste", false, this::paste);
+        View paste = Ui.button(c, "Paste", false, this::paste);
         fit(paste);
         strip.addView(paste, Ui.lp(Ui.WRAP, Ui.u(38)));
         TextView name = Ui.line(c, "CAR KEYBOARD", 11, Ui.MUTED, false);
         name.setGravity(Gravity.CENTER);
         name.setLetterSpacing(0.05f);
         strip.addView(name, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
-        TextView hide = Ui.button(c, "⌄  Hide", false, () -> requestHideSelf(0));
+        TextView hide = Ui.textButton(c, "⌄  Hide", false, () -> requestHideSelf(0));
         fit(hide);
         LinearLayout.LayoutParams hl = Ui.lp(Ui.WRAP, Ui.u(38));
         hl.rightMargin = Ui.u(4);

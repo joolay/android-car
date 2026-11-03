@@ -368,12 +368,8 @@ final class Maps {
     private void showMini(boolean on) {
         if (on && mini == null) {
             mini = new SwipeBox(c, this::swapMini);
-            mini.onHold(LeftStages::chooser); // hold: choose the Top Left Widget's widgets
-            if (LeftStages.MUSIC.equals(miniId()) && MainActivity.I != null && MainActivity.I.nowPlaying != null) {
-                View np = MainActivity.I.nowPlaying.view; // Music: the one Now playing moves up here
-                if (np.getParent() != null) ((android.view.ViewGroup) np.getParent()).removeView(np);
-                mini.addView(np, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-            } else try {
+            mini.onHold(LeftStages::chooser); // hold: choose the alternate stage's widgets
+            try {
                 miniW = LeftStages.make(c, miniId()); // same settings as in the tiles, its own design
                 if (miniW != null && miniW.v != null) mini.addView(miniW.v, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             } catch (Exception ignored) {
