@@ -24,6 +24,17 @@ Package `com.carbox.launcher`, plain Java Android views (no XML layouts, no Andr
 - Local: `./gradlew assembleDebug` (needs JDK 17 + Android SDK 34). Install: `adb install -r app/build/outputs/apk/...`
 - `voices.yml` makes neural voice mp3s into `assets/voice`; `screens.yml` renders Robolectric screenshots to branch `screens`.
 
+## Names (the rebuild, Nov 2026)
+Home: **Top-Left Stage**, **Bottom-Left Stage**, **Centre Stage**, **Dock**, **Rail**, **News Ticker**, **Tile Drawer** (4×2 grid).
+Fixtures (part of the launcher, never add-ons): **Now Playing** (always on one left stage, `LeftStages.nowPlayingTop()`; Expanded =
+lyrics and its settings) and **Maps** (lives on the Centre Stage, minimises only into the *alternate stage*, i.e. the other left stage).
+Widgets have profiles **Main** (left stage), **Expanded** (Centre Stage), **Tile** (Tile Drawer; sizes `Widgets.SPANS`, only 1×1 made).
+Add-ons (`Addons.CATALOGUE`): widgets, themes (Modern, Glass = default), map providers, keyboard; all unlocked until billing.
+Classes kept for Android (don't rename): MainActivity, BackButtonService, MediaListener, CarIME, CarInCallService.
+Renamed: Tiles→TileDrawer, Ticker→NewsTicker, TopLeft→LeftStages, MapPanel→Maps, Sheets→Panels, Glass→Themes, Store→Prefs, U→Ui,
+Loc→Gps, Keyboard→InAppKeyboard, LyricsCard→LyricsView. Predictive text: `Predictor` + assets/dict_en.txt (SCOWL).
+CI: any branch builds; only `main` publishes a release.
+
 ## Layout of the screen
 Left column: map panel (`MapPanel`, WebView `assets/map.html`, OSM or Google with key) over
 Now playing (`NowPlaying`). While the map is big, the map panel shows the **Top Left Widget** (`TopLeft`:
