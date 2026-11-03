@@ -474,7 +474,21 @@ final class NowPlaying {
             if (lyricsBtn != null) lyricsBtn.setVisibility(View.GONE);
             lyricText.clear();
             lyricBox.setVisibility(View.GONE);
-            if (t != null && a != null) fetchLyrics(key, t, a, md.getLong(MediaMetadata.METADATA_KEY_DURATION));
+            if (t != null && a != null) {
+                final String ft = t, fa = a;
+                final long dur = md.getLong(MediaMetadata.METADATA_KEY_DURATION);
+                if (SpotifyLyrics.active()) { // Spotify's own lyrics first (signed in under Music settings), else the free source
+                    SpotifyLyrics.fetch(c, SpotifyLyrics.trackId(md.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)), t, a, (times, words) -> {
+                        if (!key.equals(trackKey)) return;
+                        if (words.isEmpty()) fetchLyrics(key, ft, fa, dur);
+                        else {
+                            lyricTimes.addAll(times);
+                            lyricText.addAll(words);
+                            showLyric();
+                        }
+                    });
+                } else fetchLyrics(key, t, a, dur);
+            }
         }
     }
 

@@ -547,6 +547,7 @@ final class SettingsPanels {
             app.setOnClickListener(v -> musicAppPicker());
             b.addView(app);
             b.addView(Panels.item("Now Playing's stage", LeftStages.nowPlayingTop() ? "Top-Left · change it" : "Bottom-Left · change it", () -> LeftStages.chooser(false)));
+            if (SpotifyLyrics.ENABLED) b.addView(Panels.item("Spotify lyrics", SpotifyLyrics.signedIn() ? "Signed in · Spotify's own lyrics first" : "Sign in for Spotify's own lyrics", SpotifyLyrics::settings));
             String st = EqView.style(); // the animation on Now playing (and where the art would be)
             b.addView(Panels.row("Animation", Ui.seg(c, "Equaliser", "bars".equals(st), () -> eqStyle("bars")),
                     Ui.seg(c, "Wave", "wave".equals(st), () -> eqStyle("wave")), Ui.seg(c, "Pulse", "pulse".equals(st), () -> eqStyle("pulse"))), top(8));
@@ -1087,6 +1088,7 @@ final class SettingsPanels {
             b.addView(Panels.switchRow(0, 0, "News", "Local headlines", NewsTicker.newsOn(), on -> { NewsTicker.setOn(NewsTicker.NEWS_ON, on); Panels.refresh(); }));
             b.addView(Panels.switchRow(0, 0, "Traffic", "Traffic news for your area", NewsTicker.trafficOn(), on -> { NewsTicker.setOn(NewsTicker.TRAFFIC_ON, on); Panels.refresh(); }));
             b.addView(Panels.switchRow(0, 0, "Lyrics", "The line being sung, while music plays", NewsTicker.lyricsOn(), on -> { NewsTicker.setOn(NewsTicker.LYRICS_ON, on); Panels.refresh(); }));
+            if (SpotifyLyrics.ENABLED) b.addView(Panels.item("Spotify lyrics", SpotifyLyrics.signedIn() ? "Signed in" : "Sign in for Spotify's own lyrics", SpotifyLyrics::settings));
             String m = Prefs.str(Prefs.TICKER_MODE, "alt");
             int every = Prefs.num(Prefs.TICKER_EVERY, 60);
             if ("alt".equals(m)) b.addView(Panels.row("Switch every", segNum(c, Prefs.TICKER_EVERY, 30, "30 s", every),
