@@ -669,8 +669,10 @@ final class Maps {
             tl.topMargin = Ui.u(8);
             col.addView(tb, tl);
         }
-        FrameLayout.LayoutParams cl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.TOP | Gravity.END);
-        cl.setMargins(0, Ui.u(10), Ui.u(10), 0);
+        // one column down the right-hand side: these, then recentre and zoom at the bottom; spread evenly
+        // over the stage's height (spread() below), whatever the size and whichever buttons are showing
+        FrameLayout.LayoutParams cl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.MATCH, Gravity.END);
+        cl.setMargins(0, Ui.u(10), Ui.u(10), Ui.u(12));
         o.addView(col, cl);
         // zoom
         LinearLayout zoom = Ui.col(a);
@@ -688,16 +690,14 @@ final class Maps {
         sl.gravity = Gravity.CENTER_HORIZONTAL;
         zoom.addView(sep, sl);
         zoom.addView(zout, Ui.lpu(48, 48));
-        FrameLayout.LayoutParams zl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.BOTTOM | Gravity.END);
-        zl.setMargins(0, 0, Ui.u(10), Ui.u(12)); // moves up above the locate button while you pan (updateControls)
-        o.addView(zoom, zl);
+        View zoomView = zoom;
         zoomBox = zoom;
         // back to my location (only once you've moved the map)
         recentre = round(a, R.drawable.ic_myloc, true, () -> js("recenter()"));
         recentre.setBackground(Ui.oval(Ui.ACCENT));
-        FrameLayout.LayoutParams ml = Ui.flpu(48, 48, Gravity.BOTTOM | Gravity.END);
-        ml.setMargins(0, 0, Ui.u(10), Ui.u(12 + 97 + 8)); // above the zoom buttons (they stay put)
-        o.addView(recentre, ml);
+        col.addView(recentre, Ui.lpu(48, 48)); // above the zoom buttons
+        col.addView(zoomView, Ui.lp(Ui.WRAP, Ui.WRAP));
+        spread(col);
         // bottom left: limit sign, speed, scale
         LinearLayout bl = Ui.row(a);
         bl.setGravity(Gravity.CENTER_VERTICAL);
@@ -747,6 +747,23 @@ final class Maps {
             Ui.ui.postDelayed(this, 1000);
         }
     };
+
+    /** Even gaps between a column's buttons, filling its height (a hidden button's gap closes up). */
+    private static void spread(LinearLayout col) {
+        java.util.List<View> kids = new java.util.ArrayList<>();
+        for (int i = 0; i < col.getChildCount(); i++) kids.add(col.getChildAt(i));
+        java.util.List<android.view.ViewGroup.LayoutParams> lps = new java.util.ArrayList<>();
+        for (View k : kids) lps.add(k.getLayoutParams());
+        col.removeAllViews();
+        col.setGravity(Gravity.CENTER_HORIZONTAL);
+        for (int i = 0; i < kids.size(); i++) {
+            if (i > 0) col.addView(new View(col.getContext()), new LinearLayout.LayoutParams(1, 0, 1));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(lps.get(i));
+            lp.topMargin = 0;
+            lp.gravity = Gravity.CENTER_HORIZONTAL;
+            col.addView(kids.get(i), lp);
+        }
+    }
 
     private void updateControls() {
         if (street == null || bigHolder == null) return;
