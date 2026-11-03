@@ -97,6 +97,7 @@ public class MainActivity extends Activity {
         else splash.run();
         Ui.ui.post(() -> handleOpen(getIntent()));
         Ui.ui.postDelayed(this::afterUpdate, 2500);
+        Wizard.resume(); // the wizard restarted the home for a new theme: carry on
         Ui.ui.postDelayed(About::offerReport, 4000); // crashed last time? offer the report
         Updater.start(this); // new versions from GitHub (needs the key in Settings → System → Updates)
         // start with the big map in the tile area and Go to in the small map panel (setting)
@@ -580,7 +581,13 @@ public class MainActivity extends Activity {
     }
 
     private void firstRunChecklist() {
-        if (Prefs.flag("setup_shown", false) || isFinishing()) return;
+        if (isFinishing()) return;
+        if (!Wizard.done()) { // the welcome wizard first; the set-up checklist follows it
+            Prefs.put("setup_shown", true);
+            Wizard.show();
+            return;
+        }
+        if (Prefs.flag("setup_shown", false)) return;
         Prefs.put("setup_shown", true);
         if (!MediaListener.hasAccess(this) || !SettingsPanels.isDefaultHome(this)) SettingsPanels.setupChecklist();
     }

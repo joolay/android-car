@@ -328,10 +328,14 @@ final class Themes {
         int weather; // 0 clear, 1 cloudy, 2 fog, 3 rain, 4 storm
         boolean night;
 
+        // a preview (the welcome wizard): this hour and weather for a few seconds instead of the real ones
+        static double previewHour = -1;
+        static int previewCode = -1;
+
         static Sky now() {
             Sky k = new Sky();
             java.util.Calendar cal = java.util.Calendar.getInstance();
-            double h = cal.get(java.util.Calendar.HOUR_OF_DAY) + cal.get(java.util.Calendar.MINUTE) / 60.0;
+            double h = previewHour >= 0 ? previewHour : cal.get(java.util.Calendar.HOUR_OF_DAY) + cal.get(java.util.Calendar.MINUTE) / 60.0;
             double[] t = Prayer.times(0);
             double rise = t != null ? t[1] : 6, set = t != null ? t[4] : 18.5;
             // 0 deep night, 1 dawn/dusk, 2 day: how far into the day we are
@@ -340,7 +344,7 @@ final class Themes {
             k.sunHeight = (float) Math.max(0, Math.sin(Math.PI * Math.max(0, Math.min(1, dayFrac))));
             k.sunX = (float) (0.2 + 0.6 * Math.max(0, Math.min(1, dayFrac)));
             boolean low = !k.night && k.sunHeight < 0.25f; // golden hour
-            int wc = Weather.ok ? Weather.code : 0; // WMO weather codes
+            int wc = previewCode >= 0 ? previewCode : Weather.ok ? Weather.code : 0; // WMO weather codes
             k.weather = wc >= 95 ? 4 : (wc >= 51 && wc <= 82) ? 3 : (wc == 45 || wc == 48) ? 2 : wc >= 2 ? 1 : 0;
             if (k.night) {
                 k.sky = new int[]{0xFF050912, 0xFF0B1430, 0xFF18224A, 0xFF2A2F5A};
@@ -378,7 +382,8 @@ final class Themes {
         /** A key that changes when the picture should be redrawn (about every 10 minutes, or the weather changes). */
         static String key() {
             java.util.Calendar cal = java.util.Calendar.getInstance();
-            return cal.get(java.util.Calendar.HOUR_OF_DAY) + ":" + cal.get(java.util.Calendar.MINUTE) / 10 + ":" + (Weather.ok ? Weather.code : -1);
+            return cal.get(java.util.Calendar.HOUR_OF_DAY) + ":" + cal.get(java.util.Calendar.MINUTE) / 10 + ":" + (Weather.ok ? Weather.code : -1)
+                    + ":" + previewHour + ":" + previewCode;
         }
     }
 }

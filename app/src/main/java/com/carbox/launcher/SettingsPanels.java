@@ -164,6 +164,7 @@ final class SettingsPanels {
         Object[][][] groups = {
                 {{"Home screen"},
                         {R.drawable.ic_apps, PURPLE, "Left Stages", "Now Playing " + (LeftStages.nowPlayingTop() ? "top" : "bottom") + " · " + LeftStages.list().size() + " widgets", (Runnable) () -> LeftStages.chooser(false)},
+                        {R.drawable.ic_check, PURPLE, "Welcome wizard", "Theme, wallpaper, Now Playing, ticker", (Runnable) () -> { Panels.close(); Wizard.show(); }},
                         {R.drawable.ic_photo, PURPLE, "Wallpaper", "image".equals(w) ? "Image" : "color".equals(w) ? "Colour" : "Black", (Runnable) SettingsPanels::wallpaper},
                         {R.drawable.ic_drag, PURPLE, "Rail Bar", railOn + " of " + Rail.IDS.length + " shown", (Runnable) SettingsPanels::railOrder},
                         {R.drawable.ic_apps, PURPLE, "Dock", Dock.icons() + " icons" + (Dock.dialler() ? " · dialler" : ""), (Runnable) SettingsPanels::dock},
