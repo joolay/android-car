@@ -37,14 +37,14 @@ final class DataMeter extends View {
     private static void load(long boot) {
         loaded = true;
         for (int k = 0; k < 3; k++) {
-            month[k][0] = Store.lng("du_" + NAMES[k] + "_d", 0);
-            month[k][1] = Store.lng("du_" + NAMES[k] + "_u", 0);
+            month[k][0] = Prefs.lng("du_" + NAMES[k] + "_d", 0);
+            month[k][1] = Prefs.lng("du_" + NAMES[k] + "_u", 0);
         }
-        if (Math.abs(Store.lng("du_boot", 0) - boot) < 60000) { // same start: carry on from the last look
-            seenAll = Store.lng("du_seen_rx", 0);
-            seenAllTx = Store.lng("du_seen_tx", 0);
-            seenMob = Store.lng("du_seen_mrx", 0);
-            seenMobTx = Store.lng("du_seen_mtx", 0);
+        if (Math.abs(Prefs.lng("du_boot", 0) - boot) < 60000) { // same start: carry on from the last look
+            seenAll = Prefs.lng("du_seen_rx", 0);
+            seenAllTx = Prefs.lng("du_seen_tx", 0);
+            seenMob = Prefs.lng("du_seen_mrx", 0);
+            seenMobTx = Prefs.lng("du_seen_mtx", 0);
         } else { // after a restart the box's counters began again at 0
             seenAll = seenAllTx = seenMob = seenMobTx = 0;
         }
@@ -52,14 +52,14 @@ final class DataMeter extends View {
 
     private static void save(long boot) {
         for (int k = 0; k < 3; k++) {
-            Store.put("du_" + NAMES[k] + "_d", month[k][0]);
-            Store.put("du_" + NAMES[k] + "_u", month[k][1]);
+            Prefs.put("du_" + NAMES[k] + "_d", month[k][0]);
+            Prefs.put("du_" + NAMES[k] + "_u", month[k][1]);
         }
-        Store.put("du_seen_rx", seenAll);
-        Store.put("du_seen_tx", seenAllTx);
-        Store.put("du_seen_mrx", seenMob);
-        Store.put("du_seen_mtx", seenMobTx);
-        Store.put("du_boot", boot);
+        Prefs.put("du_seen_rx", seenAll);
+        Prefs.put("du_seen_tx", seenAllTx);
+        Prefs.put("du_seen_mrx", seenMob);
+        Prefs.put("du_seen_mtx", seenMobTx);
+        Prefs.put("du_boot", boot);
     }
 
     /** Read the counters; at most about once a second whoever asks. */
@@ -71,8 +71,8 @@ final class DataMeter extends View {
         if (rx < 0 || tx < 0) return; // not supported on this box
         long boot = System.currentTimeMillis() - now;
         if (!loaded) load(boot);
-        if (!monthKey().equals(Store.str("du_month", ""))) { // a new month: start again
-            Store.put("du_month", monthKey());
+        if (!monthKey().equals(Prefs.str("du_month", ""))) { // a new month: start again
+            Prefs.put("du_month", monthKey());
             for (long[] m : month) m[0] = m[1] = 0;
         }
         if (rx < seenAll || tx < seenAllTx || mrx < seenMob || mtx < seenMobTx) seenAll = seenAllTx = seenMob = seenMobTx = 0;
@@ -166,18 +166,18 @@ final class DataMeter extends View {
 
     DataMeter(Context c) {
         super(c);
-        cap.setColor(U.SUB);
+        cap.setColor(Ui.SUB);
         cap.setFakeBoldText(true);
         cap.setTextAlign(Paint.Align.CENTER);
         cap.setLetterSpacing(0.08f);
-        dn.setColor(U.ACCENT_SOFT);
+        dn.setColor(Ui.ACCENT_SOFT);
         dn.setFakeBoldText(true);
         dn.setTextAlign(Paint.Align.CENTER);
-        up.setColor(U.AMBER);
+        up.setColor(Ui.AMBER);
         up.setFakeBoldText(true);
         up.setTextAlign(Paint.Align.CENTER);
         ring.setStyle(Paint.Style.STROKE);
-        ring.setColor(U.LINE);
+        ring.setColor(Ui.LINE);
         setContentDescription("Mobile data used this month");
     }
 
@@ -206,7 +206,7 @@ final class DataMeter extends View {
     @Override
     protected void onDraw(Canvas cv) {
         long[] m = used(getContext(), LTE);
-        boolean anim = U.ms(1) > 0;
+        boolean anim = Ui.ms(1) > 0;
         if (shownD < 0 || !anim) {
             shownD = m[0];
             shownU = m[1];
@@ -215,15 +215,15 @@ final class DataMeter extends View {
             shownU += (m[1] - shownU) * 0.2;
         }
         float w = getWidth(), h = getHeight();
-        ring.setStrokeWidth(U.uf(1));
-        r.set(U.uf(1), U.uf(1), w - U.uf(1), h - U.uf(1));
-        cv.drawRoundRect(r, U.uf(9), U.uf(9), ring);
+        ring.setStrokeWidth(Ui.uf(1));
+        r.set(Ui.uf(1), Ui.uf(1), w - Ui.uf(1), h - Ui.uf(1));
+        cv.drawRoundRect(r, Ui.uf(9), Ui.uf(9), ring);
         float cx = w / 2f;
-        dn.setTextSize(U.uf(11));
-        up.setTextSize(U.uf(10));
+        dn.setTextSize(Ui.uf(11));
+        up.setTextSize(Ui.uf(10));
         float mid = h / 2f; // mobile data only, no label
-        cv.drawText("↓" + shortSize(Math.round(shownD)), cx, mid - U.uf(2), dn);
-        cv.drawText("↑" + shortSize(Math.round(shownU)), cx, mid + U.uf(11), up);
+        cv.drawText("↓" + shortSize(Math.round(shownD)), cx, mid - Ui.uf(2), dn);
+        cv.drawText("↑" + shortSize(Math.round(shownU)), cx, mid + Ui.uf(11), up);
         if (anim && (Math.abs(m[0] - shownD) > 500 || Math.abs(m[1] - shownU) > 500)) postInvalidateOnAnimation();
     }
 
@@ -241,8 +241,8 @@ final class DataMeter extends View {
         SpeedBar(Context c, int kind) {
             super(c);
             this.kind = kind;
-            track.setColor(U.LINE);
-            fill.setColor(kind == LTE ? U.ACCENT : kind == WIFI ? U.TEAL : U.AMBER);
+            track.setColor(Ui.LINE);
+            fill.setColor(kind == LTE ? Ui.ACCENT : kind == WIFI ? Ui.TEAL : Ui.AMBER);
             if (kind == LTE) setVisibility(GONE); // until there's mobile data moving
         }
 
@@ -281,7 +281,7 @@ final class DataMeter extends View {
             r.set(0, 0, w, h);
             cv.drawRoundRect(r, rad, rad, track);
             float t = level(speed[kind][0] + speed[kind][1]);
-            boolean anim = U.ms(1) > 0;
+            boolean anim = Ui.ms(1) > 0;
             shown = anim ? shown + (t - shown) * 0.25f : t;
             if (shown > 0.02f) {
                 r.set(0, h - Math.max(w, h * shown), w, h);

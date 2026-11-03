@@ -16,7 +16,7 @@ final class SpeedCard {
     }
 
     static void start() {
-        Loc.listen(SpeedCard::check);
+        Gps.listen(SpeedCard::check);
     }
 
     private static void check() {
@@ -35,27 +35,27 @@ final class SpeedCard {
         if (a == null || !a.isResumed2() || shown != null) return;
         shown = new FrameLayout(a);
         shown.setClickable(true);
-        shown.setBackground(U.outline(0xFF5A1010, 0xFFE24B4A, 4, 16));
-        LinearLayout row = U.row(a);
+        shown.setBackground(Ui.outline(0xFF5A1010, 0xFFE24B4A, 4, 16));
+        LinearLayout row = Ui.row(a);
         row.setGravity(Gravity.CENTER);
-        U.pad(row, 24, 16, 24, 16);
-        LinearLayout left = U.col(a);
-        left.addView(U.line(a, "SLOW DOWN", 14, 0xFFFF8A80, true));
-        speed = U.line(a, "", 64, U.TEXT, true);
+        Ui.pad(row, 24, 16, 24, 16);
+        LinearLayout left = Ui.col(a);
+        left.addView(Ui.line(a, "SLOW DOWN", 14, 0xFFFF8A80, true));
+        speed = Ui.line(a, "", 64, Ui.TEXT, true);
         left.addView(speed, Widgets.top(2));
-        left.addView(U.line(a, Widgets.mph() ? "mph" : "km/h", 16, U.TEXT2, false));
-        row.addView(left, new LinearLayout.LayoutParams(0, U.WRAP, 1));
-        sign = U.text(a, "", 34, 0xFF111111, true); // the limit, as a road sign
+        left.addView(Ui.line(a, Widgets.mph() ? "mph" : "km/h", 16, Ui.TEXT2, false));
+        row.addView(left, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+        sign = Ui.text(a, "", 34, 0xFF111111, true); // the limit, as a road sign
         sign.setGravity(Gravity.CENTER);
-        sign.setBackground(U.outline(0xFFFFFFFF, 0xFFE24B4A, 10, 60));
-        row.addView(sign, U.lpu(120, 120));
-        shown.addView(row, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        View x = U.icon(a, R.drawable.ic_x, U.TEXT2);
-        U.pad(x, 8, 8, 8, 8);
+        sign.setBackground(Ui.outline(0xFFFFFFFF, 0xFFE24B4A, 10, 60));
+        row.addView(sign, Ui.lpu(120, 120));
+        shown.addView(row, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        View x = Ui.icon(a, R.drawable.ic_x, Ui.TEXT2);
+        Ui.pad(x, 8, 8, 8, 8);
         x.setOnClickListener(v -> hide());
-        shown.addView(x, U.flpu(46, 46, Gravity.TOP | Gravity.END));
+        shown.addView(x, Ui.flpu(46, 46, Gravity.TOP | Gravity.END));
         shown.setOnClickListener(v -> hide());
-        a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        a.tileArea.addView(shown, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         a.growIn(shown, a.alertRect("speed")); // grows out of the speed tile
         update();
         a.resetIdle(); // minimises after 15 s like the other panels
@@ -64,7 +64,7 @@ final class SpeedCard {
     private static void update() {
         boolean m = Widgets.mph();
         float f = m ? 2.23694f : 3.6f;
-        speed.setText(String.valueOf(Math.round(Loc.speed * f)));
+        speed.setText(String.valueOf(Math.round(Gps.speed * f)));
         sign.setText(String.valueOf(Math.round(SpeedLimit.kmh * (m ? 0.621371f : 1f))));
     }
 

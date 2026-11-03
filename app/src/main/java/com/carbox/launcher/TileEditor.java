@@ -20,7 +20,7 @@ import org.json.JSONObject;
  * and drag it to reorder; a quick swipe scrolls; tap a card to change or remove it; + adds one.
  */
 final class TileEditor {
-    static Sheets.Page page;
+    static Panels.Page page;
 
     private TileEditor() {
     }
@@ -32,23 +32,23 @@ final class TileEditor {
 
     static void openOld() {
         page = TileEditor::build;
-        Sheets.showFull(page); // the editor uses the whole screen
+        Panels.showFull(page); // the editor uses the whole screen
     }
 
     private static View build() {
-        Context c = Sheets.ctx();
-        LinearLayout card = U.col(c);
-        card.setBackground(U.round(U.CARD, 22));
-        U.pad(card, 22, 16, 22, 16);
-        card.setLayoutParams(Sheets.centered(784, 464));
+        Context c = Panels.ctx();
+        LinearLayout card = Ui.col(c);
+        card.setBackground(Ui.round(Ui.CARD, 22));
+        Ui.pad(card, 22, 16, 22, 16);
+        card.setLayoutParams(Panels.centered(784, 464));
 
-        LinearLayout head = U.row(c);
-        LinearLayout titles = U.col(c);
-        titles.addView(U.line(c, "Edit tiles", 20, U.TEXT, true));
-        titles.addView(U.line(c, "Hold a tile and drag to move it · tap to change or remove · + to add tiles", 12, U.SUB, false), Widgets.top(2));
-        head.addView(titles, new LinearLayout.LayoutParams(0, U.WRAP, 1));
-        head.addView(U.button(c, "Done", true, () -> {
-            Sheets.close();
+        LinearLayout head = Ui.row(c);
+        LinearLayout titles = Ui.col(c);
+        titles.addView(Ui.line(c, "Edit tiles", 20, Ui.TEXT, true));
+        titles.addView(Ui.line(c, "Hold a tile and drag to move it · tap to change or remove · + to add tiles", 12, Ui.SUB, false), Widgets.top(2));
+        head.addView(titles, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+        head.addView(Ui.button(c, "Done", true, () -> {
+            Panels.close();
             if (MainActivity.I != null) MainActivity.I.tiles.refresh();
         }));
         card.addView(head);
@@ -58,9 +58,9 @@ final class TileEditor {
         hs.setOverScrollMode(View.OVER_SCROLL_NEVER);
         hs.setFillViewport(true);
         Board board = new Board(c, hs);
-        hs.addView(board, new FrameLayout.LayoutParams(U.WRAP, U.MATCH));
-        LinearLayout.LayoutParams hl = U.weight(1, false);
-        hl.topMargin = U.u(14);
+        hs.addView(board, new FrameLayout.LayoutParams(Ui.WRAP, Ui.MATCH));
+        LinearLayout.LayoutParams hl = Ui.weight(1, false);
+        hl.topMargin = Ui.u(14);
         card.addView(hs, hl);
         return card;
     }
@@ -73,20 +73,20 @@ final class TileEditor {
         boolean empty = !folder && "none".equals(id);
         if (!folder && !empty) { // widgets: show the real thing, shrunk to fit
             FrameLayout f = new FrameLayout(c);
-            f.addView(Widgets.preview(c, spec), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-            f.addView(minusDot(c), U.flpu(24, 24, Gravity.TOP | Gravity.END));
+            f.addView(Widgets.preview(c, spec), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            f.addView(minusDot(c), Ui.flpu(24, 24, Gravity.TOP | Gravity.END));
             return f;
         }
-        LinearLayout l = U.col(c);
-        l.setBackground(empty ? U.outline(U.CARD2, U.LINE, 1, 14) : U.round(folder ? U.CARD2 : 0xFF1A2740, 14));
-        U.pad(l, 12, 12, 12, 10);
+        LinearLayout l = Ui.col(c);
+        l.setBackground(empty ? Ui.outline(Ui.CARD2, Ui.LINE, 1, 14) : Ui.round(folder ? Ui.CARD2 : 0xFF1A2740, 14));
+        Ui.pad(l, 12, 12, 12, 10);
         FrameLayout ic = new FrameLayout(c);
-        ic.setBackground(U.oval(folder ? U.CARD3 : U.ACCENT));
-        ic.addView(U.icon(c, folder ? R.drawable.ic_folder : empty ? R.drawable.ic_plus : R.drawable.ic_apps, U.TEXT), U.flpu(18, 18, Gravity.CENTER));
-        l.addView(ic, U.lpu(34, 34));
-        l.addView(new View(c), U.weight(1, false));
+        ic.setBackground(Ui.oval(folder ? Ui.CARD3 : Ui.ACCENT));
+        ic.addView(Ui.icon(c, folder ? R.drawable.ic_folder : empty ? R.drawable.ic_plus : R.drawable.ic_apps, Ui.TEXT), Ui.flpu(18, 18, Gravity.CENTER));
+        l.addView(ic, Ui.lpu(34, 34));
+        l.addView(new View(c), Ui.weight(1, false));
         String name = folder ? (spec == null ? "Folder" : spec.optString("name", "Folder")) : Widgets.name(id);
-        TextView t = U.text(c, name, 14, empty ? U.SUB : U.TEXT, true);
+        TextView t = Ui.text(c, name, 14, empty ? Ui.SUB : Ui.TEXT, true);
         t.setMaxLines(2);
         l.addView(t);
         String sub;
@@ -95,29 +95,29 @@ final class TileEditor {
             int n = apps == null ? 0 : apps.length();
             sub = "Folder · " + n + (n == 1 ? " app" : " apps");
         } else sub = empty ? "Tap to choose" : "Tile";
-        l.addView(U.line(c, sub, 11, U.SUB, false), Widgets.top(2));
+        l.addView(Ui.line(c, sub, 11, Ui.SUB, false), Widgets.top(2));
         FrameLayout f = new FrameLayout(c);
-        f.addView(l, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        f.addView(minusDot(c), U.flpu(24, 24, Gravity.TOP | Gravity.END));
+        f.addView(l, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        f.addView(minusDot(c), Ui.flpu(24, 24, Gravity.TOP | Gravity.END));
         return f;
     }
 
     /** Red dot with − in a card's corner: tap it to take that tile off the home screen. */
     private static View minusDot(Context c) {
-        TextView m = U.text(c, "−", 16, U.TEXT, true);
+        TextView m = Ui.text(c, "−", 16, Ui.TEXT, true);
         m.setGravity(Gravity.CENTER);
-        m.setBackground(U.oval(U.RED));
+        m.setBackground(Ui.oval(Ui.RED));
         return m;
     }
 
     private static View addCard(Context c) {
-        LinearLayout l = U.col(c);
+        LinearLayout l = Ui.col(c);
         l.setGravity(Gravity.CENTER);
-        l.setBackground(U.outline(0, U.ACCENT, 2, 14));
-        TextView plus = U.text(c, "+", 30, U.ACCENT_SOFT, true);
+        l.setBackground(Ui.outline(0, Ui.ACCENT, 2, 14));
+        TextView plus = Ui.text(c, "+", 30, Ui.ACCENT_SOFT, true);
         plus.setGravity(Gravity.CENTER);
         l.addView(plus);
-        TextView t = U.text(c, "Add tiles", 13, U.ACCENT_SOFT, false);
+        TextView t = Ui.text(c, "Add tiles", 13, Ui.ACCENT_SOFT, false);
         t.setGravity(Gravity.CENTER);
         l.addView(t);
         return l;
@@ -138,9 +138,9 @@ final class TileEditor {
             @Override
             public void run() {
                 if (!dragging || edgeDir == 0) return;
-                hs.scrollBy(edgeDir * U.u(14), 0);
+                hs.scrollBy(edgeDir * Ui.u(14), 0);
                 follow(lastRawX, lastRawY);
-                U.ui.postDelayed(this, 16);
+                Ui.ui.postDelayed(this, 16);
             }
         };
         private int edgeDir;
@@ -165,14 +165,14 @@ final class TileEditor {
 
         private void fill() {
             removeAllViews();
-            JSONArray s = Tiles.specs();
+            JSONArray s = TileDrawer.specs();
             count = s.length();
             for (int i = 0; i < count; i++) addView(cardFor(getContext(), i, s.optJSONObject(i)));
             if (addSlot) addView(addCard(getContext()));
         }
 
         private float gap() {
-            return U.u(10);
+            return Ui.u(10);
         }
 
         private float cellH() {
@@ -181,13 +181,13 @@ final class TileEditor {
 
         private float cellW() {
             // a bit narrower than the height so 5 columns show and you can see there are more
-            return Math.min(U.u(140), cellH() * 0.76f); // the shape of a home-screen tile
+            return Math.min(Ui.u(140), cellH() * 0.76f); // the shape of a home-screen tile
         }
 
         @Override
         protected void onMeasure(int ws, int hsSpec) {
             int h = MeasureSpec.getSize(hsSpec);
-            float ch = (h - gap()) / 2f, cw = Math.min(U.u(140), ch * 0.76f);
+            float ch = (h - gap()) / 2f, cw = Math.min(Ui.u(140), ch * 0.76f);
             int cols = (getChildCount() + 1) / 2;
             int w = Math.round(cols * cw + (cols - 1) * gap());
             setMeasuredDimension(Math.max(w, MeasureSpec.getSize(ws)), h);
@@ -216,8 +216,8 @@ final class TileEditor {
             getParent().requestDisallowInterceptTouchEvent(true); // stop the scroll view taking over
             performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
             View v = getChildAt(dragIndex);
-            v.setTranslationZ(U.uf(12));
-            v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(U.ms(100)).start();
+            v.setTranslationZ(Ui.uf(12));
+            v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(Ui.ms(100)).start();
         }
 
         /** Move the lifted card with the finger and slide the others aside to show where it'll land. */
@@ -238,7 +238,7 @@ final class TileEditor {
                 if (dragIndex < to && i > dragIndex && i <= to) pos = i - 1;
                 else if (dragIndex > to && i >= to && i < dragIndex) pos = i + 1;
                 View w = getChildAt(i);
-                w.animate().translationX((pos / 2 - i / 2) * step).translationY((pos % 2 - i % 2) * rowStep).setDuration(U.ms(150)).start();
+                w.animate().translationX((pos / 2 - i / 2) * step).translationY((pos % 2 - i % 2) * rowStep).setDuration(Ui.ms(150)).start();
             }
         }
 
@@ -258,7 +258,7 @@ final class TileEditor {
                     overIndex = -1;
                     int i = Math.min(getChildCount() - 1, Math.max(0, (int) (downX / (cellW() + gap())) * 2 + (downY < cellH() + gap() / 2 ? 0 : 1)));
                     dragIndex = i;
-                    if (i < count) U.ui.postDelayed(pickUp, 280);
+                    if (i < count) Ui.ui.postDelayed(pickUp, 280);
                     return true;
                 case MotionEvent.ACTION_MOVE:
                     lastRawX = e.getRawX();
@@ -266,7 +266,7 @@ final class TileEditor {
                     if (!dragging) {
                         if (Math.hypot(e.getX() - downX, e.getY() - downY) > slop) {
                             moved = true;
-                            U.ui.removeCallbacks(pickUp); // a swipe, not a hold: let the row scroll
+                            Ui.ui.removeCallbacks(pickUp); // a swipe, not a hold: let the row scroll
                         }
                         return true;
                     }
@@ -274,18 +274,18 @@ final class TileEditor {
                     // near either edge of the window: keep scrolling
                     int[] o = new int[2];
                     hs.getLocationOnScreen(o);
-                    float rx = lastRawX - o[0], zone = U.uf(48);
+                    float rx = lastRawX - o[0], zone = Ui.uf(48);
                     int dir = rx > hs.getWidth() - zone ? 1 : rx < zone ? -1 : 0;
                     if (dir != edgeDir) {
                         edgeDir = dir;
-                        U.ui.removeCallbacks(edge);
-                        if (dir != 0) U.ui.post(edge);
+                        Ui.ui.removeCallbacks(edge);
+                        if (dir != 0) Ui.ui.post(edge);
                     }
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    U.ui.removeCallbacks(pickUp);
-                    U.ui.removeCallbacks(edge);
+                    Ui.ui.removeCallbacks(pickUp);
+                    Ui.ui.removeCallbacks(edge);
                     edgeDir = 0;
                     if (dragging) {
                         dragging = false;
@@ -297,13 +297,13 @@ final class TileEditor {
                     if (e.getActionMasked() == MotionEvent.ACTION_UP && !moved) {
                         if (dragIndex >= count) {
                             // no empty tiles any more: pick widgets straight away (blue = already on the home screen)
-                            int e0 = Tiles.emptyIndex();
+                            int e0 = TileDrawer.emptyIndex();
                             AppPanels.gallery(e0 >= 0 ? e0 : -1);
                         } else {
                             // a tap on the red − in the top-right corner removes the tile
                             View v = getChildAt(dragIndex);
-                            if (v != null && downX > v.getRight() - U.u(34) && downY < v.getTop() + U.u(34)) {
-                                Tiles.removeTile(dragIndex);
+                            if (v != null && downX > v.getRight() - Ui.u(34) && downY < v.getTop() + Ui.u(34)) {
+                                TileDrawer.removeTile(dragIndex);
                                 fill();
                                 requestLayout();
                             } else AppPanels.tileMenu(dragIndex);
@@ -315,13 +315,13 @@ final class TileEditor {
         }
 
         private void move(int from, int to) {
-            JSONArray s = Tiles.specs();
+            JSONArray s = TileDrawer.specs();
             java.util.List<Object> l = new java.util.ArrayList<>();
             for (int k = 0; k < s.length(); k++) l.add(s.opt(k));
             l.add(to, l.remove(from));
             JSONArray out = new JSONArray();
             for (Object o : l) out.put(o);
-            Tiles.save(out);
+            TileDrawer.save(out);
             if (MainActivity.I != null) MainActivity.I.tiles.refresh();
         }
     }

@@ -23,7 +23,7 @@ final class Music {
 
     /** The chosen music app's package, or null for "last app that played". */
     static String pkg() {
-        String p = Store.str(Store.MUSIC_PKG, null);
+        String p = Prefs.str(Prefs.MUSIC_PKG, null);
         if (p == null) {
             // not chosen yet: the first well-known music app on the box
             for (String m : Actions.MUSIC) if (Apps.installed(m)) return m;
@@ -33,7 +33,7 @@ final class Music {
     }
 
     static String label() {
-        String p = Store.str(Store.MUSIC_PKG, null);
+        String p = Prefs.str(Prefs.MUSIC_PKG, null);
         if (LAST.equals(p)) return "Last app that played";
         String k = pkg();
         return k == null ? "Choose" : Apps.label(k);
@@ -75,21 +75,21 @@ final class Music {
     /** Called first thing when the launcher starts (before the splash), once per car start. */
     // ---- what happened at the last car start (shown in Music settings, to see why music didn't start)
     static void log(String what) {
-        java.util.List<String> l = new java.util.ArrayList<>(Store.list("music_log"));
+        java.util.List<String> l = new java.util.ArrayList<>(Prefs.list("music_log"));
         l.add(new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(new java.util.Date()) + "  " + what);
         while (l.size() > 14) l.remove(0);
-        Store.putList("music_log", l);
+        Prefs.putList("music_log", l);
         Trace.event("Music: " + what);
     }
 
     /** At a car start with Play music at car start on: starts the music and returns true (the music app is then opened). */
     static boolean atStart(MainActivity a) {
         long bootAt = System.currentTimeMillis() - SystemClock.elapsedRealtime();
-        if (Math.abs(Store.lng("music_boot", 0) - bootAt) < 60000) return false;
-        Store.put("music_boot", bootAt);
-        Store.put("music_log", "[]");
+        if (Math.abs(Prefs.lng("music_boot", 0) - bootAt) < 60000) return false;
+        Prefs.put("music_boot", bootAt);
+        Prefs.put("music_log", "[]");
         log("Car start (box on for " + SystemClock.elapsedRealtime() / 1000 + " s). App: " + label() + ", start with: " + startWith());
-        if (!Store.flag(Store.MUSIC_AUTOPLAY, false)) { // still logged, so the reason shows in Music settings
+        if (!Prefs.flag(Prefs.MUSIC_AUTOPLAY, false)) { // still logged, so the reason shows in Music settings
             log("Play music at car start is off: nothing done");
             return false;
         }
@@ -108,14 +108,14 @@ final class Music {
             }
             resume(a);
             // the music app may still be waking up: try once more, then fall back to the playlist
-            U.ui.postDelayed(() -> {
+            Ui.ui.postDelayed(() -> {
                 if (!musicActive(a)) resume(a);
             }, 1500);
-            U.ui.postDelayed(() -> {
-                if (!musicActive(a) && !Store.str(Store.MUSIC_PLAYLIST, "").isEmpty()) playPlaylist(a, true);
+            Ui.ui.postDelayed(() -> {
+                if (!musicActive(a) && !Prefs.str(Prefs.MUSIC_PLAYLIST, "").isEmpty()) playPlaylist(a, true);
             }, 5000);
         };
-        U.ui.postDelayed(() -> go("waited 40 s"), 40000); // never left silent
+        Ui.ui.postDelayed(() -> go("waited 40 s"), 40000); // never left silent
         log("Opening " + label() + " (waits for the splash voice), then the splash");
         return true;
     }
@@ -135,12 +135,12 @@ final class Music {
     static void afterVoice() {
         if (pending == null) return;
         final long from = SystemClock.elapsedRealtime();
-        U.ui.postDelayed(new Runnable() {
+        Ui.ui.postDelayed(new Runnable() {
             @Override
             public void run() {
                 if (pending == null) return;
                 if (!Rest.speaking() || SystemClock.elapsedRealtime() - from > 35000) go("splash voice done");
-                else U.ui.postDelayed(this, 300);
+                else Ui.ui.postDelayed(this, 300);
             }
         }, 1200);
     }
@@ -155,7 +155,7 @@ final class Music {
         guardUntil = SystemClock.elapsedRealtime() + 45000;
         paused = false;
         started = false;
-        U.ui.postDelayed(new Runnable() {
+        Ui.ui.postDelayed(new Runnable() {
             int quiet;
 
             @Override
@@ -182,7 +182,7 @@ final class Music {
                             + ", internet " + (net ? "yes" : "no") + ")");
                     resume(c); // play on the music app's own session when it has one, else its play button (not any other app's)
                 }
-                U.ui.postDelayed(this, 1500);
+                Ui.ui.postDelayed(this, 1500);
             }
         }, 9000); // the first few seconds belong to the normal start (app waking up, playlist)
     }
@@ -204,11 +204,11 @@ final class Music {
     /** Run r once the music is playing (or after maxMs), so other apps start after it. */
     static void whenStarted(Context c, Runnable r, long maxMs) {
         long end = SystemClock.elapsedRealtime() + maxMs;
-        U.ui.post(new Runnable() {
+        Ui.ui.post(new Runnable() {
             @Override
             public void run() {
                 if (started || musicActive(c) || SystemClock.elapsedRealtime() > end || SystemClock.elapsedRealtime() > guardUntil) r.run();
-                else U.ui.postDelayed(this, 500);
+                else Ui.ui.postDelayed(this, 500);
             }
         });
     }
@@ -262,7 +262,7 @@ final class Music {
      */
     /** "playlist" (start with the chosen playlist) or "last" (carry on with whatever played last). */
     static String startWith() {
-        return Store.str("music_start", Store.str(Store.MUSIC_PLAYLIST, "").trim().isEmpty() ? "last" : "playlist");
+        return Prefs.str("music_start", Prefs.str(Prefs.MUSIC_PLAYLIST, "").trim().isEmpty() ? "last" : "playlist");
     }
 
     /** Spotify's own address for a few names people type, so it plays that exact list. */
@@ -277,7 +277,7 @@ final class Music {
     }
 
     static void playPlaylist(Context c, boolean comeBack) {
-        String q = Store.str(Store.MUSIC_PLAYLIST, "").trim();
+        String q = Prefs.str(Prefs.MUSIC_PLAYLIST, "").trim();
         if (q.isEmpty()) return;
         String p = pkg();
         // Best way: ask the music app's media session directly (no screen switching).
@@ -296,7 +296,7 @@ final class Music {
                 if (uri != null) m.getTransportControls().playFromUri(Uri.parse(uri), null);
                 else m.getTransportControls().playFromSearch(q, null);
                 // check it took: if nothing plays within a few seconds, fall back to opening the app
-                U.ui.postDelayed(() -> {
+                Ui.ui.postDelayed(() -> {
                     if (musicActive(c)) log("Music is playing");
                     else if (android.os.SystemClock.elapsedRealtime() - openedAt < 60000) // opened at the car start already:
                         log("Still silent after 5 s: leaving it to the guard (no second jump into " + Apps.label(target) + ")");
@@ -320,7 +320,7 @@ final class Music {
         }
         if (tries == 19) log(Apps.label(target) + " never showed a music session (is notification access on?)");
         if (tries >= 20) return false; // checks every 0.4 s for up to 8 s
-        U.ui.postDelayed(() -> {
+        Ui.ui.postDelayed(() -> {
             if (!viaSession(c, target, q, uri, comeBack, tries + 1) && tries + 1 >= 20) playByOpening(c, q, pkg(), comeBack);
         }, 400);
         return true; // still waiting for the session
@@ -349,8 +349,8 @@ final class Music {
             return;
         }
         final String fp = p;
-        if (link && fp != null) U.ui.postDelayed(() -> mediaButton(c, fp), 2500);
-        if (comeBack) U.ui.postDelayed(() -> {
+        if (link && fp != null) Ui.ui.postDelayed(() -> mediaButton(c, fp), 2500);
+        if (comeBack) Ui.ui.postDelayed(() -> {
             try {
                 c.startActivity(new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
             } catch (Exception ignored) {

@@ -23,24 +23,24 @@ final class Safety {
     }
 
     static String[] items() {
-        String s = Store.str("safety_items", DEFAULT).trim();
+        String s = Prefs.str("safety_items", DEFAULT).trim();
         return (s.isEmpty() ? DEFAULT : s).split("\\|");
     }
 
     /** Checked items as a bit mask; cleared when it's a fresh start. */
     static long done() {
-        long at = Store.lng("safety_at", 0), now = System.currentTimeMillis();
+        long at = Prefs.lng("safety_at", 0), now = System.currentTimeMillis();
         boolean newDay = at > 0 && !sameDay(at, now);
         if (at > 0 && (now - at > RESET || newDay) && !Logbook.driving()) {
-            Store.put("safety_done", 0L);
-            Store.put("safety_at", 0L);
+            Prefs.put("safety_done", 0L);
+            Prefs.put("safety_at", 0L);
         }
-        return Store.lng("safety_done", 0);
+        return Prefs.lng("safety_done", 0);
     }
 
     static void toggle(int i) {
-        Store.put("safety_done", done() ^ (1L << i));
-        Store.put("safety_at", System.currentTimeMillis());
+        Prefs.put("safety_done", done() ^ (1L << i));
+        Prefs.put("safety_at", System.currentTimeMillis());
     }
 
     static int count() {
@@ -56,55 +56,55 @@ final class Safety {
 
     /** The whole list, and the deeper settings (edit items, start again). */
     static void list() {
-        Sheets.Page p = () -> {
-            Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
+        Panels.Page p = () -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
             String[] it = items();
             long d = done();
             for (int i = 0; i < it.length; i++) {
                 final int k = i;
                 boolean on = (d & (1L << i)) != 0;
-                LinearLayout row = U.row(c);
-                row.setMinimumHeight(U.u(42));
-                row.addView(tick(c, on), U.lpu(24, 24));
-                TextView t = U.line(c, it[i], 15, on ? U.SUB : U.TEXT, false);
-                LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-                tl.leftMargin = U.u(12);
+                LinearLayout row = Ui.row(c);
+                row.setMinimumHeight(Ui.u(42));
+                row.addView(tick(c, on), Ui.lpu(24, 24));
+                TextView t = Ui.line(c, it[i], 15, on ? Ui.SUB : Ui.TEXT, false);
+                LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
+                tl.leftMargin = Ui.u(12);
                 row.addView(t, tl);
                 row.setOnClickListener(v -> {
                     toggle(k);
-                    Sheets.refresh();
+                    Panels.refresh();
                 });
-                if (i > 0) b.addView(U.hr(c));
+                if (i > 0) b.addView(Ui.hr(c));
                 b.addView(row);
             }
-            LinearLayout r = U.row(c);
-            r.addView(U.button(c, "Start again", false, () -> {
-                Store.put("safety_done", 0L);
-                Sheets.refresh();
+            LinearLayout r = Ui.row(c);
+            r.addView(Ui.button(c, "Start again", false, () -> {
+                Prefs.put("safety_done", 0L);
+                Panels.refresh();
             }));
-            r.addView(U.gap(c, 10, 1));
-            r.addView(U.button(c, "All done", true, () -> {
-                Store.put("safety_done", (1L << items().length) - 1);
-                Store.put("safety_at", System.currentTimeMillis());
-                Sheets.refresh();
+            r.addView(Ui.gap(c, 10, 1));
+            r.addView(Ui.button(c, "All done", true, () -> {
+                Prefs.put("safety_done", (1L << items().length) - 1);
+                Prefs.put("safety_at", System.currentTimeMillis());
+                Panels.refresh();
             }));
             b.addView(r, Widgets.top(12));
-            b.addView(Sheets.section("Edit the checklist (one item per line)"));
+            b.addView(Panels.section("Edit the checklist (one item per line)"));
             android.widget.EditText e = Widgets.field("Checklist items", String.join("\n", it), false,
-                    s -> Store.put("safety_items", s.trim().replaceAll("\\s*\\n+\\s*", "|")));
+                    s -> Prefs.put("safety_items", s.trim().replaceAll("\\s*\\n+\\s*", "|")));
             e.setSingleLine(false);
             e.setMinLines(4);
-            b.addView(e, U.lp(U.MATCH, U.WRAP));
-            b.addView(U.button(c, "Restore the usual list", false, () -> {
-                Store.put("safety_items", DEFAULT);
-                Store.put("safety_done", 0L);
-                Sheets.refresh();
+            b.addView(e, Ui.lp(Ui.MATCH, Ui.WRAP));
+            b.addView(Ui.button(c, "Restore the usual list", false, () -> {
+                Prefs.put("safety_items", DEFAULT);
+                Prefs.put("safety_done", 0L);
+                Panels.refresh();
             }), Widgets.top(8));
-            return Sheets.panel(String.format(Locale.US, "Safety check · %d of %d", count(), it.length), b, 620, 440);
+            return Panels.panel(String.format(Locale.US, "Safety check · %d of %d", count(), it.length), b, 620, 440);
         };
-        if (Sheets.open()) Sheets.push(p);
-        else Sheets.show(p);
+        if (Panels.open()) Panels.push(p);
+        else Panels.show(p);
     }
 
     private static boolean sameDay(long a, long b) {
@@ -117,7 +117,7 @@ final class Safety {
     private static android.graphics.drawable.GradientDrawable ring(int color, float w) {
         android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
         g.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-        g.setStroke(U.u(w), color);
+        g.setStroke(Ui.u(w), color);
         return g;
     }
 
@@ -129,12 +129,12 @@ final class Safety {
 
             @Override
             protected void onDraw(android.graphics.Canvas cv) {
-                float s = Math.min(getWidth(), getHeight()), cx = getWidth() / 2f, cy = getHeight() / 2f, r = s / 2f - U.u(1.5f);
+                float s = Math.min(getWidth(), getHeight()), cx = getWidth() / 2f, cy = getHeight() / 2f, r = s / 2f - Ui.u(1.5f);
                 p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
                 p.setStrokeJoin(android.graphics.Paint.Join.ROUND);
                 if (on) {
                     p.setStyle(android.graphics.Paint.Style.FILL);
-                    p.setColor(U.GREEN);
+                    p.setColor(Ui.GREEN);
                     cv.drawCircle(cx, cy, r, p);
                     p.setStyle(android.graphics.Paint.Style.STROKE);
                     p.setStrokeWidth(s * 0.11f);
@@ -146,8 +146,8 @@ final class Safety {
                     cv.drawPath(path, p);
                 } else {
                     p.setStyle(android.graphics.Paint.Style.STROKE);
-                    p.setStrokeWidth(U.u(2));
-                    p.setColor(U.SUB);
+                    p.setStrokeWidth(Ui.u(2));
+                    p.setColor(Ui.SUB);
                     cv.drawCircle(cx, cy, r, p);
                 }
             }
@@ -187,16 +187,16 @@ final class Safety {
             p.setStrokeJoin(android.graphics.Paint.Join.ROUND);
             // ring: grey track, green for what's checked
             p.setStrokeWidth(ring);
-            p.setColor(all ? U.GREEN : U.CARD3);
+            p.setColor(all ? Ui.GREEN : Ui.CARD3);
             cv.drawCircle(cx, cy, rad, p);
             if (!all && !none) {
                 r.set(cx - rad, cy - rad, cx + rad, cy + rad);
-                p.setColor(U.GREEN);
+                p.setColor(Ui.GREEN);
                 cv.drawArc(r, -90, 360f * done / Math.max(1, total), false, p);
             }
             // person: head, shoulders and body
             float u = s / 92f; // drawn on a 92-unit square, like the mockup
-            int body = all ? U.GREEN : none ? AMBER : U.TEXT;
+            int body = all ? Ui.GREEN : none ? AMBER : Ui.TEXT;
             p.setColor(body);
             p.setStrokeWidth(3.5f * u);
             cv.drawCircle(cx, cy - 17 * u, 6 * u, p);
@@ -209,12 +209,12 @@ final class Safety {
             path.lineTo(cx + 14 * u, cy + 22 * u);
             cv.drawPath(path, p);
             // seatbelt across
-            p.setColor(all || !none ? U.GREEN : U.TEXT);
+            p.setColor(all || !none ? Ui.GREEN : Ui.TEXT);
             p.setStrokeWidth(4 * u);
             cv.drawLine(cx + 8 * u, cy - 7 * u, cx - 12 * u, cy + 20 * u, p);
             if (all) { // tick badge
                 p.setStyle(android.graphics.Paint.Style.FILL);
-                p.setColor(U.GREEN);
+                p.setColor(Ui.GREEN);
                 float bx = cx + rad * 0.62f, by = cy + rad * 0.62f, br = 11 * u;
                 cv.drawCircle(bx, by, br, p);
                 p.setStyle(android.graphics.Paint.Style.STROKE);
@@ -235,18 +235,18 @@ final class Safety {
 
         Tile(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = Widgets.card(c, U.CARD);
+            LinearLayout l = Widgets.card(c, Ui.CARD);
             l.addView(Widgets.label(c, "SAFETY CHECK"));
             badge = new Badge(c);
-            LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(U.MATCH, 0, 1);
-            bl.topMargin = U.u(4);
-            bl.bottomMargin = U.u(4);
+            LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(Ui.MATCH, 0, 1);
+            bl.topMargin = Ui.u(4);
+            bl.bottomMargin = Ui.u(4);
             l.addView(badge, bl); // takes the room that's left, drawn square in the middle
-            status = U.line(c, "", 13, U.TEXT, true);
+            status = Ui.line(c, "", 13, Ui.TEXT, true);
             status.setGravity(Gravity.CENTER);
-            l.addView(status, U.lp(U.MATCH, U.WRAP));
+            l.addView(status, Ui.lp(Ui.MATCH, Ui.WRAP));
             l.setOnClickListener(v -> list());
-            U.press(l);
+            Ui.press(l);
             v = l;
             tick();
         }
@@ -257,13 +257,13 @@ final class Safety {
             badge.set(k, n);
             if (k >= n) {
                 status.setText("Ready to drive");
-                status.setTextColor(U.GREEN);
+                status.setTextColor(Ui.GREEN);
             } else if (k == 0) {
                 status.setText("Tap to check");
                 status.setTextColor(0xFFE8A33D);
             } else {
                 status.setText(k + " of " + n);
-                status.setTextColor(U.TEXT);
+                status.setTextColor(Ui.TEXT);
             }
         }
     }

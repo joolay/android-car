@@ -50,10 +50,10 @@ final class Pager extends LinearLayout {
         };
         hs.setHorizontalScrollBarEnabled(false);
         hs.setOverScrollMode(OVER_SCROLL_NEVER);
-        strip = U.row(c);
+        strip = Ui.row(c);
         strip.setGravity(Gravity.TOP);
         hs.addView(strip, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
-        dots = U.row(c);
+        dots = Ui.row(c);
         dots.setGravity(Gravity.CENTER);
         this.cells = cells;
         this.cols = cols;
@@ -61,8 +61,8 @@ final class Pager extends LinearLayout {
         auto = rows <= 0;
         // auto (rows 0): fill the height it's given, the dots always at the bottom
         addView(hs, auto ? new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1) : new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
-        LayoutParams dl = U.lp(U.MATCH, U.u(16));
-        dl.topMargin = U.u(4);
+        LayoutParams dl = Ui.lp(Ui.MATCH, Ui.u(16));
+        dl.topMargin = Ui.u(4);
         addView(dots, dl);
         if (!auto) build(rows);
     }
@@ -89,8 +89,8 @@ final class Pager extends LinearLayout {
         dots.removeAllViews();
         if (pages.size() > 1) for (int i = 0; i < pages.size(); i++) {
             View d = new View(getContext());
-            LayoutParams l = U.lpu(7, 7);
-            l.setMargins(U.u(4), 0, U.u(4), 0);
+            LayoutParams l = Ui.lpu(7, 7);
+            l.setMargins(Ui.u(4), 0, Ui.u(4), 0);
             dots.addView(d, l);
         }
         dots.setVisibility(pages.size() > 1 ? VISIBLE : INVISIBLE);
@@ -104,8 +104,8 @@ final class Pager extends LinearLayout {
         View c0 = cells.get(0);
         if (c0.getParent() != null) ((android.view.ViewGroup) c0.getParent()).removeView(c0);
         c0.measure(MeasureSpec.makeMeasureSpec(width / cols, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-        int ch = c0.getMeasuredHeight() + U.u(gap);
-        return Math.max(1, (height - U.u(20)) / Math.max(1, ch));
+        int ch = c0.getMeasuredHeight() + Ui.u(gap);
+        return Math.max(1, (height - Ui.u(20)) / Math.max(1, ch));
     }
 
     @Override
@@ -132,13 +132,13 @@ final class Pager extends LinearLayout {
 
     private void go(int p) {
         page = Math.max(0, Math.min(pages.size() - 1, p));
-        if (U.ms(1) == 0) hs.scrollTo(page * w, 0);
+        if (Ui.ms(1) == 0) hs.scrollTo(page * w, 0);
         else hs.smoothScrollTo(page * w, 0);
         dots(page);
     }
 
     private void dots(int at) {
         for (int i = 0; i < dots.getChildCount(); i++)
-            dots.getChildAt(i).setBackground(U.oval(i == at ? U.ACCENT : U.LINE));
+            dots.getChildAt(i).setBackground(Ui.oval(i == at ? Ui.ACCENT : Ui.LINE));
     }
 }

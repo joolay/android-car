@@ -113,7 +113,7 @@ final class Widgets {
                 spec.put("cfg", cfg);
             } catch (Exception ignored) {
             }
-            Tiles.setSpec(index, spec);
+            TileDrawer.setSpec(index, spec);
         }
     }
 
@@ -175,9 +175,9 @@ final class Widgets {
 
     /** Preview of a widget in its Top Left design (same shape as the Top Left Widget). */
     static View preview(Context c, String id) {
-        int idx = TopLeft.tileIndex(id);
-        JSONObject spec = idx >= 0 ? Tiles.specs().optJSONObject(idx) : Tiles.widget(id);
-        int fw = U.u(200), fh = U.u(232);
+        int idx = LeftStages.tileIndex(id);
+        JSONObject spec = idx >= 0 ? TileDrawer.specs().optJSONObject(idx) : TileDrawer.widget(id);
+        int fw = Ui.u(200), fh = Ui.u(232);
         if (MainActivity.I != null && MainActivity.I.map != null && MainActivity.I.map.view.getWidth() > 0) {
             fw = MainActivity.I.map.view.getWidth();
             fh = MainActivity.I.map.view.getHeight();
@@ -191,11 +191,11 @@ final class Widgets {
     }
 
     static View preview(Context c, JSONObject spec) {
-        int tw = U.u(122), th = U.u(165);
+        int tw = Ui.u(122), th = Ui.u(165);
         if (MainActivity.I != null && MainActivity.I.tiles.view.getWidth() > 0) {
             View t = MainActivity.I.tiles.view;
-            tw = Math.round((t.getWidth() - U.u(8) * 3) / 4f);
-            th = Math.round((t.getHeight() - U.u(8)) / 2f);
+            tw = Math.round((t.getWidth() - Ui.u(8) * 3) / 4f);
+            th = Math.round((t.getHeight() - Ui.u(8)) / 2f);
         }
         return preview(c, spec, tw, th);
     }
@@ -239,13 +239,13 @@ final class Widgets {
         };
         box.setClipChildren(true);
         box.addView(live);
-        MapPanel.clip(box, 14);
+        Maps.clip(box, 14);
         return box;
     }
 
     /** Settings page for widgets that need setting up. */
     static void configure(int index) {
-        JSONObject spec = Tiles.specs().optJSONObject(index);
+        JSONObject spec = TileDrawer.specs().optJSONObject(index);
         if (spec == null) return;
         String id = spec.optString("id");
         if ("goto".equals(id)) gotoSetup(index);
@@ -260,33 +260,33 @@ final class Widgets {
     // ------------------------------------------------------------------ shared bits
 
     static LinearLayout card(Context c, int bg) {
-        LinearLayout l = U.col(c);
-        l.setBackground(bg == U.CARD ? Glass.card(bg, 16) : U.round(bg, 16)); // glass in the Glass theme
-        U.pad(l, 14, 14, 14, 14);
+        LinearLayout l = Ui.col(c);
+        l.setBackground(bg == Ui.CARD ? Themes.card(bg, 16) : Ui.round(bg, 16)); // glass in the Glass theme
+        Ui.pad(l, 14, 14, 14, 14);
         return l;
     }
 
     static TextView label(Context c, String s) {
-        TextView t = U.line(c, s, 11, U.SUB, true);
+        TextView t = Ui.line(c, s, 11, Ui.SUB, true);
         t.setLetterSpacing(0.06f);
         return t;
     }
 
     static boolean mph() {
-        return Store.flag("mph", false);
+        return Prefs.flag("mph", false);
     }
 
     static LinearLayout.LayoutParams top(float m) {
-        LinearLayout.LayoutParams lp = U.lp(U.MATCH, U.WRAP);
-        lp.topMargin = U.u(m);
+        LinearLayout.LayoutParams lp = Ui.lp(Ui.MATCH, Ui.WRAP);
+        lp.topMargin = Ui.u(m);
         return lp;
     }
 
     static final class Empty extends W {
         Empty(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = card(c, U.CARD);
-            l.addView(U.text(c, "Tap to choose a tile", 13, U.SUB, false));
+            LinearLayout l = card(c, Ui.CARD);
+            l.addView(Ui.text(c, "Tap to choose a tile", 13, Ui.SUB, false));
             l.setOnClickListener(x -> AppPanels.gallery(index));
             v = l;
         }
@@ -297,21 +297,21 @@ final class Widgets {
     static final class CarConnect extends W {
         CarConnect(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = U.col(c);
+            LinearLayout l = Ui.col(c);
             l.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF1F4E9A, 0xFF13284A}));
-            ((GradientDrawable) l.getBackground()).setCornerRadius(U.uf(16));
-            U.pad(l, 14, 16, 14, 16);
+            ((GradientDrawable) l.getBackground()).setCornerRadius(Ui.uf(16));
+            Ui.pad(l, 14, 16, 14, 16);
             FrameLayout ic = new FrameLayout(c);
-            ic.setBackground(U.oval(0x33FFFFFF));
-            ic.addView(U.icon(c, R.drawable.ic_cast, U.TEXT), U.flpu(26, 26, Gravity.CENTER));
-            l.addView(ic, U.lpu(48, 48));
-            l.addView(new View(c), U.weight(1, false));
-            l.addView(U.text(c, "Car Connect", 16, U.TEXT, true));
-            TextView sub = U.text(c, "CarPlay · Auto\nMirror · Native", 11, 0xCCFFFFFF, false);
-            sub.setLineSpacing(U.uf(2), 1);
+            ic.setBackground(Ui.oval(0x33FFFFFF));
+            ic.addView(Ui.icon(c, R.drawable.ic_cast, Ui.TEXT), Ui.flpu(26, 26, Gravity.CENTER));
+            l.addView(ic, Ui.lpu(48, 48));
+            l.addView(new View(c), Ui.weight(1, false));
+            l.addView(Ui.text(c, "Car Connect", 16, Ui.TEXT, true));
+            TextView sub = Ui.text(c, "CarPlay · Auto\nMirror · Native", 11, 0xCCFFFFFF, false);
+            sub.setLineSpacing(Ui.uf(2), 1);
             l.addView(sub, top(4));
             l.setOnClickListener(x -> AppPanels.connect());
-            U.press(l);
+            Ui.press(l);
             v = l;
         }
     }
@@ -332,25 +332,25 @@ final class Widgets {
         @Override
         protected void onDraw(Canvas cv) {
             float s = Math.min(getWidth(), getHeight());
-            float sw = U.uf(7);
+            float sw = Ui.uf(7);
             float cx = getWidth() / 2f, cy = getHeight() / 2f;
             r.set(cx - s / 2 + sw, cy - s / 2 + sw, cx + s / 2 - sw, cy + s / 2 - sw);
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(sw);
-            p.setColor(U.CARD3);
+            p.setColor(Ui.CARD3);
             cv.drawArc(r, 135, 270, false, p);
-            p.setColor(SpeedLimit.over() ? U.RED : value > max * 0.67f ? U.AMBER : U.ACCENT);
+            p.setColor(SpeedLimit.over() ? Ui.RED : value > max * 0.67f ? Ui.AMBER : Ui.ACCENT);
             cv.drawArc(r, 135, 270 * Math.max(0, Math.min(1, value / max)), false, p);
             p.setStyle(Paint.Style.FILL);
             p.setTextAlign(Paint.Align.CENTER);
-            p.setColor(U.TEXT);
+            p.setColor(Ui.TEXT);
             p.setTypeface(Typeface.DEFAULT_BOLD);
-            p.setTextSize(U.uf(30));
-            cv.drawText(big, cx, cy + U.uf(8), p);
+            p.setTextSize(Ui.uf(30));
+            cv.drawText(big, cx, cy + Ui.uf(8), p);
             p.setTypeface(Typeface.DEFAULT);
-            p.setColor(U.SUB);
-            p.setTextSize(U.uf(11));
-            cv.drawText(unit, cx, cy + U.uf(26), p);
+            p.setColor(Ui.SUB);
+            p.setTextSize(Ui.uf(11));
+            cv.drawText(unit, cx, cy + Ui.uf(26), p);
         }
     }
 
@@ -362,22 +362,22 @@ final class Widgets {
 
         Speed(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = card(c, U.CARD);
+            LinearLayout l = card(c, Ui.CARD);
             box = l;
-            LinearLayout head = U.row(c);
-            head.addView(label(c, "SPEED"), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+            LinearLayout head = Ui.row(c);
+            head.addView(label(c, "SPEED"), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
             // the road's speed limit, as a round road sign
-            limit = U.text(c, "", 12, 0xFF111111, true);
+            limit = Ui.text(c, "", 12, 0xFF111111, true);
             limit.setGravity(Gravity.CENTER);
-            limit.setBackground(U.outline(0xFFFFFFFF, 0xFFE24B4A, 3, 15));
+            limit.setBackground(Ui.outline(0xFFFFFFFF, 0xFFE24B4A, 3, 15));
             limit.setVisibility(View.GONE);
-            head.addView(limit, U.lpu(30, 30));
+            head.addView(limit, Ui.lpu(30, 30));
             l.addView(head);
             dial = new Dial(c);
-            l.addView(dial, U.weight(1, false));
-            topT = U.line(c, "", ts(11), U.SUB, false);
+            l.addView(dial, Ui.weight(1, false));
+            topT = Ui.line(c, "", ts(11), Ui.SUB, false);
             topT.setGravity(Gravity.CENTER);
-            l.addView(topT, U.lp(U.MATCH, U.WRAP));
+            l.addView(topT, Ui.lp(Ui.MATCH, Ui.WRAP));
             v = l;
             tick();
         }
@@ -388,15 +388,15 @@ final class Widgets {
             float f = m ? 2.23694f : 3.6f;
             dial.unit = m ? "mph" : "km/h";
             dial.max = m ? 110 : 180;
-            if (Loc.speed >= 0 && Loc.fresh()) {
-                dial.value = Loc.speed * f;
+            if (Gps.speed >= 0 && Gps.fresh()) {
+                dial.value = Gps.speed * f;
                 dial.big = String.valueOf(Math.round(dial.value));
             } else {
                 dial.value = 0;
                 dial.big = "--";
             }
             dial.invalidate();
-            float top = Loc.topSpeedToday * (m ? 0.621371f : 1f);
+            float top = Gps.topSpeedToday * (m ? 0.621371f : 1f);
             topT.setText("Top today " + Math.round(top));
             // speed limit sign, and light the tile up red when over it
             if (SpeedLimit.kmh > 0) {
@@ -407,7 +407,7 @@ final class Widgets {
             if (over) dial.max = Math.max(dial.max, dial.value);
             if (over != lit) {
                 lit = over;
-                box.setBackground(over ? U.outline(0xFF5A1010, 0xFFE24B4A, 3, 16) : Glass.card(U.CARD, 16));
+                box.setBackground(over ? Ui.outline(0xFF5A1010, 0xFFE24B4A, 3, 16) : Themes.card(Ui.CARD, 16));
                 box.animate().cancel();
                 box.setAlpha(1f);
                 if (over) pulse();
@@ -415,13 +415,13 @@ final class Widgets {
             if (over) {
                 topT.setText("Over the limit");
                 topT.setTextColor(0xFFFF8A80);
-            } else topT.setTextColor(U.SUB);
+            } else topT.setTextColor(Ui.SUB);
         }
 
         /** A gentle glow pulse while over the limit. */
         private void pulse() {
             if (!lit) return;
-            box.animate().alpha(0.7f).setDuration(U.ms(450)).withEndAction(() -> box.animate().alpha(1f).setDuration(U.ms(450)).withEndAction(this::pulse).start()).start();
+            box.animate().alpha(0.7f).setDuration(Ui.ms(450)).withEndAction(() -> box.animate().alpha(1f).setDuration(Ui.ms(450)).withEndAction(this::pulse).start()).start();
         }
     }
 
@@ -432,35 +432,35 @@ final class Widgets {
 
         Trip(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = card(c, U.CARD);
+            LinearLayout l = card(c, Ui.CARD);
             l.addView(label(c, "TRIP"));
-            l.addView(new View(c), U.weight(1, false));
-            LinearLayout r = U.row(c);
+            l.addView(new View(c), Ui.weight(1, false));
+            LinearLayout r = Ui.row(c);
             r.setGravity(Gravity.BOTTOM);
-            dist = U.text(c, "0.0", tl ? 44 : 30, U.TEXT, true);
+            dist = Ui.text(c, "0.0", tl ? 44 : 30, Ui.TEXT, true);
             r.addView(dist);
-            unit = U.text(c, " km", ts(13), U.SUB, false);
-            unit.setPadding(0, 0, 0, U.u(4));
+            unit = Ui.text(c, " km", ts(13), Ui.SUB, false);
+            unit.setPadding(0, 0, 0, Ui.u(4));
             r.addView(unit);
             l.addView(r);
-            l.addView(new View(c), U.weight(1, false));
-            drive = U.line(c, "", ts(12), U.TEXT2, false);
+            l.addView(new View(c), Ui.weight(1, false));
+            drive = Ui.line(c, "", ts(12), Ui.TEXT2, false);
             l.addView(drive);
-            avg = U.line(c, "", ts(12), U.TEXT2, false);
+            avg = Ui.line(c, "", ts(12), Ui.TEXT2, false);
             l.addView(avg, top(4));
-            l.setOnClickListener(x -> Sheets.show(() -> {
-                LinearLayout b = U.col(Sheets.ctx());
-                b.addView(U.text(Sheets.ctx(), "Start a new trip from zero?", 15, U.TEXT2, false));
-                LinearLayout btns = U.row(Sheets.ctx());
-                btns.addView(U.button(Sheets.ctx(), "Reset trip", true, () -> {
-                    Loc.resetTrip();
-                    Sheets.close();
+            l.setOnClickListener(x -> Panels.show(() -> {
+                LinearLayout b = Ui.col(Panels.ctx());
+                b.addView(Ui.text(Panels.ctx(), "Start a new trip from zero?", 15, Ui.TEXT2, false));
+                LinearLayout btns = Ui.row(Panels.ctx());
+                btns.addView(Ui.button(Panels.ctx(), "Reset trip", true, () -> {
+                    Gps.resetTrip();
+                    Panels.close();
                     tick();
                 }));
-                btns.addView(U.gap(Sheets.ctx(), 10, 1));
-                btns.addView(U.button(Sheets.ctx(), "Cancel", false, Sheets::close));
+                btns.addView(Ui.gap(Panels.ctx(), 10, 1));
+                btns.addView(Ui.button(Panels.ctx(), "Cancel", false, Panels::close));
                 b.addView(btns, top(18));
-                return Sheets.panel("Trip", b, 400, 200);
+                return Panels.panel("Trip", b, 400, 200);
             }));
             v = l;
             tick();
@@ -469,11 +469,11 @@ final class Widgets {
         @Override
         void tick() {
             boolean m = mph();
-            double d = Loc.tripMeters / (m ? 1609.34 : 1000.0);
+            double d = Gps.tripMeters / (m ? 1609.34 : 1000.0);
             dist.setText(String.format(Locale.US, d < 100 ? "%.1f" : "%.0f", d));
             unit.setText(m ? " mi" : " km");
-            drive.setText(U.dur(Loc.tripMovingMs) + " driving");
-            double hrs = Loc.tripMovingMs / 3600000.0;
+            drive.setText(Ui.dur(Gps.tripMovingMs) + " driving");
+            double hrs = Gps.tripMovingMs / 3600000.0;
             avg.setText(hrs > 0.01 ? "Avg " + Math.round(d / hrs) + (m ? " mph" : " km/h") : "Avg --");
         }
     }
@@ -486,63 +486,63 @@ final class Widgets {
 
         Park(Context c, int i, JSONObject s) {
             super(c, i, s);
-            box = card(c, U.CARD);
-            LinearLayout hd = U.row(c); // PARKING with a small P badge on the right
+            box = card(c, Ui.CARD);
+            LinearLayout hd = Ui.row(c); // PARKING with a small P badge on the right
             hd.setGravity(Gravity.CENTER_VERTICAL);
-            hd.addView(label(c, "PARKING"), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+            hd.addView(label(c, "PARKING"), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
             FrameLayout ic = new FrameLayout(c);
-            ic.setBackground(U.oval(U.ACCENT));
-            ic.addView(U.text(c, "P", 16, U.TEXT, true), U.flpu(16, 22, Gravity.CENTER));
-            hd.addView(ic, U.lpu(28, 28));
-            box.addView(hd, U.lp(U.MATCH, U.WRAP));
-            box.addView(new View(c), U.weight(1, false));
-            title = U.line(c, "", tl ? 34 : 26, U.TEXT, true); // the time it was parked, big
+            ic.setBackground(Ui.oval(Ui.ACCENT));
+            ic.addView(Ui.text(c, "P", 16, Ui.TEXT, true), Ui.flpu(16, 22, Gravity.CENTER));
+            hd.addView(ic, Ui.lpu(28, 28));
+            box.addView(hd, Ui.lp(Ui.MATCH, Ui.WRAP));
+            box.addView(new View(c), Ui.weight(1, false));
+            title = Ui.line(c, "", tl ? 34 : 26, Ui.TEXT, true); // the time it was parked, big
             box.addView(title);
-            sub = U.text(c, "", ts(13), U.TEXT2, false); // town (two lines if it needs them)
+            sub = Ui.text(c, "", ts(13), Ui.TEXT2, false); // town (two lines if it needs them)
             sub.setMaxLines(2);
             sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
             box.addView(sub, top(4));
-            sub2 = U.line(c, "", ts(12), U.SUB, false); // how long ago
+            sub2 = Ui.line(c, "", ts(12), Ui.SUB, false); // how long ago
             box.addView(sub2, top(2));
-            box.addView(new View(c), U.weight(1, false));
+            box.addView(new View(c), Ui.weight(1, false));
             box.setOnClickListener(x -> tapped());
-            U.press(box);
+            Ui.press(box);
             v = box;
             tick();
         }
 
         private void tapped() {
-            if (Store.lng("park_at", 0) == 0) savePark();
-            else Sheets.show(() -> { // already parked: open, park again or clear
-                Context k = Sheets.ctx();
-                LinearLayout b = U.col(k);
-                b.addView(U.text(k, sub.getText() + " · " + sub2.getText(), 14, U.TEXT2, false));
-                b.addView(Sheets.item("Show in Maps", null, () -> {
-                    Sheets.close();
-                    Actions.navigateTo(k, Store.str("park_lat", "") + "," + Store.str("park_lon", ""));
+            if (Prefs.lng("park_at", 0) == 0) savePark();
+            else Panels.show(() -> { // already parked: open, park again or clear
+                Context k = Panels.ctx();
+                LinearLayout b = Ui.col(k);
+                b.addView(Ui.text(k, sub.getText() + " · " + sub2.getText(), 14, Ui.TEXT2, false));
+                b.addView(Panels.item("Show in Maps", null, () -> {
+                    Panels.close();
+                    Actions.navigateTo(k, Prefs.str("park_lat", "") + "," + Prefs.str("park_lon", ""));
                 }), top(8));
-                b.addView(Sheets.item("Park here again", "Replace with where the car is now", () -> {
-                    Sheets.close();
+                b.addView(Panels.item("Park here again", "Replace with where the car is now", () -> {
+                    Panels.close();
                     savePark();
                 }));
-                b.addView(Sheets.item("Clear", null, () -> {
-                    Store.put("park_at", 0L);
-                    Sheets.close();
+                b.addView(Panels.item("Clear", null, () -> {
+                    Prefs.put("park_at", 0L);
+                    Panels.close();
                     tick();
                 }));
-                return Sheets.panel("Parked", b, 460, 320);
+                return Panels.panel("Parked", b, 460, 320);
             });
         }
 
         private void savePark() {
-            if (!Loc.has()) {
+            if (!Gps.has()) {
                 android.widget.Toast.makeText(c, "Waiting for GPS", android.widget.Toast.LENGTH_SHORT).show();
                 return;
             }
-            Store.put("park_lat", String.valueOf(Loc.lat));
-            Store.put("park_lon", String.valueOf(Loc.lon));
-            Store.put("park_town", Loc.town == null ? "" : Loc.town);
-            Store.put("park_at", System.currentTimeMillis());
+            Prefs.put("park_lat", String.valueOf(Gps.lat));
+            Prefs.put("park_lon", String.valueOf(Gps.lon));
+            Prefs.put("park_town", Gps.town == null ? "" : Gps.town);
+            Prefs.put("park_at", System.currentTimeMillis());
             if (HA.configured()) CarHA.send(true); // also tells Home Assistant (if set up)
             android.widget.Toast.makeText(c, "Parking spot saved", android.widget.Toast.LENGTH_SHORT).show();
             tick();
@@ -550,19 +550,19 @@ final class Widgets {
 
         @Override
         void tick() {
-            long at = Store.lng("park_at", 0);
+            long at = Prefs.lng("park_at", 0);
             if (at == 0) {
                 title.setText("Park here");
                 sub.setText("Tap to save this spot");
                 sub2.setVisibility(View.GONE);
-                box.setBackground(Glass.card(U.CARD, 16));
+                box.setBackground(Themes.card(Ui.CARD, 16));
             } else {
-                title.setText(new java.text.SimpleDateFormat(Store.flag(Store.H24, true) ? "HH:mm" : "h:mm a", Locale.getDefault()).format(new java.util.Date(at)));
-                String town = Store.str("park_town", "");
+                title.setText(new java.text.SimpleDateFormat(Prefs.flag(Prefs.H24, true) ? "HH:mm" : "h:mm a", Locale.getDefault()).format(new java.util.Date(at)));
+                String town = Prefs.str("park_town", "");
                 sub.setText(town.isEmpty() ? "Parked here" : town);
-                sub2.setText("Parked " + Ticker.ago(at));
+                sub2.setText("Parked " + NewsTicker.ago(at));
                 sub2.setVisibility(View.VISIBLE);
-                box.setBackground(U.outline(U.CARD, U.ACCENT, 2, 16));
+                box.setBackground(Ui.outline(Ui.CARD, Ui.ACCENT, 2, 16));
             }
         }
     }
@@ -572,7 +572,7 @@ final class Widgets {
     /** Thin rounded progress bar. */
     static final class Bar extends View {
         float value;
-        int color = U.ACCENT;
+        int color = Ui.ACCENT;
         private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final RectF r = new RectF();
 
@@ -584,7 +584,7 @@ final class Widgets {
         protected void onDraw(Canvas cv) {
             float h = getHeight(), rad = h / 2;
             r.set(0, 0, getWidth(), h);
-            p.setColor(U.CARD3);
+            p.setColor(Ui.CARD3);
             cv.drawRoundRect(r, rad, rad, p);
             r.right = Math.max(h, getWidth() * Math.max(0, Math.min(1, value)));
             p.setColor(color);
@@ -599,23 +599,23 @@ final class Widgets {
 
         RestW(Context c, int i, JSONObject s) {
             super(c, i, s);
-            box = card(c, U.CARD);
+            box = card(c, Ui.CARD);
             head = label(c, "DRIVING");
             box.addView(head);
-            box.addView(new View(c), U.weight(1, false));
-            time = U.text(c, "0:00", tl ? 44 : 30, U.TEXT, true);
+            box.addView(new View(c), Ui.weight(1, false));
+            time = Ui.text(c, "0:00", tl ? 44 : 30, Ui.TEXT, true);
             box.addView(time);
             bar = new Bar(c);
-            LinearLayout.LayoutParams bl = U.lp(U.MATCH, U.u(6));
-            bl.topMargin = U.u(6);
+            LinearLayout.LayoutParams bl = Ui.lp(Ui.MATCH, Ui.u(6));
+            bl.topMargin = Ui.u(6);
             box.addView(bar, bl);
-            box.addView(new View(c), U.weight(1, false));
-            sub = U.line(c, "", ts(12), U.TEXT2, false);
+            box.addView(new View(c), Ui.weight(1, false));
+            sub = Ui.line(c, "", ts(12), Ui.TEXT2, false);
             box.addView(sub);
-            sub2 = U.line(c, "", ts(12), U.SUB, false);
+            sub2 = Ui.line(c, "", ts(12), Ui.SUB, false);
             box.addView(sub2, top(2));
             box.setOnClickListener(x -> Rest.setup());
-            U.press(box);
+            Ui.press(box);
             v = box;
             tick();
         }
@@ -623,7 +623,7 @@ final class Widgets {
         @Override
         void tick() {
             long min = Rest.driveMs / 60000;
-            time.setText((min / 60) + ":" + U.two((int) (min % 60)));
+            time.setText((min / 60) + ":" + Ui.two((int) (min % 60)));
             bar.value = Rest.progress();
             boolean due = Rest.due();
             long stopped = Rest.stoppedMs();
@@ -632,37 +632,37 @@ final class Widgets {
             if (!Rest.on()) {
                 head.setText("DRIVING");
                 sub.setText("Reminders off");
-                bar.color = U.MUTED;
-                bg = U.CARD;
+                bar.color = Ui.MUTED;
+                bg = Ui.CARD;
             } else if (due && stopped > 60000) {
                 long left = Rest.breakMin() - stopped / 60000;
                 head.setText("RESTING");
                 sub.setText(left > 0 ? "Break done in" : "Break done");
                 if (left > 0) l2 = left + " min";
-                bar.color = U.TEAL;
-                bg = U.CARD;
+                bar.color = Ui.TEAL;
+                bg = Ui.CARD;
             } else if (due) {
                 head.setText("TAKE A BREAK");
                 sub.setText("Stop and rest");
                 l2 = Rest.breakMin() + " minutes";
-                bar.color = U.AMBER;
+                bar.color = Ui.AMBER;
                 bg = 0xFF4A3410;
             } else {
                 head.setText("DRIVING");
                 long leftMin = Rest.limitMin() - min;
                 long lm = Math.max(0, leftMin); // short so it fits: "Break in 2 h", "1 h 25", "40 min"
-                sub.setText("Break in " + (lm < 60 ? lm + " min" : lm % 60 == 0 ? (lm / 60) + " h" : (lm / 60) + " h " + U.two((int) (lm % 60))));
+                sub.setText("Break in " + (lm < 60 ? lm + " min" : lm % 60 == 0 ? (lm / 60) + " h" : (lm / 60) + " h " + Ui.two((int) (lm % 60))));
                 if (Rest.limitKm() > 0) {
                     boolean m = mph();
                     double left = (Rest.limitKm() * 1000.0 - Rest.meters) / (m ? 1609.34 : 1000.0);
                     l2 = "or " + Math.max(0, Math.round(left)) + (m ? " mi" : " km");
                 }
-                bar.color = bar.value > 0.85f ? U.AMBER : U.ACCENT;
-                bg = U.CARD;
+                bar.color = bar.value > 0.85f ? Ui.AMBER : Ui.ACCENT;
+                bg = Ui.CARD;
             }
             sub2.setText(l2);
             sub2.setVisibility(l2.isEmpty() ? View.GONE : View.VISIBLE);
-            box.setBackground(U.round(bg, 16));
+            box.setBackground(Ui.round(bg, 16));
             bar.invalidate();
         }
     }
@@ -684,43 +684,43 @@ final class Widgets {
         @Override
         protected void onDraw(Canvas cv) {
             float s = Math.min(getWidth(), getHeight());
-            float cx = getWidth() / 2f, cy = getHeight() / 2f, rad = s / 2 - U.uf(2);
+            float cx = getWidth() / 2f, cy = getHeight() / 2f, rad = s / 2 - Ui.uf(2);
             p.setStyle(Paint.Style.FILL);
-            p.setColor(U.CARD2);
+            p.setColor(Ui.CARD2);
             cv.drawCircle(cx, cy, rad, p);
             cv.save();
             cv.rotate(-rotation, cx, cy);
-            p.setColor(U.MUTED);
+            p.setColor(Ui.MUTED);
             for (int i = 0; i < 72; i++) {
                 float a = (float) Math.toRadians(i * 5);
-                float len = i % 18 == 0 ? U.uf(7) : i % 2 == 0 ? U.uf(4) : U.uf(2);
-                p.setStrokeWidth(i % 18 == 0 ? U.uf(2) : U.uf(1));
-                cv.drawLine(cx + (float) Math.sin(a) * (rad - U.uf(3)), cy - (float) Math.cos(a) * (rad - U.uf(3)),
-                        cx + (float) Math.sin(a) * (rad - U.uf(3) - len), cy - (float) Math.cos(a) * (rad - U.uf(3) - len), p);
+                float len = i % 18 == 0 ? Ui.uf(7) : i % 2 == 0 ? Ui.uf(4) : Ui.uf(2);
+                p.setStrokeWidth(i % 18 == 0 ? Ui.uf(2) : Ui.uf(1));
+                cv.drawLine(cx + (float) Math.sin(a) * (rad - Ui.uf(3)), cy - (float) Math.cos(a) * (rad - Ui.uf(3)),
+                        cx + (float) Math.sin(a) * (rad - Ui.uf(3) - len), cy - (float) Math.cos(a) * (rad - Ui.uf(3) - len), p);
             }
             p.setTextAlign(Paint.Align.CENTER);
             p.setTypeface(Typeface.DEFAULT_BOLD);
-            p.setTextSize(U.uf(11));
+            p.setTextSize(Ui.uf(11));
             String[] nesw = {"N", "E", "S", "W"};
             for (int i = 0; i < 4; i++) {
                 float a = (float) Math.toRadians(i * 90);
-                float tr = rad - U.uf(18);
-                p.setColor(i == 0 ? U.RED : U.SUB);
-                float x = cx + (float) Math.sin(a) * tr, y = cy - (float) Math.cos(a) * tr + U.uf(4);
+                float tr = rad - Ui.uf(18);
+                p.setColor(i == 0 ? Ui.RED : Ui.SUB);
+                float x = cx + (float) Math.sin(a) * tr, y = cy - (float) Math.cos(a) * tr + Ui.uf(4);
                 cv.save();
-                cv.rotate(rotation, x, y - U.uf(4));
+                cv.rotate(rotation, x, y - Ui.uf(4));
                 cv.drawText(nesw[i], x, y, p);
                 cv.restore();
             }
             if (!Float.isNaN(marker)) {
                 float a = (float) Math.toRadians(marker);
-                p.setColor(U.GREEN);
-                p.setStrokeWidth(U.uf(3));
+                p.setColor(Ui.GREEN);
+                p.setStrokeWidth(Ui.uf(3));
                 p.setStrokeCap(Paint.Cap.ROUND);
-                cv.drawLine(cx, cy, cx + (float) Math.sin(a) * (rad - U.uf(26)), cy - (float) Math.cos(a) * (rad - U.uf(26)), p);
+                cv.drawLine(cx, cy, cx + (float) Math.sin(a) * (rad - Ui.uf(26)), cy - (float) Math.cos(a) * (rad - Ui.uf(26)), p);
                 if (markerIcon != null) {
-                    float mx = cx + (float) Math.sin(a) * (rad - U.uf(14)), my = cy - (float) Math.cos(a) * (rad - U.uf(14));
-                    int h = U.u(8);
+                    float mx = cx + (float) Math.sin(a) * (rad - Ui.uf(14)), my = cy - (float) Math.cos(a) * (rad - Ui.uf(14));
+                    int h = Ui.u(8);
                     cv.save();
                     cv.rotate(rotation, mx, my);
                     markerIcon.setBounds((int) mx - h, (int) my - h, (int) mx + h, (int) my + h);
@@ -739,11 +739,11 @@ final class Widgets {
                 path.lineTo(cx - h * 0.55f, cy + h * 0.7f);
                 path.close();
                 p.setStyle(Paint.Style.FILL);
-                p.setColor(U.ACCENT);
+                p.setColor(Ui.ACCENT);
                 cv.drawPath(path, p);
             } else {
-                p.setColor(U.TEXT);
-                cv.drawCircle(cx, cy, U.uf(4), p);
+                p.setColor(Ui.TEXT);
+                cv.drawCircle(cx, cy, Ui.uf(4), p);
             }
         }
     }
@@ -754,37 +754,37 @@ final class Widgets {
 
         Heading(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = card(c, U.CARD);
+            LinearLayout l = card(c, Ui.CARD);
             l.addView(label(c, "HEADING"));
             compass = new Compass(c);
-            LinearLayout.LayoutParams cl = U.weight(1, false);
-            cl.topMargin = U.u(6);
-            cl.bottomMargin = U.u(6);
+            LinearLayout.LayoutParams cl = Ui.weight(1, false);
+            cl.topMargin = Ui.u(6);
+            cl.bottomMargin = Ui.u(6);
             l.addView(compass, cl);
-            dir = U.line(c, "--", tl ? 24 : 16, U.TEXT, true);
+            dir = Ui.line(c, "--", tl ? 24 : 16, Ui.TEXT, true);
             dir.setGravity(Gravity.CENTER);
-            l.addView(dir, U.lp(U.MATCH, U.WRAP));
-            alt = U.line(c, "", ts(11), U.SUB, false);
+            l.addView(dir, Ui.lp(Ui.MATCH, Ui.WRAP));
+            alt = Ui.line(c, "", ts(11), Ui.SUB, false);
             alt.setGravity(Gravity.CENTER);
             l.addView(alt, top(3));
             l.setOnClickListener(x -> InfoPanels.heading());
-            U.press(l);
+            Ui.press(l);
             v = l;
             tick();
         }
 
         @Override
         void tick() {
-            float h = Loc.heading(); // held at the last direction while parked
+            float h = Gps.heading(); // held at the last direction while parked
             if (!Float.isNaN(h)) {
                 compass.rotation = h;
                 dir.setText(Weather.compass(Math.round(h)) + "  " + Math.round(h) + "°");
             } else {
                 compass.rotation = 0;
-                dir.setText(Loc.fresh() ? "Drive to set" : "No GPS");
+                dir.setText(Gps.fresh() ? "Drive to set" : "No GPS");
             }
             compass.invalidate();
-            alt.setText(Double.isNaN(Loc.alt) ? (!Float.isNaN(h) && !Loc.moving() ? "Parked" : "") : "▲ " + Math.round(mph() ? Loc.alt * 3.28084 : Loc.alt) + (mph() ? " ft" : " m") + " high");
+            alt.setText(Double.isNaN(Gps.alt) ? (!Float.isNaN(h) && !Gps.moving() ? "Parked" : "") : "▲ " + Math.round(mph() ? Gps.alt * 3.28084 : Gps.alt) + (mph() ? " ft" : " m") + " high");
         }
     }
 
@@ -796,43 +796,43 @@ final class Widgets {
 
         WeatherW(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = card(c, U.CARD);
-            place = U.line(c, "", ts(11), U.SUB, true);
+            LinearLayout l = card(c, Ui.CARD);
+            place = Ui.line(c, "", ts(11), Ui.SUB, true);
             l.addView(place);
-            icon = U.icon(c, R.drawable.ic_w_partly, 0);
-            temp = U.text(c, "--°", tl ? 48 : 34, U.TEXT, true);
+            icon = Ui.icon(c, R.drawable.ic_w_partly, 0);
+            temp = Ui.text(c, "--°", tl ? 48 : 34, Ui.TEXT, true);
             if (tl) { // Top Left: big icon beside a big temperature
-                l.addView(new View(c), U.weight(1, false));
-                LinearLayout r = U.row(c);
+                l.addView(new View(c), Ui.weight(1, false));
+                LinearLayout r = Ui.row(c);
                 r.setGravity(Gravity.CENTER_VERTICAL);
-                r.addView(icon, U.lpu(68, 68));
-                LinearLayout.LayoutParams tl2 = U.lp(U.WRAP, U.WRAP);
-                tl2.leftMargin = U.u(10);
+                r.addView(icon, Ui.lpu(68, 68));
+                LinearLayout.LayoutParams tl2 = Ui.lp(Ui.WRAP, Ui.WRAP);
+                tl2.leftMargin = Ui.u(10);
                 r.addView(temp, tl2);
                 l.addView(r);
-                l.addView(new View(c), U.weight(1, false));
+                l.addView(new View(c), Ui.weight(1, false));
             } else {
-                LinearLayout.LayoutParams il = U.lpu(48, 48);
-                il.topMargin = U.u(10);
+                LinearLayout.LayoutParams il = Ui.lpu(48, 48);
+                il.topMargin = Ui.u(10);
                 l.addView(icon, il);
-                l.addView(new View(c), U.weight(1, false));
+                l.addView(new View(c), Ui.weight(1, false));
                 l.addView(temp);
             }
-            desc = U.line(c, "", ts(12), U.TEXT2, false);
+            desc = Ui.line(c, "", ts(12), Ui.TEXT2, false);
             l.addView(desc, top(2));
-            hilo = U.line(c, "", ts(12), U.SUB, false);
+            hilo = Ui.line(c, "", ts(12), Ui.SUB, false);
             l.addView(hilo, top(3));
             l.setOnClickListener(x -> InfoPanels.weather(0));
-            U.press(l);
+            Ui.press(l);
             v = l;
             tick();
         }
 
         @Override
         void tick() {
-            place.setText(Loc.town != null ? Loc.town.toUpperCase(Locale.ROOT) : "WEATHER");
+            place.setText(Gps.town != null ? Gps.town.toUpperCase(Locale.ROOT) : "WEATHER");
             if (!Weather.ok) {
-                desc.setText(Loc.has() ? "Loading…" : "Waiting for location");
+                desc.setText(Gps.has() ? "Loading…" : "Waiting for location");
                 return;
             }
             icon.setImageResource(Weather.icon(Weather.code, Weather.isDay));
@@ -850,29 +850,29 @@ final class Widgets {
 
         WhatsW(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = card(c, U.CARD);
-            LinearLayout head = U.row(c);
-            head.addView(label(c, "WHATSAPP"), new LinearLayout.LayoutParams(0, U.WRAP, 1));
-            badge = U.line(c, "", ts(12), U.TEXT, true); // unread chats
+            LinearLayout l = card(c, Ui.CARD);
+            LinearLayout head = Ui.row(c);
+            head.addView(label(c, "WHATSAPP"), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+            badge = Ui.line(c, "", ts(12), Ui.TEXT, true); // unread chats
             badge.setGravity(Gravity.CENTER);
-            badge.setBackground(U.round(U.GREEN, 11));
-            U.pad(badge, 7, 2, 7, 2);
+            badge.setBackground(Ui.round(Ui.GREEN, 11));
+            Ui.pad(badge, 7, 2, 7, 2);
             badge.setVisibility(View.GONE);
             head.addView(badge);
             l.addView(head);
-            l.addView(new View(c), U.weight(1, false));
+            l.addView(new View(c), Ui.weight(1, false));
             android.widget.FrameLayout ic = new android.widget.FrameLayout(c);
-            ic.setBackground(U.oval(0xFF1F7A46));
-            ic.addView(U.icon(c, R.drawable.ic_chat, U.TEXT), U.flpu(tl ? 34 : 26, tl ? 34 : 26, Gravity.CENTER));
-            LinearLayout.LayoutParams il = U.lpu(tl ? 64 : 50, tl ? 64 : 50);
+            ic.setBackground(Ui.oval(0xFF1F7A46));
+            ic.addView(Ui.icon(c, R.drawable.ic_chat, Ui.TEXT), Ui.flpu(tl ? 34 : 26, tl ? 34 : 26, Gravity.CENTER));
+            LinearLayout.LayoutParams il = Ui.lpu(tl ? 64 : 50, tl ? 64 : 50);
             il.gravity = Gravity.CENTER_HORIZONTAL;
             l.addView(ic, il);
-            l.addView(new View(c), U.weight(1, false));
-            sub = U.line(c, "Tap to open", ts(12), U.SUB, false);
+            l.addView(new View(c), Ui.weight(1, false));
+            sub = Ui.line(c, "Tap to open", ts(12), Ui.SUB, false);
             sub.setGravity(Gravity.CENTER);
-            l.addView(sub, U.lp(U.MATCH, U.WRAP));
+            l.addView(sub, Ui.lp(Ui.MATCH, Ui.WRAP));
             l.setOnClickListener(x -> WhatsWeb.open());
-            U.press(l);
+            Ui.press(l);
             v = l;
             if (index >= 0) WhatsWeb.web(c); // loads in the background, so chats are ready when it opens
             tick();
@@ -892,63 +892,63 @@ final class Widgets {
     static final class GoTo extends W {
         GoTo(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = card(c, U.CARD);
+            LinearLayout l = card(c, Ui.CARD);
             // tap the title (or anywhere but Home / Work) for more saved places
-            LinearLayout head = U.row(c);
-            head.addView(U.text(c, "Go to", 15, U.TEXT, true), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+            LinearLayout head = Ui.row(c);
+            head.addView(Ui.text(c, "Go to", 15, Ui.TEXT, true), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
             JSONArray more = cfg.optJSONArray("places");
-            head.addView(U.text(c, (more != null && more.length() > 0 ? "+" + more.length() + " " : "") + "›", 13, U.ACCENT_SOFT, true));
+            head.addView(Ui.text(c, (more != null && more.length() > 0 ? "+" + more.length() + " " : "") + "›", 13, Ui.ACCENT_SOFT, true));
             l.addView(head);
             l.setOnClickListener(x -> places(index));
             // Home and Work share the space under the title (big buttons, at least 52 high)
-            LinearLayout.LayoutParams hl = U.weight(1, false);
-            hl.topMargin = U.u(10);
+            LinearLayout.LayoutParams hl = Ui.weight(1, false);
+            hl.topMargin = Ui.u(10);
             View home = place(R.drawable.ic_home, "Home", "home");
-            home.setMinimumHeight(U.u(tl ? 52 : 40));
+            home.setMinimumHeight(Ui.u(tl ? 52 : 40));
             l.addView(home, hl);
-            LinearLayout.LayoutParams wl = U.weight(1, false);
-            wl.topMargin = U.u(8);
+            LinearLayout.LayoutParams wl = Ui.weight(1, false);
+            wl.topMargin = Ui.u(8);
             View work = place(R.drawable.ic_work, "Work", "work");
-            work.setMinimumHeight(U.u(tl ? 52 : 40));
+            work.setMinimumHeight(Ui.u(tl ? 52 : 40));
             l.addView(work, wl);
             v = l;
         }
 
         private View place(int icon, String name, String key) {
-            LinearLayout b = U.row(c);
-            b.setBackground(Glass.inner(U.CARD2, 12));
+            LinearLayout b = Ui.row(c);
+            b.setBackground(Themes.inner(Ui.CARD2, 12));
             b.setGravity(Gravity.CENTER_VERTICAL);
             // big in the Top Left Widget; in a tile (narrower) smaller so the name isn't cut off
-            U.pad(b, tl ? 14 : 9, 0, tl ? 10 : 6, 0);
-            b.addView(U.icon(c, icon, U.ACCENT_SOFT), U.lpu(tl ? 28 : 22, tl ? 28 : 22));
-            TextView t = U.line(c, name, tl ? 18 : 15, U.TEXT, true);
-            LinearLayout.LayoutParams nl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-            nl.leftMargin = U.u(tl ? 12 : 8);
+            Ui.pad(b, tl ? 14 : 9, 0, tl ? 10 : 6, 0);
+            b.addView(Ui.icon(c, icon, Ui.ACCENT_SOFT), Ui.lpu(tl ? 28 : 22, tl ? 28 : 22));
+            TextView t = Ui.line(c, name, tl ? 18 : 15, Ui.TEXT, true);
+            LinearLayout.LayoutParams nl = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
+            nl.leftMargin = Ui.u(tl ? 12 : 8);
             b.addView(t, nl);
             b.setOnClickListener(x -> {
                 String a = cfg.optString(key, "");
                 if (a.isEmpty()) gotoSetup(index);
                 else Actions.navigateTo(c, a);
             });
-            U.press(b);
+            Ui.press(b);
             return b;
         }
     }
 
-    static EditText field(String hint, String value, boolean secret, U.Cb<String> changed) {
-        Context c = Sheets.ctx();
+    static EditText field(String hint, String value, boolean secret, Ui.Cb<String> changed) {
+        Context c = Panels.ctx();
         EditText e = new EditText(c);
         e.setHint(hint);
         e.setText(value);
         e.setSingleLine(true);
-        e.setTextColor(U.TEXT);
-        e.setHintTextColor(U.MUTED);
-        e.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, U.uf(14));
-        e.setBackground(Glass.inner(U.CARD2, 10));
-        U.pad(e, 12, 9, 12, 9);
+        e.setTextColor(Ui.TEXT);
+        e.setHintTextColor(Ui.MUTED);
+        e.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.uf(14));
+        e.setBackground(Themes.inner(Ui.CARD2, 10));
+        Ui.pad(e, 12, 9, 12, 9);
         if (secret) e.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
         e.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI | android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
-        Keyboard.attach(e, hint);
+        InAppKeyboard.attach(e, hint);
         e.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int a, int b, int d) {
@@ -968,16 +968,16 @@ final class Widgets {
 
     /** All saved places: Home, Work and any others. Tap to navigate; add or remove places here. */
     static void places(int index) {
-        Sheets.Page pg = () -> {
-            Context c = Sheets.ctx();
-            JSONObject spec = Tiles.specs().optJSONObject(index);
+        Panels.Page pg = () -> {
+            Context c = Panels.ctx();
+            JSONObject spec = TileDrawer.specs().optJSONObject(index);
             JSONObject cfg = spec.optJSONObject("cfg");
             if (cfg == null) cfg = new JSONObject();
             final JSONObject fc = cfg;
             JSONArray more = fc.optJSONArray("places");
             if (more == null) more = new JSONArray();
             final JSONArray list = more;
-            LinearLayout b = U.col(c);
+            LinearLayout b = Ui.col(c);
             List<View> cells = new ArrayList<>();
             String[][] fixed = {{"home", "Home"}, {"work", "Work"}};
             for (String[] f : fixed) {
@@ -985,7 +985,7 @@ final class Widgets {
                 cells.add(placeRow(c, "home".equals(f[0]) ? R.drawable.ic_home : R.drawable.ic_work, f[1], a.isEmpty() ? "Tap to set" : a, () -> {
                     if (a.isEmpty()) gotoSetup(index);
                     else {
-                        Sheets.close();
+                        Panels.close();
                         Actions.navigateTo(c, a);
                     }
                 }, null));
@@ -996,27 +996,27 @@ final class Widgets {
                 final int k = i;
                 String a = o.optString("addr");
                 cells.add(placeRow(c, R.drawable.ic_pin, o.optString("name"), a, () -> {
-                    Sheets.close();
+                    Panels.close();
                     Actions.navigateTo(c, a);
                 }, () -> { // remove
                     JSONArray out = new JSONArray();
                     for (int q = 0; q < list.length(); q++) if (q != k) out.put(list.opt(q));
                     put(fc, "places", out);
                     put(spec, "cfg", fc);
-                    Tiles.setSpec(index, spec);
-                    Sheets.refresh();
+                    TileDrawer.setSpec(index, spec);
+                    Panels.refresh();
                 }));
             }
             b.addView(AppPanels.grid(c, cells, 2, 8));
             // add a place
-            b.addView(Sheets.section("Add a place"));
+            b.addView(Panels.section("Add a place"));
             final String[] nm = {""}, ad = {""};
             // stacked, so it fits the tile area's width
             b.addView(field("Name, e.g. Gym", "", false, t -> nm[0] = t), top(4));
-            LinearLayout add = U.row(c);
-            add.addView(field("Address", "", false, t -> ad[0] = t), new LinearLayout.LayoutParams(0, U.WRAP, 1));
-            add.addView(U.gap(c, 8, 1));
-            add.addView(U.button(c, "Add", true, () -> {
+            LinearLayout add = Ui.row(c);
+            add.addView(field("Address", "", false, t -> ad[0] = t), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+            add.addView(Ui.gap(c, 8, 1));
+            add.addView(Ui.button(c, "Add", true, () -> {
                 if (nm[0].trim().isEmpty() || ad[0].trim().isEmpty()) return;
                 JSONObject o = new JSONObject();
                 put(o, "name", nm[0].trim());
@@ -1024,61 +1024,61 @@ final class Widgets {
                 list.put(o);
                 put(fc, "places", list);
                 put(spec, "cfg", fc);
-                Tiles.setSpec(index, spec);
-                Sheets.refresh();
+                TileDrawer.setSpec(index, spec);
+                Panels.refresh();
             }));
             b.addView(add, top(8));
-            b.addView(Sheets.item("Change Home and Work", null, () -> gotoSetup(index)), top(8));
-            return Sheets.panel("Places", b);
+            b.addView(Panels.item("Change Home and Work", null, () -> gotoSetup(index)), top(8));
+            return Panels.panel("Places", b);
         };
-        Sheets.show(pg); // always inside the 2×4 tile area
+        Panels.show(pg); // always inside the 2×4 tile area
     }
 
     private static View placeRow(Context c, int icon, String name, String addr, Runnable go, Runnable remove) {
-        LinearLayout r = U.row(c);
-        r.setBackground(Glass.inner(U.CARD2, 12));
-        U.pad(r, 12, 8, 8, 8);
-        r.setMinimumHeight(U.u(56));
-        r.addView(U.icon(c, icon, U.ACCENT_SOFT), U.lpu(22, 22));
-        LinearLayout t = U.col(c);
-        t.addView(U.line(c, name, 14, U.TEXT, true));
-        t.addView(U.line(c, addr, 11, U.SUB, false), top(2));
-        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-        tl.leftMargin = U.u(10);
+        LinearLayout r = Ui.row(c);
+        r.setBackground(Themes.inner(Ui.CARD2, 12));
+        Ui.pad(r, 12, 8, 8, 8);
+        r.setMinimumHeight(Ui.u(56));
+        r.addView(Ui.icon(c, icon, Ui.ACCENT_SOFT), Ui.lpu(22, 22));
+        LinearLayout t = Ui.col(c);
+        t.addView(Ui.line(c, name, 14, Ui.TEXT, true));
+        t.addView(Ui.line(c, addr, 11, Ui.SUB, false), top(2));
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
+        tl.leftMargin = Ui.u(10);
         r.addView(t, tl);
         if (remove != null) {
-            TextView x = U.text(c, "−", 16, U.TEXT, true);
+            TextView x = Ui.text(c, "−", 16, Ui.TEXT, true);
             x.setGravity(Gravity.CENTER);
-            x.setBackground(U.oval(U.RED));
+            x.setBackground(Ui.oval(Ui.RED));
             x.setOnClickListener(v -> remove.run());
-            r.addView(x, U.lpu(24, 24));
+            r.addView(x, Ui.lpu(24, 24));
         }
         r.setOnClickListener(v -> go.run());
-        U.press(r);
+        Ui.press(r);
         return r;
     }
 
     static void gotoSetup(int index) {
-        Sheets.show(() -> {
-            Context c = Sheets.ctx();
-            JSONObject spec = Tiles.specs().optJSONObject(index);
+        Panels.show(() -> {
+            Context c = Panels.ctx();
+            JSONObject spec = TileDrawer.specs().optJSONObject(index);
             JSONObject cfg = spec.optJSONObject("cfg");
             if (cfg == null) cfg = new JSONObject();
             final JSONObject fc = cfg;
-            LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Addresses open in your navigation app (" + (Actions.navPkg() == null ? "not chosen yet" : Apps.label(Actions.navPkg())) + ").", 13, U.SUB, false));
-            b.addView(Sheets.section("Home"));
-            b.addView(field("e.g. 12 Florida Road, Durban", fc.optString("home"), false, t -> put(fc, "home", t)), U.lp(U.MATCH, U.WRAP));
-            b.addView(Sheets.section("Work"));
-            b.addView(field("Work address", fc.optString("work"), false, t -> put(fc, "work", t)), U.lp(U.MATCH, U.WRAP));
-            LinearLayout btns = U.row(c);
-            btns.addView(U.button(c, "Save", true, () -> {
+            LinearLayout b = Ui.col(c);
+            b.addView(Ui.text(c, "Addresses open in your navigation app (" + (Actions.navPkg() == null ? "not chosen yet" : Apps.label(Actions.navPkg())) + ").", 13, Ui.SUB, false));
+            b.addView(Panels.section("Home"));
+            b.addView(field("e.g. 12 Florida Road, Durban", fc.optString("home"), false, t -> put(fc, "home", t)), Ui.lp(Ui.MATCH, Ui.WRAP));
+            b.addView(Panels.section("Work"));
+            b.addView(field("Work address", fc.optString("work"), false, t -> put(fc, "work", t)), Ui.lp(Ui.MATCH, Ui.WRAP));
+            LinearLayout btns = Ui.row(c);
+            btns.addView(Ui.button(c, "Save", true, () -> {
                 put(spec, "cfg", fc);
-                Sheets.close();
-                Tiles.setSpec(index, spec);
+                Panels.close();
+                TileDrawer.setSpec(index, spec);
             }));
             b.addView(btns, top(18));
-            return Sheets.panel("Go to", b);
+            return Panels.panel("Go to", b);
         });
     }
 
@@ -1149,7 +1149,7 @@ final class Widgets {
             ImageView iv = new ImageView(c);
             iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
             iv.setImageBitmap(bm);
-            f.addView(iv, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            f.addView(iv, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             f.setOutlineProvider(new android.view.ViewOutlineProvider() {
                 @Override
                 public void getOutline(View view, android.graphics.Outline o) {
@@ -1158,49 +1158,49 @@ final class Widgets {
             });
             f.setClipToOutline(true);
         } else {
-            f.setBackground(U.oval(AVATAR[Math.abs(p.name.hashCode()) % AVATAR.length]));
-            TextView t = U.text(c, p.name.isEmpty() ? "?" : p.name.substring(0, 1).toUpperCase(Locale.ROOT), size * 0.45f, U.TEXT, true);
+            f.setBackground(Ui.oval(AVATAR[Math.abs(p.name.hashCode()) % AVATAR.length]));
+            TextView t = Ui.text(c, p.name.isEmpty() ? "?" : p.name.substring(0, 1).toUpperCase(Locale.ROOT), size * 0.45f, Ui.TEXT, true);
             t.setGravity(Gravity.CENTER);
-            f.addView(t, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            f.addView(t, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         }
         return f;
     }
 
     /** Pick a phone contact (or type a number). */
-    static void pickContact(String title, U.Cb<Person> cb) {
+    static void pickContact(String title, Ui.Cb<Person> cb) {
         MainActivity a = MainActivity.I;
         if (a != null && a.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
             a.requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, 3);
         }
         final String[] query = {""};
-        Sheets.push(new Sheets.Page() {
+        Panels.push(new Panels.Page() {
             @Override
             public View build() {
-                Context c = Sheets.ctx();
-                LinearLayout b = U.col(c);
-                LinearLayout list = U.col(c);
+                Context c = Panels.ctx();
+                LinearLayout b = Ui.col(c);
+                LinearLayout list = Ui.col(c);
                 EditText search = field("Search, or type a number", query[0], false, t -> {
                     query[0] = t;
                     fill(c, list, t, cb);
                 });
-                b.addView(search, U.lp(U.MATCH, U.WRAP));
+                b.addView(search, Ui.lp(Ui.MATCH, Ui.WRAP));
                 b.addView(list, top(8));
                 fill(c, list, query[0], cb);
-                return Sheets.panel(title, b);
+                return Panels.panel(title, b);
             }
         });
     }
 
-    private static void fill(Context c, LinearLayout list, String q, U.Cb<Person> cb) {
+    private static void fill(Context c, LinearLayout list, String q, Ui.Cb<Person> cb) {
         list.removeAllViews();
         if (q.matches("[+0-9 ()-]{3,}")) {
             Person p = new Person();
             p.name = q;
             p.number = q;
-            list.addView(Sheets.item("Use number " + q, null, () -> cb.on(p)));
+            list.addView(Panels.item("Use number " + q, null, () -> cb.on(p)));
         }
         if (c.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
-            list.addView(U.text(c, "Allow contacts access to pick from your contacts.", 13, U.SUB, false));
+            list.addView(Ui.text(c, "Allow contacts access to pick from your contacts.", 13, Ui.SUB, false));
             return;
         }
         String sel = q.isEmpty() ? null : ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " LIKE ?";
@@ -1215,14 +1215,14 @@ final class Widgets {
                 p.name = cur.getString(0) == null ? "" : cur.getString(0);
                 p.number = cur.getString(1);
                 p.photo = cur.getString(2);
-                LinearLayout r = U.row(c);
-                r.setMinimumHeight(U.u(48));
-                r.addView(avatar(c, p, 34), U.lpu(34, 34));
-                LinearLayout t = U.col(c);
-                t.addView(U.line(c, p.name, 15, U.TEXT, false));
-                t.addView(U.line(c, p.number, 12, U.SUB, false));
-                LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-                tl.leftMargin = U.u(12);
+                LinearLayout r = Ui.row(c);
+                r.setMinimumHeight(Ui.u(48));
+                r.addView(avatar(c, p, 34), Ui.lpu(34, 34));
+                LinearLayout t = Ui.col(c);
+                t.addView(Ui.line(c, p.name, 15, Ui.TEXT, false));
+                t.addView(Ui.line(c, p.number, 12, Ui.SUB, false));
+                LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
+                tl.leftMargin = Ui.u(12);
                 r.addView(t, tl);
                 r.setOnClickListener(x -> cb.on(p));
                 list.addView(r);
@@ -1230,7 +1230,7 @@ final class Widgets {
             }
         } catch (Exception ignored) {
         }
-        if (n == 0 && !q.matches("[+0-9 ()-]{3,}")) list.addView(U.text(c, "No contacts found", 13, U.SUB, false));
+        if (n == 0 && !q.matches("[+0-9 ()-]{3,}")) list.addView(Ui.text(c, "No contacts found", 13, Ui.SUB, false));
     }
 
     // ------------------------------------------------------------------ Phone
@@ -1238,19 +1238,19 @@ final class Widgets {
     static final class PhoneW extends W {
         PhoneW(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = U.col(c);
+            LinearLayout l = Ui.col(c);
             l.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF1F7A46, 0xFF0F3D26}));
-            ((GradientDrawable) l.getBackground()).setCornerRadius(U.uf(16));
-            U.pad(l, 14, 16, 14, 16);
+            ((GradientDrawable) l.getBackground()).setCornerRadius(Ui.uf(16));
+            Ui.pad(l, 14, 16, 14, 16);
             FrameLayout ic = new FrameLayout(c);
-            ic.setBackground(U.oval(0x33FFFFFF));
-            ic.addView(U.icon(c, R.drawable.ic_call, U.TEXT), U.flpu(26, 26, Gravity.CENTER));
-            l.addView(ic, U.lpu(48, 48));
-            l.addView(new View(c), U.weight(1, false));
-            l.addView(U.text(c, "Phone", 16, U.TEXT, true));
-            l.addView(U.text(c, "Contacts · Keypad\nRecents", 11, 0xCCFFFFFF, false), top(4));
+            ic.setBackground(Ui.oval(0x33FFFFFF));
+            ic.addView(Ui.icon(c, R.drawable.ic_call, Ui.TEXT), Ui.flpu(26, 26, Gravity.CENTER));
+            l.addView(ic, Ui.lpu(48, 48));
+            l.addView(new View(c), Ui.weight(1, false));
+            l.addView(Ui.text(c, "Phone", 16, Ui.TEXT, true));
+            l.addView(Ui.text(c, "Contacts · Keypad\nRecents", 11, 0xCCFFFFFF, false), top(4));
             l.setOnClickListener(x -> PhoneScreen.show(null));
-            U.press(l);
+            Ui.press(l);
             v = l;
         }
     }
@@ -1260,9 +1260,9 @@ final class Widgets {
     static final class QuickDial extends W {
         QuickDial(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = card(c, U.CARD);
-            U.pad(l, 12, 14, 12, 10);
-            l.addView(U.text(c, "Quick dial", 15, U.TEXT, true));
+            LinearLayout l = card(c, Ui.CARD);
+            Ui.pad(l, 12, 14, 12, 10);
+            l.addView(Ui.text(c, "Quick dial", 15, Ui.TEXT, true));
             JSONArray people = cfg.optJSONArray("people");
             List<Person> ps = new ArrayList<>();
             for (int k = 0; people != null && k < people.length() && ps.size() < 4; k++) {
@@ -1270,33 +1270,33 @@ final class Widgets {
                 if (p != null) ps.add(p);
             }
             // the contacts as big faces filling the tile: one alone in the middle, else 2 × 2 (+ adds more)
-            LinearLayout grid = U.col(c);
+            LinearLayout grid = Ui.col(c);
             int n = ps.size() <= 1 ? 1 : 4, cols = n == 1 ? 1 : 2;
             for (int r = 0; r < n / cols; r++) {
-                LinearLayout row = U.row(c);
+                LinearLayout row = Ui.row(c);
                 for (int k = 0; k < cols; k++) {
                     int at = r * cols + k;
                     row.addView(at < ps.size() ? face(c, ps.get(at), n == 1 ? (tl ? 72 : 56) : (tl ? 48 : 36))
-                            : addFace(c, n == 1 ? 56 : 36), new LinearLayout.LayoutParams(0, U.MATCH, 1));
+                            : addFace(c, n == 1 ? 56 : 36), new LinearLayout.LayoutParams(0, Ui.MATCH, 1));
                 }
-                grid.addView(row, new LinearLayout.LayoutParams(U.MATCH, 0, 1));
+                grid.addView(row, new LinearLayout.LayoutParams(Ui.MATCH, 0, 1));
             }
-            LinearLayout.LayoutParams gl = U.weight(1, false);
-            gl.topMargin = U.u(6);
+            LinearLayout.LayoutParams gl = Ui.weight(1, false);
+            gl.topMargin = Ui.u(6);
             l.addView(grid, gl);
             v = l;
         }
 
     private static View faceBox(Context c, View pic, float size, String name) {
-        LinearLayout f = U.col(c);
+        LinearLayout f = Ui.col(c);
         f.setGravity(Gravity.CENTER);
-        f.addView(pic, U.lpu(size, size));
-        TextView t = U.line(c, name, size > 50 ? 15 : 12, U.TEXT2, size > 50);
+        f.addView(pic, Ui.lpu(size, size));
+        TextView t = Ui.line(c, name, size > 50 ? 15 : 12, Ui.TEXT2, size > 50);
         t.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams tl = U.lp(U.MATCH, U.WRAP);
-        tl.topMargin = U.u(3);
+        LinearLayout.LayoutParams tl = Ui.lp(Ui.MATCH, Ui.WRAP);
+        tl.topMargin = Ui.u(3);
         f.addView(t, tl);
-        U.press(f);
+        Ui.press(f);
         return f;
     }
 
@@ -1313,8 +1313,8 @@ final class Widgets {
     /** An empty place: + chooses contacts. */
     private View addFace(Context c, float size) {
         FrameLayout ring = new FrameLayout(c);
-        ring.setBackground(U.dashed(U.LINE, size / 2));
-        ring.addView(U.icon(c, R.drawable.ic_plus, U.SUB), U.flpu(size * 0.4f, size * 0.4f, Gravity.CENTER));
+        ring.setBackground(Ui.dashed(Ui.LINE, size / 2));
+        ring.addView(Ui.icon(c, R.drawable.ic_plus, Ui.SUB), Ui.flpu(size * 0.4f, size * 0.4f, Gravity.CENTER));
         View f = faceBox(c, ring, size, "Add");
         f.setOnClickListener(x -> quickDialSetup(index));
         return f;
@@ -1322,41 +1322,41 @@ final class Widgets {
     }
 
     static void quickDialSetup(int index) {
-        Sheets.show(new Sheets.Page() {
+        Panels.show(new Panels.Page() {
             @Override
             public View build() {
-                Context c = Sheets.ctx();
-                JSONObject spec = Tiles.specs().optJSONObject(index);
+                Context c = Panels.ctx();
+                JSONObject spec = TileDrawer.specs().optJSONObject(index);
                 JSONObject cfg = spec.optJSONObject("cfg");
                 if (cfg == null) cfg = new JSONObject();
                 JSONArray people = cfg.optJSONArray("people");
                 if (people == null) people = new JSONArray();
                 final JSONArray fp = people;
                 final JSONObject fc = cfg;
-                LinearLayout b = U.col(c);
+                LinearLayout b = Ui.col(c);
                 for (int k = 0; k < 4; k++) {
                     final int slot = k;
                     Person p = person(fp.optJSONObject(k));
-                    b.addView(Sheets.item("Contact " + (k + 1), p == null ? "Choose" : p.name, () -> pickContact("Contact " + (slot + 1), chosen -> {
+                    b.addView(Panels.item("Contact " + (k + 1), p == null ? "Choose" : p.name, () -> pickContact("Contact " + (slot + 1), chosen -> {
                         try {
                             fp.put(slot, json(chosen));
                         } catch (Exception ignored) {
                         }
                         put(fc, "people", fp);
                         put(spec, "cfg", fc);
-                        Tiles.setSpec(index, spec);
-                        Sheets.back();
-                        Sheets.refresh();
+                        TileDrawer.setSpec(index, spec);
+                        Panels.back();
+                        Panels.refresh();
                     })));
                 }
-                b.addView(U.text(c, "Calls go through: " + callsLabel() + ".", 12, U.SUB, false), top(10));
-                return Sheets.panel("Quick dial", b);
+                b.addView(Ui.text(c, "Calls go through: " + callsLabel() + ".", 12, Ui.SUB, false), top(10));
+                return Panels.panel("Quick dial", b);
             }
         });
     }
 
     static String callsLabel() {
-        String m = Store.str(Store.CALLS, "bt");
+        String m = Prefs.str(Prefs.CALLS, "bt");
         if ("bt".equals(m)) {
             String p = Actions.btDialler();
             return p == null ? "Bluetooth" : "Bluetooth · " + Apps.label(p);
@@ -1371,11 +1371,11 @@ final class Widgets {
             super(c, i, s);
             Person p = person(cfg.optJSONObject("person"));
             FrameLayout f = new FrameLayout(c);
-            f.setBackground(Glass.card(U.CARD, 16));
+            f.setBackground(Themes.card(Ui.CARD, 16));
             if (p == null) {
-                LinearLayout l = card(c, U.CARD);
-                l.addView(U.text(c, "Contact", 15, U.TEXT, true));
-                l.addView(U.text(c, "Tap to choose who to call", 12, U.SUB, false), top(8));
+                LinearLayout l = card(c, Ui.CARD);
+                l.addView(Ui.text(c, "Contact", 15, Ui.TEXT, true));
+                l.addView(Ui.text(c, "Tap to choose who to call", 12, Ui.SUB, false), top(8));
                 l.setOnClickListener(x -> contactSetup(index));
                 v = l;
                 return;
@@ -1385,51 +1385,51 @@ final class Widgets {
                 ImageView iv = new ImageView(c);
                 iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
                 iv.setImageBitmap(bm);
-                f.addView(iv, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+                f.addView(iv, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             } else {
-                f.setBackground(U.round(AVATAR[Math.abs(p.name.hashCode()) % AVATAR.length], 16));
-                TextView big = U.text(c, p.name.isEmpty() ? "?" : p.name.substring(0, 1).toUpperCase(Locale.ROOT), 64, 0x99FFFFFF, true);
+                f.setBackground(Ui.round(AVATAR[Math.abs(p.name.hashCode()) % AVATAR.length], 16));
+                TextView big = Ui.text(c, p.name.isEmpty() ? "?" : p.name.substring(0, 1).toUpperCase(Locale.ROOT), 64, 0x99FFFFFF, true);
                 big.setGravity(Gravity.CENTER);
-                FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(U.MATCH, U.MATCH);
-                bl.bottomMargin = U.u(30);
+                FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH);
+                bl.bottomMargin = Ui.u(30);
                 f.addView(big, bl);
             }
             View shade = new View(c);
             shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x00000000, 0x00000000, 0xCC000000}));
-            f.addView(shade, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-            LinearLayout t = U.col(c);
-            U.pad(t, 12, 0, 12, 12);
-            t.addView(U.line(c, p.name, 15, U.TEXT, true));
-            t.addView(U.line(c, p.number, 11, 0xCCFFFFFF, false), top(2));
-            f.addView(t, new FrameLayout.LayoutParams(U.MATCH, U.WRAP, Gravity.BOTTOM));
+            f.addView(shade, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            LinearLayout t = Ui.col(c);
+            Ui.pad(t, 12, 0, 12, 12);
+            t.addView(Ui.line(c, p.name, 15, Ui.TEXT, true));
+            t.addView(Ui.line(c, p.number, 11, 0xCCFFFFFF, false), top(2));
+            f.addView(t, new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP, Gravity.BOTTOM));
             FrameLayout call = new FrameLayout(c);
-            call.setBackground(U.oval(U.GREEN));
-            call.addView(U.icon(c, R.drawable.ic_call, U.TEXT), U.flpu(18, 18, Gravity.CENTER));
-            FrameLayout.LayoutParams cl = U.flpu(36, 36, Gravity.TOP | Gravity.END);
-            cl.setMargins(0, U.u(10), U.u(10), 0);
+            call.setBackground(Ui.oval(Ui.GREEN));
+            call.addView(Ui.icon(c, R.drawable.ic_call, Ui.TEXT), Ui.flpu(18, 18, Gravity.CENTER));
+            FrameLayout.LayoutParams cl = Ui.flpu(36, 36, Gravity.TOP | Gravity.END);
+            cl.setMargins(0, Ui.u(10), Ui.u(10), 0);
             f.addView(call, cl);
             f.setOnClickListener(x -> {
                 if (MainActivity.I != null) Actions.call(MainActivity.I, p.number);
             });
-            U.press(f);
+            Ui.press(f);
             v = f;
         }
     }
 
     static void contactSetup(int index) {
-        Sheets.show(() -> {
-            Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Choose who this tile calls. Their contact photo fills the tile.", 13, U.SUB, false));
-            b.addView(U.button(c, "Choose contact", true, () -> pickContact("Choose contact", p -> {
-                JSONObject spec = Tiles.specs().optJSONObject(index);
+        Panels.show(() -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
+            b.addView(Ui.text(c, "Choose who this tile calls. Their contact photo fills the tile.", 13, Ui.SUB, false));
+            b.addView(Ui.button(c, "Choose contact", true, () -> pickContact("Choose contact", p -> {
+                JSONObject spec = TileDrawer.specs().optJSONObject(index);
                 JSONObject cfg = new JSONObject();
                 put(cfg, "person", json(p));
                 put(spec, "cfg", cfg);
-                Tiles.setSpec(index, spec);
-                Sheets.close();
+                TileDrawer.setSpec(index, spec);
+                Panels.close();
             })), top(16));
-            return Sheets.panel("Contact", b, 480, 240);
+            return Panels.panel("Contact", b, 480, 240);
         });
     }
 
@@ -1440,24 +1440,24 @@ final class Widgets {
 
         NextPrayer(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = card(c, U.CARD);
-            LinearLayout head = U.row(c);
-            head.addView(label(c, "NEXT"), new LinearLayout.LayoutParams(0, U.WRAP, 1));
-            head.addView(U.icon(c, R.drawable.ic_moon, U.TEAL), U.lpu(18, 18));
+            LinearLayout l = card(c, Ui.CARD);
+            LinearLayout head = Ui.row(c);
+            head.addView(label(c, "NEXT"), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+            head.addView(Ui.icon(c, R.drawable.ic_moon, Ui.TEAL), Ui.lpu(18, 18));
             l.addView(head);
-            l.addView(new View(c), U.weight(1, false));
-            name = U.line(c, "", ts(18), U.TEXT2, true);
+            l.addView(new View(c), Ui.weight(1, false));
+            name = Ui.line(c, "", ts(18), Ui.TEXT2, true);
             l.addView(name);
-            time = U.line(c, "--:--", tl ? 46 : 32, U.TEXT, true);
+            time = Ui.line(c, "--:--", tl ? 46 : 32, Ui.TEXT, true);
             l.addView(time, top(2));
-            l.addView(new View(c), U.weight(1, false));
-            pill = U.line(c, "", ts(12), U.MINT, true);
+            l.addView(new View(c), Ui.weight(1, false));
+            pill = Ui.line(c, "", ts(12), Ui.MINT, true);
             pill.setGravity(Gravity.CENTER);
-            pill.setBackground(U.round(0xFF143B2A, 12));
-            U.pad(pill, 10, 6, 10, 6);
-            l.addView(pill, U.lp(U.MATCH, U.WRAP));
+            pill.setBackground(Ui.round(0xFF143B2A, 12));
+            Ui.pad(pill, 10, 6, 10, 6);
+            l.addView(pill, Ui.lp(Ui.MATCH, Ui.WRAP));
             l.setOnClickListener(x -> InfoPanels.prayer());
-            U.press(l);
+            Ui.press(l);
             v = l;
             tick();
         }
@@ -1465,13 +1465,13 @@ final class Widgets {
         @Override
         void tick() {
             if (Alerts.salahNow()) { // the salaah alert, inside the tile
-                v.setBackground(U.outline(0xFF0F3D2E, U.TEAL, 3, 16));
+                v.setBackground(Ui.outline(0xFF0F3D2E, Ui.TEAL, 3, 16));
                 name.setText("Time for Salaah");
                 time.setText(Alerts.salahName == null ? "" : Alerts.salahName);
                 pill.setText("Now");
                 return;
             }
-            v.setBackground(Glass.card(U.CARD, 16));
+            v.setBackground(Themes.card(Ui.CARD, 16));
             double[] n = Prayer.next();
             if (n == null) {
                 name.setText("Prayer");
@@ -1482,7 +1482,7 @@ final class Widgets {
             name.setText(Prayer.NAMES[(int) n[0]]);
             time.setText(InfoPanels.clock(n[2]));
             long ms = Prayer.msUntil(n);
-            pill.setText("in " + U.dur(ms + 59999));
+            pill.setText("in " + Ui.dur(ms + 59999));
         }
     }
 
@@ -1495,14 +1495,14 @@ final class Widgets {
 
         PrayerTimes(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = card(c, U.CARD);
-            U.pad(l, 10, 14, 10, 10);
+            LinearLayout l = card(c, Ui.CARD);
+            Ui.pad(l, 10, 14, 10, 10);
             head = label(c, "TODAY");
-            head.setPadding(U.u(4), 0, 0, 0);
+            head.setPadding(Ui.u(4), 0, 0, 0);
             l.addView(head);
-            rows = U.col(c);
-            LinearLayout.LayoutParams rl = U.weight(1, false);
-            rl.topMargin = U.u(6);
+            rows = Ui.col(c);
+            LinearLayout.LayoutParams rl = Ui.weight(1, false);
+            rl.topMargin = Ui.u(6);
             l.addView(rows, rl);
             l.setOnClickListener(x -> InfoPanels.prayer());
             v = l;
@@ -1522,12 +1522,12 @@ final class Widgets {
             int[] five = {0, 2, 3, 4, 5};
             for (int k : five) {
                 boolean next = n != null && (int) n[0] == k;
-                LinearLayout r = U.row(c);
-                U.pad(r, 6, 0, 6, 0);
-                if (next) r.setBackground(U.round(U.DGREEN, 8));
-                r.addView(U.line(c, Prayer.NAMES[k], 12, next ? U.TEXT : U.TEXT2, next), new LinearLayout.LayoutParams(0, U.WRAP, 1));
-                r.addView(U.line(c, t == null ? "--:--" : InfoPanels.clock(t[k]), 12, next ? U.TEXT : U.SUB, next));
-                rows.addView(r, U.weight(1, false));
+                LinearLayout r = Ui.row(c);
+                Ui.pad(r, 6, 0, 6, 0);
+                if (next) r.setBackground(Ui.round(Ui.DGREEN, 8));
+                r.addView(Ui.line(c, Prayer.NAMES[k], 12, next ? Ui.TEXT : Ui.TEXT2, next), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+                r.addView(Ui.line(c, t == null ? "--:--" : InfoPanels.clock(t[k]), 12, next ? Ui.TEXT : Ui.SUB, next));
+                rows.addView(r, Ui.weight(1, false));
             }
         }
     }
@@ -1540,16 +1540,16 @@ final class Widgets {
 
         Qibla(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = card(c, U.CARD);
-            U.pad(l, 12, 12, 12, 12);
+            LinearLayout l = card(c, Ui.CARD);
+            Ui.pad(l, 12, 12, 12, 12);
             compass = new Compass(c);
             compass.arrow = false;
             compass.markerIcon = c.getDrawable(R.drawable.ic_kaaba);
-            l.addView(compass, U.weight(1, false));
-            deg = U.line(c, "--°", 22, U.TEXT, true);
+            l.addView(compass, Ui.weight(1, false));
+            deg = Ui.line(c, "--°", 22, Ui.TEXT, true);
             deg.setGravity(Gravity.CENTER);
             l.addView(deg, top(8));
-            sub = U.line(c, "from North", 11, U.SUB, false);
+            sub = Ui.line(c, "from North", 11, Ui.SUB, false);
             sub.setGravity(Gravity.CENTER);
             l.addView(sub, top(2));
             l.setOnClickListener(x -> InfoPanels.qibla());
@@ -1559,7 +1559,7 @@ final class Widgets {
 
         @Override
         void tick() {
-            if (!Loc.has()) {
+            if (!Gps.has()) {
                 compass.marker = Float.NaN;
                 deg.setText("--°");
                 sub.setText("Waiting for GPS");
@@ -1568,7 +1568,7 @@ final class Widgets {
             }
             float q = (float) Prayer.qibla();
             compass.marker = q;
-            float h = Loc.heading(); // last direction driven, held while parked
+            float h = Gps.heading(); // last direction driven, held while parked
             if (!Float.isNaN(h)) {
                 compass.rotation = h;
                 compass.arrow = true;

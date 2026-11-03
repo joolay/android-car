@@ -23,7 +23,7 @@ final class Salah {
     static void start(Context c) {
         if (ctx != null) return;
         ctx = c.getApplicationContext();
-        U.ui.post(check);
+        Ui.ui.post(check);
     }
 
     private static final Runnable check = new Runnable() {
@@ -33,12 +33,12 @@ final class Salah {
                 tick();
             } catch (Exception ignored) {
             }
-            U.ui.postDelayed(this, 20000);
+            Ui.ui.postDelayed(this, 20000);
         }
     };
 
     private static void tick() {
-        if (!Faith.islam() || (!Store.flag(PAUSE, true) && !Store.flag(ANNOUNCE, true))) return;
+        if (!Faith.islam() || (!Prefs.flag(PAUSE, true) && !Prefs.flag(ANNOUNCE, true))) return;
         double[] t = Prayer.times(0);
         if (t == null) return;
         Calendar k = Calendar.getInstance();
@@ -59,10 +59,10 @@ final class Salah {
     static void fire(String name) {
         Alerts.salahAt = System.currentTimeMillis();
         Alerts.salahName = name;
-        if (Alerts.expand("salah")) U.ui.post(() -> SalahCard.show(name)); // large notice in the tile area
+        if (Alerts.expand("salah")) Ui.ui.post(() -> SalahCard.show(name)); // large notice in the tile area
         else Alerts.front("salah"); // shown in the prayer tile, moved to the first spot
-        if (Store.flag(PAUSE, true)) pauseMedia();
-        if (Store.flag(ANNOUNCE, true)) U.ui.postDelayed(() -> {
+        if (Prefs.flag(PAUSE, true)) pauseMedia();
+        if (Prefs.flag(ANNOUNCE, true)) Ui.ui.postDelayed(() -> {
             if (!Rest.play(ctx, "voice/salah_" + name.toLowerCase(java.util.Locale.ROOT) + ".mp3", null))
                 Rest.say(ctx, "It's time for Salaah. " + name + ".", null, null);
         }, 700);

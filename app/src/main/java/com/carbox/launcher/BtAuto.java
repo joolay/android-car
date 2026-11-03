@@ -41,14 +41,14 @@ final class BtAuto {
         String bt = Actions.btDialler();
         if (bt == null || e.getPackageName() == null || !bt.equals(e.getPackageName().toString())) {
             // BT Phone's call window gone (another app came up): end a call we were showing
-            if (seenCall && e.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) U.ui.postDelayed(() -> recheck(s), 600);
+            if (seenCall && e.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) Ui.ui.postDelayed(() -> recheck(s), 600);
             return;
         }
         if (pendingNumber != null && !typing && System.currentTimeMillis() - pendingAt < 15000) {
             typing = true;
-            U.ui.postDelayed(() -> typeNumber(s), 700); // let the keypad finish drawing
+            Ui.ui.postDelayed(() -> typeNumber(s), 700); // let the keypad finish drawing
         }
-        U.ui.post(() -> recheck(s));
+        Ui.ui.post(() -> recheck(s));
     }
 
     /** Look at BT Phone's windows and update the call shown by Car Launcher. */
@@ -151,8 +151,8 @@ final class BtAuto {
             return;
         }
         AccessibilityNodeInfo call = callButton(root);
-        for (int i = 0; i < steps.size(); i++) U.ui.postDelayed(steps.get(i), 150L * i);
-        U.ui.postDelayed(() -> {
+        for (int i = 0; i < steps.size(); i++) Ui.ui.postDelayed(steps.get(i), 150L * i);
+        Ui.ui.postDelayed(() -> {
             typing = false;
             if (call != null) call.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             else log("dial: number typed, call button not found");
@@ -236,9 +236,9 @@ final class BtAuto {
     }
 
     private static void log(String msg) {
-        java.util.List<String> l = new ArrayList<>(Store.list("call_log"));
+        java.util.List<String> l = new ArrayList<>(Prefs.list("call_log"));
         l.add(0, new java.text.SimpleDateFormat("HH:mm", Locale.US).format(new java.util.Date()) + "  " + msg);
         while (l.size() > 6) l.remove(l.size() - 1);
-        Store.putList("call_log", l);
+        Prefs.putList("call_log", l);
     }
 }

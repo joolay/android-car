@@ -29,7 +29,7 @@ final class Updater {
 
     /** The key typed in Settings, else the built-in one. */
     static String key() {
-        String k = Store.str(KEY, "").trim();
+        String k = Prefs.str(KEY, "").trim();
         return k.isEmpty() ? BUILT_IN_KEY : k;
     }
     private static final String ACTION = "com.carbox.launcher.INSTALL_RESULT";
@@ -42,11 +42,11 @@ final class Updater {
     /** Started from the home screen: first check 20 s in (after the splash), then every 6 hours. */
     static void start(Context c) {
         final Context app = c.getApplicationContext();
-        U.ui.postDelayed(new Runnable() {
+        Ui.ui.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (Store.flag(AUTO, true)) check(app, false);
-                U.ui.postDelayed(this, 6 * 3600 * 1000L);
+                if (Prefs.flag(AUTO, true)) check(app, false);
+                Ui.ui.postDelayed(this, 6 * 3600 * 1000L);
             }
         }, 20000);
     }
@@ -102,7 +102,7 @@ final class Updater {
                 }
                 org.json.JSONObject r = a.getJSONObject(0);
                 String tag = r.optString("tag_name"), mine = About.version(app);
-                Store.put("upd_checked", System.currentTimeMillis());
+                Prefs.put("upd_checked", System.currentTimeMillis());
                 if (!newer(tag, mine)) {
                     status = "Up to date (" + mine + ")";
                     say(app, status, byHand);
@@ -142,7 +142,7 @@ final class Updater {
                 status = tag + " downloaded · tap Install";
                 Trace.event(app, "Update " + tag + " downloaded");
                 final String t = tag;
-                U.ui.post(() -> ask(app, apk, t, byHand));
+                Ui.ui.post(() -> ask(app, apk, t, byHand));
             } catch (Exception e) {
                 status = "Couldn't check: no connection?";
                 say(app, status, byHand);
@@ -160,32 +160,32 @@ final class Updater {
     }
 
     private static void say(Context c, String s, boolean show) {
-        if (show) U.ui.post(() -> android.widget.Toast.makeText(c, s, android.widget.Toast.LENGTH_LONG).show());
-        U.ui.post(Sheets::refresh);
+        if (show) Ui.ui.post(() -> android.widget.Toast.makeText(c, s, android.widget.Toast.LENGTH_LONG).show());
+        Ui.ui.post(Panels::refresh);
     }
 
     /** Asks on the home screen: Install now or Later (never while driving, on a call or over another page). */
     private static void ask(Context c, File apk, String tag, boolean byHand) {
         MainActivity a = MainActivity.I;
-        if (byHand && Sheets.open()) Sheets.close(); // asked for from Settings: show it straight away
-        if (a == null || MainActivity.frontAt == 0 || Loc.moving() || Sheets.open() || CallState.state != CallState.NONE) {
-            U.ui.postDelayed(() -> ask(c, apk, tag, false), 30000);
+        if (byHand && Panels.open()) Panels.close(); // asked for from Settings: show it straight away
+        if (a == null || MainActivity.frontAt == 0 || Gps.moving() || Panels.open() || CallState.state != CallState.NONE) {
+            Ui.ui.postDelayed(() -> ask(c, apk, tag, false), 30000);
             return;
         }
-        Sheets.show(() -> {
-            Context x = Sheets.ctx();
-            android.widget.LinearLayout b = U.col(x);
-            b.addView(U.text(x, "Car Launcher " + tag.replace("v", "").replace("-alpha", "") + " is ready. Install it now?", 17, U.TEXT, true));
-            b.addView(U.text(x, "It takes a few seconds; Android asks you to tap Update, then Car Launcher starts again.", 15, U.TEXT2, false), Widgets.top(8));
-            android.widget.LinearLayout btns = U.row(x);
-            btns.addView(U.button(x, "Install now", true, () -> {
-                Sheets.close();
+        Panels.show(() -> {
+            Context x = Panels.ctx();
+            android.widget.LinearLayout b = Ui.col(x);
+            b.addView(Ui.text(x, "Car Launcher " + tag.replace("v", "").replace("-alpha", "") + " is ready. Install it now?", 17, Ui.TEXT, true));
+            b.addView(Ui.text(x, "It takes a few seconds; Android asks you to tap Update, then Car Launcher starts again.", 15, Ui.TEXT2, false), Widgets.top(8));
+            android.widget.LinearLayout btns = Ui.row(x);
+            btns.addView(Ui.button(x, "Install now", true, () -> {
+                Panels.close();
                 install(c, apk, tag);
             }));
-            btns.addView(U.gap(x, 10, 1));
-            btns.addView(U.button(x, "Later", false, Sheets::close));
+            btns.addView(Ui.gap(x, 10, 1));
+            btns.addView(Ui.button(x, "Later", false, Panels::close));
             b.addView(btns, Widgets.top(18));
-            return Sheets.panel("Update available", b, 560, 300);
+            return Panels.panel("Update available", b, 560, 300);
         });
     }
 
@@ -198,7 +198,7 @@ final class Updater {
                         android.net.Uri.parse("package:" + c.getPackageName())).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } catch (Exception ignored) {
             }
-            Sheets.refresh();
+            Panels.refresh();
             return;
         }
         try {
@@ -223,7 +223,7 @@ final class Updater {
         } catch (Exception e) {
             status = "Couldn't install " + tag + ": " + e.getMessage();
         }
-        Sheets.refresh();
+        Panels.refresh();
     }
 
     /** Android answers the install here: it asks you to confirm (one tap), then Car Launcher restarts as the new version. */
@@ -240,7 +240,7 @@ final class Updater {
                 } else if (st != PackageInstaller.STATUS_SUCCESS) {
                     status = "Update not installed: " + in.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
                     Trace.event(x, status);
-                    Sheets.refresh();
+                    Panels.refresh();
                 }
             }
         };
@@ -252,30 +252,30 @@ final class Updater {
     /** Settings page. */
     static void settings() {
         SettingsPanels.open(() -> {
-            Context c = Sheets.ctx();
-            android.widget.LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Car Launcher can update itself from your GitHub releases. Your project is private, so it needs a GitHub key "
+            Context c = Panels.ctx();
+            android.widget.LinearLayout b = Ui.col(c);
+            b.addView(Ui.text(c, "Car Launcher can update itself from your GitHub releases. Your project is private, so it needs a GitHub key "
                     + "that can only read it: on github.com → Settings → Developer settings → Fine-grained tokens, make one for CarLauncher "
-                    + "with Contents: Read-only, and paste it here. Updates install when the car is parked; Android asks you to tap Update.", 12, U.SUB, false));
-            final String[] k = {Store.str(KEY, "")};
+                    + "with Contents: Read-only, and paste it here. Updates install when the car is parked; Android asks you to tap Update.", 12, Ui.SUB, false));
+            final String[] k = {Prefs.str(KEY, "")};
             b.addView(Widgets.field("GitHub key (github_pat_…)", k[0], true, t -> {
                 k[0] = t;
-                Store.put(KEY, t.trim());
+                Prefs.put(KEY, t.trim());
             }), Widgets.top(10));
-            b.addView(Sheets.switchRow(0, 0, "Check automatically", "At every start, then every 6 hours; asks before installing", Store.flag(AUTO, true),
-                    v -> Store.put(AUTO, v)), Widgets.top(8));
-            long at = Store.lng("upd_checked", 0);
-            String st = !status.isEmpty() ? status : at > 0 ? "Last checked " + Ticker.ago(at) : "Not checked yet";
-            b.addView(U.text(c, "This version: " + About.version(c) + " · " + st, 12, U.SUB, false), Widgets.top(6));
-            android.widget.LinearLayout btns = U.row(c);
-            btns.addView(U.button(c, "Check now", true, () -> check(c, true)));
+            b.addView(Panels.switchRow(0, 0, "Check automatically", "At every start, then every 6 hours; asks before installing", Prefs.flag(AUTO, true),
+                    v -> Prefs.put(AUTO, v)), Widgets.top(8));
+            long at = Prefs.lng("upd_checked", 0);
+            String st = !status.isEmpty() ? status : at > 0 ? "Last checked " + NewsTicker.ago(at) : "Not checked yet";
+            b.addView(Ui.text(c, "This version: " + About.version(c) + " · " + st, 12, Ui.SUB, false), Widgets.top(6));
+            android.widget.LinearLayout btns = Ui.row(c);
+            btns.addView(Ui.button(c, "Check now", true, () -> check(c, true)));
             File apk = new File(c.getCacheDir(), "update.apk");
             if (apk.exists() && status.contains("downloaded") || status.contains("allow Car Launcher")) {
-                btns.addView(U.gap(c, 10, 1));
-                btns.addView(U.button(c, "Install", false, () -> install(c, apk, "the update")));
+                btns.addView(Ui.gap(c, 10, 1));
+                btns.addView(Ui.button(c, "Install", false, () -> install(c, apk, "the update")));
             }
             b.addView(btns, Widgets.top(10));
-            return Sheets.panel("Updates", b, 600, 400);
+            return Panels.panel("Updates", b, 600, 400);
         });
     }
 }

@@ -142,7 +142,7 @@ final class EqView extends View {
 
     /** "bars" (equaliser), "wave" (flowing wave) or "pulse" (rings that beat with the music). */
     static String style() {
-        return Store.str("eq_style", "bars");
+        return Prefs.str("eq_style", "bars");
     }
 
     private final android.graphics.Path wave = new android.graphics.Path();
@@ -167,7 +167,7 @@ final class EqView extends View {
                 p.setColor((color & 0x00FFFFFF) | 0x33000000);
             } else {
                 p.setStyle(Paint.Style.STROKE);
-                p.setStrokeWidth(U.uf(2.5f));
+                p.setStrokeWidth(Ui.uf(2.5f));
                 p.setStrokeCap(Paint.Cap.ROUND);
                 p.setColor(color);
             }
@@ -188,7 +188,7 @@ final class EqView extends View {
         for (int k = 0; k < 3; k++) {
             float t = ((phase * 0.35f + k / 3f) % 1f); // rings keep spreading outwards
             float r = max * (0.25f + 0.75f * t) * (0.7f + 0.5f * pulseLevel);
-            p.setStrokeWidth(U.uf(2) + U.uf(4) * pulseLevel * (1 - t));
+            p.setStrokeWidth(Ui.uf(2) + Ui.uf(4) * pulseLevel * (1 - t));
             int a = (int) (200 * (1 - t) * (0.3f + pulseLevel));
             p.setColor((color & 0x00FFFFFF) | (Math.min(255, a) << 24));
             cv.drawCircle(cx, cy, r, p);
@@ -202,12 +202,12 @@ final class EqView extends View {
         float gap = w / bars * 0.28f, bw = w / bars - gap;
         p.setStyle(Paint.Style.FILL);
         for (int i = 0; i < bars; i++) {
-            float x = i * (bw + gap) + gap / 2, bh = Math.max(U.uf(2), level[i] * h);
+            float x = i * (bw + gap) + gap / 2, bh = Math.max(Ui.uf(2), level[i] * h);
             p.setColor(color);
             cv.drawRoundRect(x, h - bh, x + bw, h, bw / 3, bw / 3, p);
             p.setColor((color & 0x00FFFFFF) | 0xCC000000);
-            float py = h - peak[i] * h - U.uf(3);
-            cv.drawRect(x, py, x + bw, py + U.uf(2), p);
+            float py = h - peak[i] * h - Ui.uf(3);
+            cv.drawRect(x, py, x + bw, py + Ui.uf(2), p);
         }
     }
 }

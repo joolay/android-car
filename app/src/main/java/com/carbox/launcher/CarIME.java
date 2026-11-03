@@ -36,8 +36,8 @@ public class CarIME extends InputMethodService {
     @Override
     public void onCreate() {
         super.onCreate();
-        Store.init(this);
-        U.init((Context) this);
+        Prefs.init(this);
+        Ui.init((Context) this);
     }
 
     @Override
@@ -47,7 +47,7 @@ public class CarIME extends InputMethodService {
 
     @Override
     public View onCreateInputView() {
-        U.init((Context) this);
+        Ui.init((Context) this);
         root = new FrameLayout(this);
         root.setClipChildren(false);
         render();
@@ -95,78 +95,78 @@ public class CarIME extends InputMethodService {
     private void render() {
         Context c = this;
         root.removeAllViews();
-        Keyboard.bubbleHost = root;
-        LinearLayout kb = U.col(c);
-        kb.setBackgroundColor(U.CARD);
-        U.pad(kb, 8, 8, 8, 6);
+        InAppKeyboard.bubbleHost = root;
+        LinearLayout kb = Ui.col(c);
+        kb.setBackgroundColor(Ui.CARD);
+        Ui.pad(kb, 8, 8, 8, 6);
 
         // strip: voice, paste, hide
-        LinearLayout strip = U.row(c);
-        TextView voice = U.text(c, listening ? "  Listening… tap to stop" : "  Voice", 14, U.TEXT, false);
+        LinearLayout strip = Ui.row(c);
+        TextView voice = Ui.text(c, listening ? "  Listening… tap to stop" : "  Voice", 14, Ui.TEXT, false);
         android.graphics.drawable.Drawable micIcon = getDrawable(R.drawable.ic_mic).mutate();
-        micIcon.setTint(U.TEXT);
-        micIcon.setBounds(0, 0, U.u(20), U.u(20));
+        micIcon.setTint(Ui.TEXT);
+        micIcon.setBounds(0, 0, Ui.u(20), Ui.u(20));
         voice.setCompoundDrawablesRelative(micIcon, null, null, null);
         voice.setGravity(Gravity.CENTER_VERTICAL);
-        voice.setBackground(U.round(listening ? U.RED : 0xFF1F4E9A, 10));
-        U.pad(voice, 14, 0, 16, 0);
+        voice.setBackground(Ui.round(listening ? Ui.RED : 0xFF1F4E9A, 10));
+        Ui.pad(voice, 14, 0, 16, 0);
         voice.setOnClickListener(v -> voice());
-        LinearLayout.LayoutParams vl = U.lp(U.WRAP, U.u(38));
-        vl.setMargins(U.u(4), 0, U.u(8), 0);
+        LinearLayout.LayoutParams vl = Ui.lp(Ui.WRAP, Ui.u(38));
+        vl.setMargins(Ui.u(4), 0, Ui.u(8), 0);
         strip.addView(voice, vl);
-        TextView paste = U.button(c, "Paste", false, this::paste);
+        TextView paste = Ui.button(c, "Paste", false, this::paste);
         fit(paste);
-        strip.addView(paste, U.lp(U.WRAP, U.u(38)));
-        TextView name = U.line(c, "CAR KEYBOARD", 11, U.MUTED, false);
+        strip.addView(paste, Ui.lp(Ui.WRAP, Ui.u(38)));
+        TextView name = Ui.line(c, "CAR KEYBOARD", 11, Ui.MUTED, false);
         name.setGravity(Gravity.CENTER);
         name.setLetterSpacing(0.05f);
-        strip.addView(name, new LinearLayout.LayoutParams(0, U.WRAP, 1));
-        TextView hide = U.button(c, "⌄  Hide", false, () -> requestHideSelf(0));
+        strip.addView(name, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+        TextView hide = Ui.button(c, "⌄  Hide", false, () -> requestHideSelf(0));
         fit(hide);
-        LinearLayout.LayoutParams hl = U.lp(U.WRAP, U.u(38));
-        hl.rightMargin = U.u(4);
+        LinearLayout.LayoutParams hl = Ui.lp(Ui.WRAP, Ui.u(38));
+        hl.rightMargin = Ui.u(4);
         strip.addView(hide, hl);
-        kb.addView(strip, U.lpu(U.MATCH, 42));
+        kb.addView(strip, Ui.lpu(Ui.MATCH, 42));
 
         String[][] rows = symbols
                 ? new String[][]{"1234567890".split(""), {"@", "#", "&", "_", "-", "/", ":", ";", "(", ")"}, {"=", ",", "+", "%", "'", "\"", "!", "?"}}
                 : new String[][]{"qwertyuiop".split(""), "asdfghjkl".split(""), "zxcvbnm".split("")};
         for (int r = 0; r < 3; r++) {
-            LinearLayout row = U.row(c);
-            if (r == 1 && !symbols) U.pad(row, 36, 0, 36, 0);
-            if (r == 2) row.addView(Keyboard.special(c, symbols ? "=" : null, symbols ? 0 : R.drawable.ic_shift, () -> {
+            LinearLayout row = Ui.row(c);
+            if (r == 1 && !symbols) Ui.pad(row, 36, 0, 36, 0);
+            if (r == 2) row.addView(InAppKeyboard.special(c, symbols ? "=" : null, symbols ? 0 : R.drawable.ic_shift, () -> {
                 if (symbols) type("=");
                 else {
                     shift = !shift;
                     render();
                 }
-            }, shift && !symbols), Keyboard.weightLp(1.5f));
+            }, shift && !symbols), InAppKeyboard.weightLp(1.5f));
             for (String k : rows[r]) {
                 if (k.isEmpty() || (r == 2 && symbols && "=".equals(k))) continue;
                 String shownKey = shift ? k.toUpperCase(Locale.ROOT) : k;
-                row.addView(Keyboard.key(c, shownKey, () -> type(shownKey)), Keyboard.weightLp(1));
+                row.addView(InAppKeyboard.key(c, shownKey, () -> type(shownKey)), InAppKeyboard.weightLp(1));
             }
             if (r == 2) {
-                View bs = Keyboard.special(c, null, R.drawable.ic_backspace, this::backspace, false);
-                Keyboard.repeat(bs, this::backspace);
-                row.addView(bs, Keyboard.weightLp(1.5f));
+                View bs = InAppKeyboard.special(c, null, R.drawable.ic_backspace, this::backspace, false);
+                InAppKeyboard.repeat(bs, this::backspace);
+                row.addView(bs, InAppKeyboard.weightLp(1.5f));
             }
-            kb.addView(row, U.lpu(U.MATCH, Keyboard.KEY_H));
+            kb.addView(row, Ui.lpu(Ui.MATCH, InAppKeyboard.KEY_H));
         }
-        LinearLayout last = U.row(c);
-        last.addView(Keyboard.special(c, symbols ? "ABC" : "?123", 0, () -> {
+        LinearLayout last = Ui.row(c);
+        last.addView(InAppKeyboard.special(c, symbols ? "ABC" : "?123", 0, () -> {
             symbols = !symbols;
             render();
-        }, false), Keyboard.weightLp(1.5f));
-        last.addView(Keyboard.key(c, ",", () -> type(",")), Keyboard.weightLp(1));
-        last.addView(Keyboard.key(c, "space", () -> type(" ")), Keyboard.weightLp(5));
-        last.addView(Keyboard.key(c, ".", () -> type(".")), Keyboard.weightLp(1));
-        View enter = Keyboard.special(c, enterLabel, "↵".equals(enterLabel) ? R.drawable.ic_enter : 0, this::enter, false);
-        enter.findViewWithTag("face").setBackground(U.round(U.ACCENT, 11));
-        last.addView(enter, Keyboard.weightLp(2));
-        kb.addView(last, U.lpu(U.MATCH, Keyboard.KEY_H));
+        }, false), InAppKeyboard.weightLp(1.5f));
+        last.addView(InAppKeyboard.key(c, ",", () -> type(",")), InAppKeyboard.weightLp(1));
+        last.addView(InAppKeyboard.key(c, "space", () -> type(" ")), InAppKeyboard.weightLp(5));
+        last.addView(InAppKeyboard.key(c, ".", () -> type(".")), InAppKeyboard.weightLp(1));
+        View enter = InAppKeyboard.special(c, enterLabel, "↵".equals(enterLabel) ? R.drawable.ic_enter : 0, this::enter, false);
+        enter.findViewWithTag("face").setBackground(Ui.round(Ui.ACCENT, 11));
+        last.addView(enter, InAppKeyboard.weightLp(2));
+        kb.addView(last, Ui.lpu(Ui.MATCH, InAppKeyboard.KEY_H));
 
-        root.addView(kb, new FrameLayout.LayoutParams(U.MATCH, U.WRAP, Gravity.BOTTOM));
+        root.addView(kb, new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP, Gravity.BOTTOM));
     }
 
     // ------------------------------------------------------------------ typing
@@ -301,7 +301,7 @@ public class CarIME extends InputMethodService {
     private static void fit(TextView b) {
         b.setMinHeight(0);
         b.setMinimumHeight(0);
-        U.pad(b, 16, 0, 16, 0);
-        b.setBackground(U.round(U.CARD2, 10));
+        Ui.pad(b, 16, 0, 16, 0);
+        b.setBackground(Ui.round(Ui.CARD2, 10));
     }
 }

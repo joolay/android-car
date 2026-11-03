@@ -50,60 +50,60 @@ final class MapDownload {
     private static Plan plan;
 
     static void panel() {
-        Sheets.Page pg = () -> {
-            Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
-            int km = Store.num("dl_km", 75), z = Store.num("dl_zoom", 15);
-            b.addView(U.text(c, "Downloads the map around where the car is now, so the map works with no signal. It's saved on the box and used as the Offline map.", 13, U.TEXT2, false));
-            b.addView(Sheets.row("Area", seg(c, "25 km", km == 25, () -> setKm(25)), seg(c, "75 km", km == 75, () -> setKm(75)),
+        Panels.Page pg = () -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
+            int km = Prefs.num("dl_km", 75), z = Prefs.num("dl_zoom", 15);
+            b.addView(Ui.text(c, "Downloads the map around where the car is now, so the map works with no signal. It's saved on the box and used as the Offline map.", 13, Ui.TEXT2, false));
+            b.addView(Panels.row("Area", seg(c, "25 km", km == 25, () -> setKm(25)), seg(c, "75 km", km == 75, () -> setKm(75)),
                     seg(c, "150 km", km == 150, () -> setKm(150)), seg(c, "300 km", km == 300, () -> setKm(300)), seg(c, "500 km", km == 500, () -> setKm(500))), Widgets.top(10));
-            b.addView(Sheets.row("Detail", seg(c, "Full (street level)", z == 15, () -> setZoom(15)), seg(c, "Less (smaller file)", z == 13, () -> setZoom(13))), Widgets.top(6));
-            TextView st = U.text(c, "", 13, U.TEXT, false);
+            b.addView(Panels.row("Detail", seg(c, "Full (street level)", z == 15, () -> setZoom(15)), seg(c, "Less (smaller file)", z == 13, () -> setZoom(13))), Widgets.top(6));
+            TextView st = Ui.text(c, "", 13, Ui.TEXT, false);
             ProgressBar bar = new ProgressBar(c, null, android.R.attr.progressBarStyleHorizontal);
             bar.setMax(100);
             b.addView(st, Widgets.top(12));
-            b.addView(bar, U.lp(U.MATCH, U.u(10)));
-            LinearLayout r = U.row(c);
+            b.addView(bar, Ui.lp(Ui.MATCH, Ui.u(10)));
+            LinearLayout r = Ui.row(c);
             boolean busy = job != null;
-            if (busy) r.addView(U.button(c, "Stop", false, () -> cancel = true));
+            if (busy) r.addView(Ui.button(c, "Stop", false, () -> cancel = true));
             else if (plan != null && plan.km == km && plan.zoom == z) {
-                r.addView(U.button(c, "Download about " + mb(plan.bytes), true, () -> start(c, false)));
-            } else r.addView(U.button(c, "Check size", true, () -> start(c, true)));
+                r.addView(Ui.button(c, "Download about " + mb(plan.bytes), true, () -> start(c, false)));
+            } else r.addView(Ui.button(c, "Check size", true, () -> start(c, true)));
             b.addView(r, Widgets.top(10));
-            String name = Store.str(OfflineMap.NAME, "");
-            if (!name.isEmpty()) b.addView(U.text(c, "Current offline map: " + name, 12, U.SUB, false), Widgets.top(10));
-            b.addView(U.text(c, "Map data © OpenStreetMap contributors, from Protomaps. Street-name lettering still needs internet the first time.", 11, U.SUB, false), Widgets.top(6));
+            String name = Prefs.str(OfflineMap.NAME, "");
+            if (!name.isEmpty()) b.addView(Ui.text(c, "Current offline map: " + name, 12, Ui.SUB, false), Widgets.top(10));
+            b.addView(Ui.text(c, "Map data © OpenStreetMap contributors, from Protomaps. Street-name lettering still needs internet the first time.", 11, Ui.SUB, false), Widgets.top(6));
             Runnable upd = new Runnable() {
                 @Override
                 public void run() {
                     if (!st.isAttachedToWindow() && st.getWidth() > 0) return;
-                    st.setText(status.isEmpty() ? (Loc.has() ? "Centre: where the car is now" : "Waiting for GPS…") : status);
+                    st.setText(status.isEmpty() ? (Gps.has() ? "Centre: where the car is now" : "Waiting for GPS…") : status);
                     bar.setVisibility(percent >= 0 ? android.view.View.VISIBLE : android.view.View.GONE);
                     if (percent >= 0) bar.setProgress(percent);
-                    U.ui.postDelayed(this, 400);
+                    Ui.ui.postDelayed(this, 400);
                 }
             };
-            U.ui.post(upd);
-            return Sheets.panel("Download offline map", b);
+            Ui.ui.post(upd);
+            return Panels.panel("Download offline map", b);
         };
-        if (Sheets.open()) Sheets.push(pg);
-        else Sheets.show(pg);
+        if (Panels.open()) Panels.push(pg);
+        else Panels.show(pg);
     }
 
     private static TextView seg(Context c, String l, boolean on, Runnable r) {
-        return U.seg(c, l, on, r);
+        return Ui.seg(c, l, on, r);
     }
 
     private static void setKm(int km) {
         if (job != null) return;
-        Store.put("dl_km", km);
-        Sheets.refresh();
+        Prefs.put("dl_km", km);
+        Panels.refresh();
     }
 
     private static void setZoom(int z) {
         if (job != null) return;
-        Store.put("dl_zoom", z);
-        Sheets.refresh();
+        Prefs.put("dl_zoom", z);
+        Panels.refresh();
     }
 
     private static String mb(long b) {
@@ -112,12 +112,12 @@ final class MapDownload {
 
     private static void start(Context c, boolean onlyCheck) {
         if (job != null) return;
-        if (!Loc.has()) {
+        if (!Gps.has()) {
             status = "Waiting for GPS: the map is downloaded around where the car is";
             return;
         }
-        final double lat = Loc.lat, lon = Loc.lon;
-        final int km = Store.num("dl_km", 75), z = Store.num("dl_zoom", 15);
+        final double lat = Gps.lat, lon = Gps.lon;
+        final int km = Prefs.num("dl_km", 75), z = Prefs.num("dl_zoom", 15);
         cancel = false;
         percent = 0;
         job = new Thread(() -> {
@@ -131,11 +131,11 @@ final class MapDownload {
             } finally {
                 percent = -1;
                 job = null;
-                U.ui.post(Sheets::refresh);
+                Ui.ui.post(Panels::refresh);
             }
         }, "map-download");
         job.start();
-        Sheets.refresh();
+        Panels.refresh();
     }
 
     // ------------------------------------------------------------------ PMTiles reading
@@ -479,7 +479,7 @@ final class MapDownload {
         double dLat = p.km / 111.32, dLon = p.km / (111.32 * Math.max(0.2, Math.cos(Math.toRadians(p.lat))));
         hb.putInt((int) ((p.lon - dLon) * 1e7)).putInt((int) ((p.lat - dLat) * 1e7)).putInt((int) ((p.lon + dLon) * 1e7)).putInt((int) ((p.lat + dLat) * 1e7));
         hb.put((byte) Math.min(12, p.zoom)).putInt((int) (p.lon * 1e7)).putInt((int) (p.lat * 1e7));
-        String name = "Around " + (Loc.town != null ? Loc.town : "here") + " " + p.km + " km " + new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new java.util.Date()) + ".pmtiles";
+        String name = "Around " + (Gps.town != null ? Gps.town : "here") + " " + p.km + " km " + new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new java.util.Date()) + ".pmtiles";
         File outFile = new File(dir, name.replaceAll("[^A-Za-z0-9 ._-]", ""));
         OfflineMap.close();
         try (RandomAccessFile raf = new RandomAccessFile(outFile, "rw"); FileChannel src = new java.io.FileInputStream(tmp).getChannel()) {
@@ -499,11 +499,11 @@ final class MapDownload {
         if (old != null) for (File f : old)
             if (!f.equals(outFile) && f.getName().endsWith(".pmtiles")) //noinspection ResultOfMethodCallIgnored
                 f.delete();
-        Store.put(OfflineMap.URI, android.net.Uri.fromFile(outFile).toString());
-        Store.put(OfflineMap.NAME, outFile.getName());
-        Store.put(Store.MAP_PROVIDER, "pmtiles");
+        Prefs.put(OfflineMap.URI, android.net.Uri.fromFile(outFile).toString());
+        Prefs.put(OfflineMap.NAME, outFile.getName());
+        Prefs.put(Prefs.MAP_PROVIDER, "pmtiles");
         status = "Done: " + mb(outFile.length()) + ". The map now works offline around here.";
-        U.ui.post(() -> {
+        Ui.ui.post(() -> {
             if (MainActivity.I != null) MainActivity.I.map.reload();
         });
     }

@@ -142,7 +142,7 @@ final class CallState {
     static void dtmf(char c) {
         if (call == null) return;
         call.playDtmfTone(c);
-        U.ui.postDelayed(call::stopDtmfTone, 150);
+        Ui.ui.postDelayed(call::stopDtmfTone, 150);
     }
 
     /** Switch the call's sound between the car (box) and the phone itself. */
@@ -229,10 +229,10 @@ final class CallState {
             if (n.actions != null) for (Notification.Action ac : n.actions) a.append(a.length() > 0 ? ", " : "").append(ac.title);
             String line = new java.text.SimpleDateFormat("HH:mm", Locale.US).format(new java.util.Date()) + "  " + (n.category == null ? "-" : n.category)
                     + " · " + t + " · " + x + (a.length() > 0 ? " · buttons: " + a : " · no buttons");
-            java.util.List<String> l = new ArrayList<>(Store.list("call_log"));
+            java.util.List<String> l = new ArrayList<>(Prefs.list("call_log"));
             l.add(0, line);
             while (l.size() > 6) l.remove(l.size() - 1);
-            Store.putList("call_log", l);
+            Prefs.putList("call_log", l);
         } catch (Exception ignored) {
         }
     }

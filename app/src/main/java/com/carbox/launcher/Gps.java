@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Locale;
 
 /** One place for GPS: position, speed, heading, altitude, satellites, trip and the town name. */
-final class Loc {
+final class Gps {
     static double lat = Double.NaN, lon = Double.NaN, alt = Double.NaN;
     static float speed = -1;          // m/s, -1 = unknown
     static float bearing = Float.NaN;  // degrees; the last direction driven (held while parked)
@@ -29,7 +29,7 @@ final class Loc {
     /** The last known direction, from this drive or the last one. */
     static float heading() {
         if (!Float.isNaN(bearing)) return bearing;
-        int b = Store.num("last_bearing", -1);
+        int b = Prefs.num("last_bearing", -1);
         return b < 0 ? Float.NaN : b;
     }
 
@@ -53,14 +53,14 @@ final class Loc {
     private static final List<Runnable> listeners = new ArrayList<>();
     private static double geocodedLat = Double.NaN, geocodedLon = Double.NaN;
 
-    private Loc() {
+    private Gps() {
     }
 
     static void init(Context c) {
         ctx = c.getApplicationContext();
         lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
         String today = day();
-        if (today.equals(Store.str(Store.TOP_SPEED_DAY, ""))) topSpeedToday = Store.num(Store.TOP_SPEED, 0);
+        if (today.equals(Prefs.str(Prefs.TOP_SPEED_DAY, ""))) topSpeedToday = Prefs.num(Prefs.TOP_SPEED, 0);
     }
 
     static void listen(Runnable r) {
@@ -134,7 +134,7 @@ final class Loc {
             }
             running = true;
             if (best != null) update(best);
-            gnssOn = lm.registerGnssStatusCallback(gnss, U.ui);
+            gnssOn = lm.registerGnssStatusCallback(gnss, Ui.ui);
         } catch (SecurityException | IllegalArgumentException ignored) {
         }
     }
@@ -162,7 +162,7 @@ final class Loc {
                 bearing = l.getBearing();
                 if (Math.abs(bearing - savedBearing) > 5) { // kept for when the car is parked (and after a restart)
                     savedBearing = bearing;
-                    Store.put("last_bearing", Math.round(bearing));
+                    Prefs.put("last_bearing", Math.round(bearing));
                 }
             }
             long now = SystemClock.elapsedRealtime();
@@ -180,8 +180,8 @@ final class Loc {
             float kmh = speed * 3.6f;
             if (kmh > topSpeedToday && kmh < 300) {
                 topSpeedToday = kmh;
-                Store.put(Store.TOP_SPEED, Math.round(kmh));
-                Store.put(Store.TOP_SPEED_DAY, day());
+                Prefs.put(Prefs.TOP_SPEED, Math.round(kmh));
+                Prefs.put(Prefs.TOP_SPEED_DAY, day());
             }
         } else if (last == null) {
             last = l;
@@ -215,7 +215,7 @@ final class Loc {
                 if (a != null && !a.isEmpty()) {
                     Address ad = a.get(0);
                     String t = ad.getLocality() != null ? ad.getLocality() : ad.getSubAdminArea() != null ? ad.getSubAdminArea() : ad.getAdminArea();
-                    if (t != null) U.ui.post(() -> town = t);
+                    if (t != null) Ui.ui.post(() -> town = t);
                 }
             } catch (Exception ignored) {
             }

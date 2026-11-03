@@ -135,7 +135,7 @@ final class StatusIcons {
             if (!changed) return;
             if (grow != null) grow.cancel();
             grow = ValueAnimator.ofFloat(shown, noSim ? 0 : level);
-            grow.setDuration(U.ms(450));
+            grow.setDuration(Ui.ms(450));
             grow.addUpdateListener(a -> {
                 shown = (float) a.getAnimatedValue();
                 invalidate();

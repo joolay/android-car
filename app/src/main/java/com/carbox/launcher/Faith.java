@@ -16,17 +16,17 @@ final class Faith {
 
     /** "none", or a faith name as used by Prayers ("Islam", "Christianity", "Judaism"). */
     static String get() {
-        String f = Store.str(KEY, "");
+        String f = Prefs.str(KEY, "");
         if (!f.isEmpty()) return f;
         f = guess();
-        Store.put(KEY, f); // remember, so this isn't worked out again on every call
+        Prefs.put(KEY, f); // remember, so this isn't worked out again on every call
         return f;
     }
 
     private static String guess() {
         // existing set-ups: carry on as before if Islamic features are in use
-        String pid = Store.str(Store.PRAYER_ID, "");
-        if (pid.startsWith("islam") || Store.arr(Store.TILES).toString().matches(".*\"(nextprayer|prayertimes|qibla)\".*")) return "Islam";
+        String pid = Prefs.str(Prefs.PRAYER_ID, "");
+        if (pid.startsWith("islam") || Prefs.arr(Prefs.TILES).toString().matches(".*\"(nextprayer|prayertimes|qibla)\".*")) return "Islam";
         if (pid.startsWith("christ")) return "Christianity";
         if (pid.startsWith("jud")) return "Judaism";
         return "none"; // new set-up: chosen in the welcome checklist
@@ -59,27 +59,27 @@ final class Faith {
     }
 
     static void picker() {
-        Sheets.Page p = () -> {
-            Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Religious features are add-ons. Only the faith you pick shows its prayer times, tiles, travel prayers, announcements and calendar.", 13, U.SUB, false));
+        Panels.Page p = () -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
+            b.addView(Ui.text(c, "Religious features are add-ons. Only the faith you pick shows its prayer times, tiles, travel prayers, announcements and calendar.", 13, Ui.SUB, false));
             String cur = get();
             java.util.List<android.view.View> segs = new java.util.ArrayList<>();
-            for (String[] f : ALL) segs.add(U.seg(c, f[1], f[0].equals(cur), () -> {
-                Store.put(KEY, f[0]);
+            for (String[] f : ALL) segs.add(Ui.seg(c, f[1], f[0].equals(cur), () -> {
+                Prefs.put(KEY, f[0]);
                 if ("hebrew".equals(Cal.alt()) || Cal.alt().startsWith("islamic")) {
-                    if (!calendarAllowed(Cal.alt())) Store.put(Store.CAL_ALT, "none");
+                    if (!calendarAllowed(Cal.alt())) Prefs.put(Prefs.CAL_ALT, "none");
                 }
-                if ("Islam".equals(f[0]) && Store.str(Store.CAL_ALT, "").isEmpty()) Store.put(Store.CAL_ALT, "islamic-umalqura");
-                if ("Judaism".equals(f[0]) && "none".equals(Cal.alt())) Store.put(Store.CAL_ALT, "hebrew");
-                Store.put("faith_seen", true);
-                Sheets.refresh();
+                if ("Islam".equals(f[0]) && Prefs.str(Prefs.CAL_ALT, "").isEmpty()) Prefs.put(Prefs.CAL_ALT, "islamic-umalqura");
+                if ("Judaism".equals(f[0]) && "none".equals(Cal.alt())) Prefs.put(Prefs.CAL_ALT, "hebrew");
+                Prefs.put("faith_seen", true);
+                Panels.refresh();
                 if (MainActivity.I != null) MainActivity.I.rail.build();
             }));
             b.addView(AppPanels.grid(c, segs, 4, 10), Widgets.top(14));
-            return Sheets.panel("Faith add-ons", b, 600, 300);
+            return Panels.panel("Faith add-ons", b, 600, 300);
         };
-        if (Sheets.open()) Sheets.push(p);
-        else Sheets.show(p);
+        if (Panels.open()) Panels.push(p);
+        else Panels.show(p);
     }
 }

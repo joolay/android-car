@@ -54,9 +54,9 @@ final class Prayers {
     static P get(String id) {
         if (id == null) return null;
         if ("own".equals(id)) {
-            String t = Store.str(Store.CUSTOM_TEXT, "");
+            String t = Prefs.str(Prefs.CUSTOM_TEXT, "");
             if (t.isEmpty()) return null;
-            return new P("own", "My own", "My own prayer", false, null, null, t, Store.str(Store.CUSTOM_SUB, ""));
+            return new P("own", "My own", "My own prayer", false, null, null, t, Prefs.str(Prefs.CUSTOM_SUB, ""));
         }
         for (P p : ALL) if (p.id.equals(id)) return p;
         return null;

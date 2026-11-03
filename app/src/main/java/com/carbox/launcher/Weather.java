@@ -44,11 +44,11 @@ final class Weather {
     static void restore() {
         if (restored || ok) return;
         restored = true;
-        String body = Store.str("weather_last", null);
+        String body = Prefs.str("weather_last", null);
         if (body == null) return;
         try {
             parse(new JSONObject(body));
-            updatedAt = Store.lng("weather_at", 0);
+            updatedAt = Prefs.lng("weather_at", 0);
             // drop the days that have gone by, and the hourly list once it's out of date
             String today = new java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new java.util.Date());
             while (!days.isEmpty() && days.get(0).date != null && days.get(0).date.compareTo(today) < 0) days.remove(0);
@@ -62,7 +62,7 @@ final class Weather {
 
     static void maybeFetch() {
         restore();
-        if (!Loc.has() || loading) return;
+        if (!Gps.has() || loading) return;
         if (fetchedAt != 0 && SystemClock.elapsedRealtime() - fetchedAt < 20 * 60 * 1000L) return;
         fetch();
     }
@@ -77,7 +77,7 @@ final class Weather {
     }
 
     static void fetch() {
-        if (!Loc.has()) return;
+        if (!Gps.has()) return;
         loading = true;
         changed();
         String url = String.format(Locale.US,
@@ -87,7 +87,7 @@ final class Weather {
                         + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,"
                         + "wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,sunrise,sunset"
                         + "&timezone=auto&forecast_days=7&forecast_hours=12",
-                Loc.lat, Loc.lon);
+                Gps.lat, Gps.lon);
         Net.get(url, null, (body, code) -> {
             loading = false;
             if (body == null) {
@@ -99,8 +99,8 @@ final class Weather {
                 fetchedAt = SystemClock.elapsedRealtime();
                 updatedAt = System.currentTimeMillis();
                 ok = true;
-                Store.put("weather_last", body); // remembered for next time
-                Store.put("weather_at", updatedAt);
+                Prefs.put("weather_last", body); // remembered for next time
+                Prefs.put("weather_at", updatedAt);
             } catch (Exception ignored) {
             }
             changed();
@@ -153,7 +153,7 @@ final class Weather {
     }
 
     static String t(double c) {
-        boolean cel = Store.flag(Store.CELSIUS, true);
+        boolean cel = Prefs.flag(Prefs.CELSIUS, true);
         return Math.round(cel ? c : c * 9 / 5 + 32) + "°";
     }
 

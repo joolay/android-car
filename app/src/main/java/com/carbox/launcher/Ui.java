@@ -26,8 +26,8 @@ import android.widget.TextView;
  * Tiny UI kit. Every size is given in "design units" for an 800 x 480 screen and scaled
  * to the real display, so the layout matches the mockups whatever the box's density is.
  */
-final class U {
-    private U() {
+final class Ui {
+    private Ui() {
     }
 
     static final int BG = 0xFF0B0E13;
@@ -222,14 +222,14 @@ final class U {
 
     /** Animation length: as given, or instant when animations are switched off (Settings → Home screen). */
     static long ms(long d) {
-        return Store.flag("anim_on", true) ? d : 0;
+        return Prefs.flag("anim_on", true) ? d : 0;
     }
 
     static void press(View v) {
         v.setOnTouchListener((view, e) -> {
-            if (e.getAction() == MotionEvent.ACTION_DOWN) view.animate().scaleX(.96f).scaleY(.96f).setDuration(U.ms(80)).start();
+            if (e.getAction() == MotionEvent.ACTION_DOWN) view.animate().scaleX(.96f).scaleY(.96f).setDuration(Ui.ms(80)).start();
             else if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL)
-                view.animate().scaleX(1f).scaleY(1f).setDuration(U.ms(120)).start();
+                view.animate().scaleX(1f).scaleY(1f).setDuration(Ui.ms(120)).start();
             return false;
         });
     }

@@ -23,11 +23,11 @@ final class NavCard {
 
     /** "swap": while navigating, the map fills the tile area and the directions stay in the map panel. */
     static boolean swap() {
-        return "swap".equals(Store.str(WHERE, "tiles"));
+        return "swap".equals(Prefs.str(WHERE, "tiles"));
     }
 
     static boolean inTiles() {
-        return "tiles".equals(Store.str(WHERE, "tiles"));
+        return "tiles".equals(Prefs.str(WHERE, "tiles"));
     }
 
     static void start() {
@@ -48,7 +48,7 @@ final class NavCard {
             // above the tiles and panels, under a call card
             int at = a.tileArea.getChildCount();
             for (int i = 0; i < a.tileArea.getChildCount(); i++) if (a.tileArea.getChildAt(i).getTag() == CallCard.class) at = i;
-            a.tileArea.addView(shown, at, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            a.tileArea.addView(shown, at, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         }
         render(a, n);
     }
@@ -61,49 +61,49 @@ final class NavCard {
 
     private static void render(Context c, MediaListener.Nav n) {
         shown.removeAllViews();
-        shown.setBackground(U.round(0xFF0F3D2E, 16));
-        LinearLayout row = U.row(c);
-        U.pad(row, 22, 16, 22, 16);
+        shown.setBackground(Ui.round(0xFF0F3D2E, 16));
+        LinearLayout row = Ui.row(c);
+        Ui.pad(row, 22, 16, 22, 16);
 
         // left: the turn
-        LinearLayout turn = U.col(c);
+        LinearLayout turn = Ui.col(c);
         turn.setGravity(Gravity.CENTER_VERTICAL);
         ImageView iv = new ImageView(c);
         if (n.icon != null) iv.setImageBitmap(n.icon);
         else iv.setImageResource(R.drawable.ic_turn);
-        iv.setColorFilter(n.icon != null ? 0 : U.TEXT);
-        turn.addView(iv, U.lpu(84, 84));
-        TextView d = U.line(c, n.distance != null ? n.distance : "", 40, U.TEXT, true);
+        iv.setColorFilter(n.icon != null ? 0 : Ui.TEXT);
+        turn.addView(iv, Ui.lpu(84, 84));
+        TextView d = Ui.line(c, n.distance != null ? n.distance : "", 40, Ui.TEXT, true);
         turn.addView(d, Widgets.top(6));
-        TextView road = U.text(c, n.instruction != null ? n.instruction : "", 20, U.TEXT2, false);
+        TextView road = Ui.text(c, n.instruction != null ? n.instruction : "", 20, Ui.TEXT2, false);
         road.setMaxLines(3);
         turn.addView(road, Widgets.top(4));
-        row.addView(turn, new LinearLayout.LayoutParams(0, U.MATCH, 1.3f));
+        row.addView(turn, new LinearLayout.LayoutParams(0, Ui.MATCH, 1.3f));
 
         // right: arrival
-        LinearLayout side = U.col(c);
-        side.setBackground(U.round(0x22FFFFFF, 14));
-        U.pad(side, 16, 14, 16, 14);
-        side.addView(U.line(c, "ARRIVAL", 11, U.MINT, true));
-        TextView eta = U.text(c, n.eta != null ? n.eta : "—", 18, U.TEXT, false);
+        LinearLayout side = Ui.col(c);
+        side.setBackground(Ui.round(0x22FFFFFF, 14));
+        Ui.pad(side, 16, 14, 16, 14);
+        side.addView(Ui.line(c, "ARRIVAL", 11, Ui.MINT, true));
+        TextView eta = Ui.text(c, n.eta != null ? n.eta : "—", 18, Ui.TEXT, false);
         eta.setMaxLines(3);
         side.addView(eta, Widgets.top(6));
-        side.addView(new View(c), U.weight(1, false));
-        side.addView(U.line(c, Apps.label(MediaListener.navPkg), 12, U.SUB, false));
-        LinearLayout.LayoutParams sl = new LinearLayout.LayoutParams(0, U.MATCH, 1);
-        sl.leftMargin = U.u(16);
+        side.addView(new View(c), Ui.weight(1, false));
+        side.addView(Ui.line(c, Apps.label(MediaListener.navPkg), 12, Ui.SUB, false));
+        LinearLayout.LayoutParams sl = new LinearLayout.LayoutParams(0, Ui.MATCH, 1);
+        sl.leftMargin = Ui.u(16);
         row.addView(side, sl);
-        shown.addView(row, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        shown.addView(row, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         shown.setOnClickListener(v -> {
             if (MainActivity.I != null && !Apps.launchPkg(MainActivity.I, MediaListener.navPkg)) Actions.openNavigation(MainActivity.I);
         });
 
-        View x = U.icon(c, R.drawable.ic_x, U.TEXT2);
-        U.pad(x, 8, 8, 8, 8);
+        View x = Ui.icon(c, R.drawable.ic_x, Ui.TEXT2);
+        Ui.pad(x, 8, 8, 8, 8);
         x.setOnClickListener(v -> {
             dismissed = true;
             hide();
         });
-        shown.addView(x, U.flpu(46, 46, Gravity.TOP | Gravity.END));
+        shown.addView(x, Ui.flpu(46, 46, Gravity.TOP | Gravity.END));
     }
 }

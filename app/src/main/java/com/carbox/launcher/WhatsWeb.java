@@ -63,7 +63,7 @@ final class WhatsWeb {
         // for a wider screen and is shrunk to fit; − / + change it
         s.setUseWideViewPort(false);
         s.setLoadWithOverviewMode(false);
-        web.setInitialScale(Store.num("wa_scale", 75));
+        web.setInitialScale(Prefs.num("wa_scale", 75));
         s.setSupportZoom(true);
         s.setBuiltInZoomControls(true);
         s.setDisplayZoomControls(false);
@@ -81,7 +81,7 @@ final class WhatsWeb {
             public boolean shouldOverrideUrlLoading(WebView v, android.webkit.WebResourceRequest r) {
                 String u = r.getUrl().toString();
                 if (u.contains("whatsapp.com") || u.contains("whatsapp.net")) return false;
-                Ticker.openLink(v.getContext(), u); // links in chats open in the browser
+                NewsTicker.openLink(v.getContext(), u); // links in chats open in the browser
                 return true;
             }
         });
@@ -117,60 +117,60 @@ final class WhatsWeb {
 
     /** Open it in the tile area (or full screen, the last way it was used). */
     static void open() {
-        if (full) Sheets.showFull(WhatsWeb::page);
-        else Sheets.show(WhatsWeb::page);
+        if (full) Panels.showFull(WhatsWeb::page);
+        else Panels.show(WhatsWeb::page);
     }
 
     private static View page() {
-        Context c = Sheets.ctx();
-        LinearLayout card = U.col(c);
-        card.setBackground(U.round(U.CARD, 16));
-        U.pad(card, 8, 6, 8, 8);
-        if (full) card.setLayoutParams(new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        Context c = Panels.ctx();
+        LinearLayout card = Ui.col(c);
+        card.setBackground(Ui.round(Ui.CARD, 16));
+        Ui.pad(card, 8, 6, 8, 8);
+        if (full) card.setLayoutParams(new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         // a slim bar: name, text size, reload, full screen / back to the tiles, close
-        LinearLayout head = U.row(c);
+        LinearLayout head = Ui.row(c);
         head.setGravity(Gravity.CENTER_VERTICAL);
-        U.pad(head, 6, 0, 2, 0);
+        Ui.pad(head, 6, 0, 2, 0);
         head.addView(btn(c, R.drawable.ic_back, "Back to the chats", WhatsWeb::chats));
-        head.addView(U.icon(c, R.drawable.ic_chat, U.GREEN), U.lpu(18, 18));
-        TextView t = U.line(c, "WhatsApp", 14, U.TEXT, true);
-        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-        tl.leftMargin = U.u(8);
+        head.addView(Ui.icon(c, R.drawable.ic_chat, Ui.GREEN), Ui.lpu(18, 18));
+        TextView t = Ui.line(c, "WhatsApp", 14, Ui.TEXT, true);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
+        tl.leftMargin = Ui.u(8);
         head.addView(t, tl);
         head.addView(btn(c, R.drawable.ic_minus, "Smaller", () -> zoom(-10)));
         head.addView(btn(c, R.drawable.ic_plus, "Bigger", () -> zoom(10)));
         head.addView(btn(c, R.drawable.ic_refresh, "Reload", () -> web(c).reload()));
         head.addView(btn(c, R.drawable.ic_maximize, full ? "Back to the tiles" : "Full screen", () -> {
             full = !full;
-            Sheets.close();
+            Panels.close();
             open();
         }));
-        head.addView(btn(c, R.drawable.ic_x, "Close", Sheets::close));
-        card.addView(head, U.lp(U.MATCH, U.u(34)));
+        head.addView(btn(c, R.drawable.ic_x, "Close", Panels::close));
+        card.addView(head, Ui.lp(Ui.MATCH, Ui.u(34)));
         WebView w = web(c);
         if (w.getParent() != null) ((ViewGroup) w.getParent()).removeView(w);
-        LinearLayout.LayoutParams wl = U.weight(1, false);
-        wl.topMargin = U.u(4);
+        LinearLayout.LayoutParams wl = Ui.weight(1, false);
+        wl.topMargin = Ui.u(4);
         FrameLayout clip = new FrameLayout(c);
-        MapPanel.clip(clip, 12);
-        clip.addView(w, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        Maps.clip(clip, 12);
+        clip.addView(w, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         card.addView(clip, wl);
         return card;
     }
 
     private static View btn(Context c, int icon, String desc, Runnable r) {
-        View v = U.icon(c, icon, U.TEXT2);
-        U.pad(v, 7, 7, 7, 7);
+        View v = Ui.icon(c, icon, Ui.TEXT2);
+        Ui.pad(v, 7, 7, 7, 7);
         v.setContentDescription(desc);
         v.setOnClickListener(x -> r.run());
-        U.press(v);
-        v.setLayoutParams(U.lpu(34, 34));
+        Ui.press(v);
+        v.setLayoutParams(Ui.lpu(34, 34));
         return v;
     }
 
     private static void zoom(int step) {
-        int z = Math.max(45, Math.min(130, Store.num("wa_scale", 75) + step));
-        Store.put("wa_scale", z);
+        int z = Math.max(45, Math.min(130, Prefs.num("wa_scale", 75) + step));
+        Prefs.put("wa_scale", z);
         if (web != null) { // the size only takes on a fresh layout: reload (the link to the phone stays)
             web.setInitialScale(z);
             web.reload();

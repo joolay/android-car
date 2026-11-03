@@ -46,7 +46,7 @@ public class MediaListener extends NotificationListenerService {
         @Override
         public void onPlaybackStateChanged(PlaybackState state) {
             notifyMedia();
-            if (state != null && state.getState() == PlaybackState.STATE_PLAYING) U.ui.post(() -> {
+            if (state != null && state.getState() == PlaybackState.STATE_PLAYING) Ui.ui.post(() -> {
                 if (msm != null) {
                     try {
                         pick(msm.getActiveSessions(component(ctx)));
@@ -92,7 +92,7 @@ public class MediaListener extends NotificationListenerService {
         if (msm != null || !hasAccess(c)) return;
         try {
             msm = (MediaSessionManager) ctx.getSystemService(Context.MEDIA_SESSION_SERVICE);
-            msm.addOnActiveSessionsChangedListener(sessionsChanged, component(ctx), U.ui);
+            msm.addOnActiveSessionsChangedListener(sessionsChanged, component(ctx), Ui.ui);
             pick(msm.getActiveSessions(component(ctx)));
         } catch (Exception e) {
             msm = null;
@@ -120,7 +120,7 @@ public class MediaListener extends NotificationListenerService {
         if (controller != null && best != null && controller.getSessionToken().equals(best.getSessionToken())) return;
         if (controller != null) controller.unregisterCallback(cb);
         controller = best;
-        if (controller != null) controller.registerCallback(cb, U.ui);
+        if (controller != null) controller.registerCallback(cb, Ui.ui);
         notifyMedia();
     }
 
@@ -170,8 +170,8 @@ public class MediaListener extends NotificationListenerService {
     @Override
     public void onListenerConnected() {
         ctx = getApplicationContext();
-        Store.init(this); // may start before the launcher at boot
-        U.ui.post(() -> attach(ctx));
+        Prefs.init(this); // may start before the launcher at boot
+        Ui.ui.post(() -> attach(ctx));
         try {
             for (StatusBarNotification sbn : getActiveNotifications()) onNotificationPosted(sbn);
         } catch (Exception ignored) {
@@ -180,12 +180,12 @@ public class MediaListener extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
-        Store.init(this);
+        Prefs.init(this);
         // calls from BT Phone: show Car Launcher's own call screen and press BT Phone's buttons
         final Notification cn = sbn.getNotification();
         if (CallState.isCallNotification(this, sbn.getPackageName(), cn)) {
             final String key = sbn.getKey(), pkg = sbn.getPackageName();
-            if (Store.flag("call_screen", true)) U.ui.post(() -> CallState.fromNotification(this, key, pkg, cn));
+            if (Prefs.flag("call_screen", true)) Ui.ui.post(() -> CallState.fromNotification(this, key, pkg, cn));
             return;
         }
         if (!isNavApp(sbn.getPackageName())) return;
@@ -213,24 +213,24 @@ public class MediaListener extends NotificationListenerService {
         final Nav fv = v;
         final String pkg = sbn.getPackageName();
         NavBanner.seen(pkg, n.getChannelId());
-        U.ui.post(() -> {
+        Ui.ui.post(() -> {
             boolean started = nav == null;
             nav = fv;
             navPkg = pkg;
             for (Runnable r : new ArrayList<>(navListeners)) r.run();
             if (started && MainActivity.I != null) Splash.maybeShow(MainActivity.I, "nav");
-            if (started) U.ui.postDelayed(NavBanner::offer, 2500);
+            if (started) Ui.ui.postDelayed(NavBanner::offer, 2500);
         });
     }
 
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
         final String key = sbn.getKey();
-        U.ui.post(() -> CallState.notificationRemoved(key));
+        Ui.ui.post(() -> CallState.notificationRemoved(key));
         if (!isNavApp(sbn.getPackageName()) || !sbn.getPackageName().equals(navPkg)) return;
         Notification n = sbn.getNotification();
         if ((n.flags & Notification.FLAG_ONGOING_EVENT) == 0) return;
-        U.ui.post(() -> {
+        Ui.ui.post(() -> {
             nav = null;
             for (Runnable r : new ArrayList<>(navListeners)) r.run();
         });
@@ -242,7 +242,7 @@ public class MediaListener extends NotificationListenerService {
             if (ic != null) {
                 Drawable d = ic.loadDrawable(this);
                 if (d != null) {
-                    int s = U.u(52);
+                    int s = Ui.u(52);
                     Bitmap b = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888);
                     android.graphics.Canvas c = new android.graphics.Canvas(b);
                     d.setBounds(0, 0, s, s);

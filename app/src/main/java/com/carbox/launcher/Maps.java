@@ -18,7 +18,7 @@ import android.widget.TextView;
 import java.util.Locale;
 
 /** Live dark map with a Navigate button. Turns into a turn-by-turn card while Google Maps or Waze is navigating. */
-final class MapPanel {
+final class Maps {
     private final Context c;
     final FrameLayout view;
     private WebView web;
@@ -31,21 +31,21 @@ final class MapPanel {
     private boolean pageReady, running;
 
     @SuppressLint("SetJavaScriptEnabled")
-    MapPanel(Context c) {
+    Maps(Context c) {
         this.c = c;
         view = new FrameLayout(c);
-        view.setBackground(U.round(U.CARD, 16));
+        view.setBackground(Ui.round(Ui.CARD, 16));
         clip(view, 16);
 
         mapLayer = new FrameLayout(c);
-        view.addView(mapLayer, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        view.addView(mapLayer, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         try {
             web = new WebView(c);
             WebSettings s = web.getSettings();
             s.setJavaScriptEnabled(true);
             s.setDomStorageEnabled(true);
             s.setCacheMode(WebSettings.LOAD_DEFAULT);
-            web.setBackgroundColor(U.BG);
+            web.setBackgroundColor(Ui.BG);
             web.setVerticalScrollBarEnabled(false);
             web.setHorizontalScrollBarEnabled(false);
             web.setWebViewClient(new WebViewClient() {
@@ -59,16 +59,16 @@ final class MapPanel {
                 @Override
                 public void onPageFinished(WebView v, String url) {
                     pageReady = true;
-                    String key = Store.str(Store.MAP_KEY, "").replace("'", "");
+                    String key = Prefs.str(Prefs.MAP_KEY, "").replace("'", "");
                     shownDark = darkNow();
-                    web.evaluateJavascript(GoogleTraffic.setupJs() + "setZoomPref(" + Store.str("map_zoom", "15") + ");setDark(" + shownDark + ");setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setTraffic(" + GoogleTraffic.on() + ")", null);
+                    web.evaluateJavascript(GoogleTraffic.setupJs() + "setZoomPref(" + Prefs.str("map_zoom", "15") + ");setDark(" + shownDark + ");setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setTraffic(" + GoogleTraffic.on() + ")", null);
                     push();
                 }
             });
             web.addJavascriptInterface(new Object() {
                 @android.webkit.JavascriptInterface
                 public void mapState(boolean follow, int scalePx, String scaleLabel) {
-                    U.ui.post(() -> {
+                    Ui.ui.post(() -> {
                         following = follow;
                         scaleW = scalePx;
                         scaleText = scaleLabel;
@@ -78,38 +78,38 @@ final class MapPanel {
 
                 @android.webkit.JavascriptInterface
                 public void mapZoom(double z) { // remembered for next time
-                    Store.put("map_zoom", String.format(java.util.Locale.US, "%.2f", z));
+                    Prefs.put("map_zoom", String.format(java.util.Locale.US, "%.2f", z));
                 }
 
                 @android.webkit.JavascriptInterface
                 public void mapNote(String msg) {
-                    U.ui.post(() -> android.widget.Toast.makeText(c, msg, android.widget.Toast.LENGTH_LONG).show());
+                    Ui.ui.post(() -> android.widget.Toast.makeText(c, msg, android.widget.Toast.LENGTH_LONG).show());
                 }
             }, "Android");
             web.loadUrl("file:///android_asset/map.html");
-            mapLayer.addView(web, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            mapLayer.addView(web, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             if (GoogleTraffic.available()) { // traffic on/off on the small map too (the big map has its own)
-                smallTraffic = U.icon(c, R.drawable.ic_traffic, U.TEXT);
-                U.pad(smallTraffic, 9, 9, 9, 9);
-                smallTraffic.setElevation(U.uf(3));
+                smallTraffic = Ui.icon(c, R.drawable.ic_traffic, Ui.TEXT);
+                Ui.pad(smallTraffic, 9, 9, 9, 9);
+                smallTraffic.setElevation(Ui.uf(3));
                 smallTraffic.setOnClickListener(v -> toggleTraffic());
-                U.press(smallTraffic);
-                FrameLayout.LayoutParams tl = U.flpu(40, 40, Gravity.TOP | Gravity.END);
-                tl.setMargins(0, U.u(10), U.u(10), 0); // same corner spot and size as Now playing's Lyrics button
+                Ui.press(smallTraffic);
+                FrameLayout.LayoutParams tl = Ui.flpu(40, 40, Gravity.TOP | Gravity.END);
+                tl.setMargins(0, Ui.u(10), Ui.u(10), 0); // same corner spot and size as Now playing's Lyrics button
                 mapLayer.addView(smallTraffic, tl);
                 trafficLook();
             }
         } catch (Throwable t) {
             web = null; // no WebView on this box
         }
-        noLoc = U.text(c, "Waiting for location…", 12, U.SUB, false);
+        noLoc = Ui.text(c, "Waiting for location…", 12, Ui.SUB, false);
         noLoc.setGravity(Gravity.CENTER);
-        mapLayer.addView(noLoc, U.flp(U.MATCH, U.MATCH, Gravity.CENTER));
+        mapLayer.addView(noLoc, Ui.flp(Ui.MATCH, Ui.MATCH, Gravity.CENTER));
 
-        go = U.text(c, "Navigate", 14, U.TEXT, true);
+        go = Ui.text(c, "Navigate", 14, Ui.TEXT, true);
         go.setGravity(Gravity.CENTER);
-        go.setBackground(U.round(U.ACCENT, 12));
-        go.setCompoundDrawablePadding(U.u(6));
+        go.setBackground(Ui.round(Ui.ACCENT, 12));
+        go.setCompoundDrawablePadding(Ui.u(6));
         go.setOnClickListener(v -> Actions.openNavigation(c));
         go.setOnLongClickListener(v -> {
             SettingsPanels.mapNav();
@@ -138,51 +138,51 @@ final class MapPanel {
                 return false;
             });
         }
-        U.press(go);
-        FrameLayout.LayoutParams gl = new FrameLayout.LayoutParams(U.MATCH, U.u(36), Gravity.BOTTOM);
-        gl.setMargins(U.u(10), 0, U.u(10), U.u(10));
+        Ui.press(go);
+        FrameLayout.LayoutParams gl = new FrameLayout.LayoutParams(Ui.MATCH, Ui.u(36), Gravity.BOTTOM);
+        gl.setMargins(Ui.u(10), 0, Ui.u(10), Ui.u(10));
         mapLayer.addView(go, gl);
 
         // turn-by-turn card
-        navCard = U.col(c);
-        navCard.setBackground(U.round(0xFF0F3D26, 16));
-        U.pad(navCard, 14, 14, 14, 12);
+        navCard = Ui.col(c);
+        navCard.setBackground(Ui.round(0xFF0F3D26, 16));
+        Ui.pad(navCard, 14, 14, 14, 12);
         navCard.setVisibility(View.GONE);
-        LinearLayout top = U.row(c);
+        LinearLayout top = Ui.row(c);
         turnIcon = new ImageView(c);
-        turnIcon.setColorFilter(U.TEXT);
-        top.addView(turnIcon, U.lpu(52, 52));
-        dist = U.text(c, "", 30, U.TEXT, true);
-        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-        dlp.leftMargin = U.u(10);
+        turnIcon.setColorFilter(Ui.TEXT);
+        top.addView(turnIcon, Ui.lpu(52, 52));
+        dist = Ui.text(c, "", 30, Ui.TEXT, true);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
+        dlp.leftMargin = Ui.u(10);
         top.addView(dist, dlp);
         navCard.addView(top);
-        road = U.text(c, "", 17, U.TEXT, true);
+        road = Ui.text(c, "", 17, Ui.TEXT, true);
         road.setMaxLines(3);
         road.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        LinearLayout.LayoutParams rl = U.lp(U.MATCH, U.WRAP);
-        rl.topMargin = U.u(10);
+        LinearLayout.LayoutParams rl = Ui.lp(Ui.MATCH, Ui.WRAP);
+        rl.topMargin = Ui.u(10);
         navCard.addView(road, rl);
-        navCard.addView(new View(c), U.weight(1, false));
-        eta = U.text(c, "", 13, U.MINT, false);
+        navCard.addView(new View(c), Ui.weight(1, false));
+        eta = Ui.text(c, "", 13, Ui.MINT, false);
         eta.setMaxLines(2);
         navCard.addView(eta);
-        navApp = U.line(c, "", 11, 0xFF9FD9B9, false);
-        LinearLayout.LayoutParams al = U.lp(U.MATCH, U.WRAP);
-        al.topMargin = U.u(6);
+        navApp = Ui.line(c, "", 11, 0xFF9FD9B9, false);
+        LinearLayout.LayoutParams al = Ui.lp(Ui.MATCH, Ui.WRAP);
+        al.topMargin = Ui.u(6);
         navCard.addView(navApp, al);
         navCard.setOnClickListener(v -> {
             if (!Apps.launchPkg(c, MediaListener.navPkg)) Actions.openNavigation(c);
         });
-        view.addView(navCard, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        view.addView(navCard, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
 
-        Loc.listen(this::push);
+        Gps.listen(this::push);
         MediaListener.listenNav(this::updateNav);
     }
 
     /** The map turns with your direction (heading up) unless set to north up. */
     static boolean headingUp() {
-        return Store.flag("map_heading_up", true);
+        return Prefs.flag("map_heading_up", true);
     }
 
     void applyHeading() {
@@ -192,13 +192,13 @@ final class MapPanel {
     /** Which map: osm (Standard), ofm (OpenFreeMap), pmtiles (offline file) or google. */
     static String provider() {
         // OpenFreeMap is the default; boxes still on the old Standard default move to it once
-        if (!Store.flag("map_ofm_default", false)) {
-            Store.put("map_ofm_default", true);
-            if ("osm".equals(Store.str(Store.MAP_PROVIDER, "osm"))) Store.put(Store.MAP_PROVIDER, "ofm");
+        if (!Prefs.flag("map_ofm_default", false)) {
+            Prefs.put("map_ofm_default", true);
+            if ("osm".equals(Prefs.str(Prefs.MAP_PROVIDER, "osm"))) Prefs.put(Prefs.MAP_PROVIDER, "ofm");
         }
-        String p = Store.str(Store.MAP_PROVIDER, "ofm");
-        if ("google".equals(p) && Store.str(Store.MAP_KEY, "").isEmpty()) return "ofm";
-        if ("pmtiles".equals(p) && Store.str(OfflineMap.URI, "").isEmpty()) return "ofm";
+        String p = Prefs.str(Prefs.MAP_PROVIDER, "ofm");
+        if ("google".equals(p) && Prefs.str(Prefs.MAP_KEY, "").isEmpty()) return "ofm";
+        if ("pmtiles".equals(p) && Prefs.str(OfflineMap.URI, "").isEmpty()) return "ofm";
         return p;
     }
 
@@ -207,7 +207,7 @@ final class MapPanel {
         String p = provider();
         boolean dark = darkNow();
         if ("ofm".equals(p)) {
-            String day = Store.str("ofm_style", "liberty");
+            String day = Prefs.str("ofm_style", "liberty");
             return dark ? "dark" : "dark".equals(day) ? "liberty" : day;
         }
         if ("pmtiles".equals(p)) return dark ? "dark" : "light";
@@ -216,7 +216,7 @@ final class MapPanel {
 
     /** "auto" (light by day, dark from sunset to sunrise), "light" or "dark". */
     static String colours() {
-        return Store.str("map_colours", "auto");
+        return Prefs.str("map_colours", "auto");
     }
 
     static boolean darkNow() {
@@ -235,7 +235,7 @@ final class MapPanel {
         @Override
         public void run() {
             if (darkNow() != shownDark) reload();
-            U.ui.postDelayed(this, 60000);
+            Ui.ui.postDelayed(this, 60000);
         }
     };
 
@@ -263,17 +263,17 @@ final class MapPanel {
             @Override
             public void draw(android.graphics.Canvas cv) {
                 android.graphics.Rect b = getBounds();
-                float rr = U.uf(r), sw = U.uf(w);
+                float rr = Ui.uf(r), sw = Ui.uf(w);
                 android.graphics.Path p = new android.graphics.Path();
                 p.setFillType(android.graphics.Path.FillType.EVEN_ODD);
                 p.addRect(b.left - 2, b.top - 2, b.right + 2, b.bottom + 2, android.graphics.Path.Direction.CW);
                 p.addRoundRect(b.left, b.top, b.right, b.bottom, rr, rr, android.graphics.Path.Direction.CW);
-                String mode = Store.str(Store.WALL, "black");
-                fill.setColor("color".equals(mode) ? Store.num(Store.WALL_COLOR, U.BG) : android.graphics.Color.BLACK);
+                String mode = Prefs.str(Prefs.WALL, "black");
+                fill.setColor("color".equals(mode) ? Prefs.num(Prefs.WALL_COLOR, Ui.BG) : android.graphics.Color.BLACK);
                 cv.drawPath(p, fill);
                 line.setStyle(android.graphics.Paint.Style.STROKE);
                 line.setStrokeWidth(sw);
-                line.setColor(U.CARD);
+                line.setColor(Ui.CARD);
                 float h = sw / 2;
                 cv.drawRoundRect(b.left + h, b.top + h, b.right - h, b.bottom - h, rr - h, rr - h, line);
             }
@@ -297,7 +297,7 @@ final class MapPanel {
         v.setOutlineProvider(new ViewOutlineProvider() {
             @Override
             public void getOutline(View view, Outline o) {
-                o.setRoundRect(0, 0, view.getWidth(), view.getHeight(), U.uf(r));
+                o.setRoundRect(0, 0, view.getWidth(), view.getHeight(), Ui.uf(r));
             }
         });
         v.setClipToOutline(true);
@@ -305,8 +305,8 @@ final class MapPanel {
 
     void start() {
         running = true;
-        U.ui.removeCallbacks(dayNight);
-        U.ui.postDelayed(dayNight, 60000);
+        Ui.ui.removeCallbacks(dayNight);
+        Ui.ui.postDelayed(dayNight, 60000);
         if (web != null) web.onResume();
         push();
         updateNav();
@@ -318,17 +318,17 @@ final class MapPanel {
     }
 
     private void push() {
-        noLoc.setVisibility(Loc.has() ? View.GONE : View.VISIBLE);
+        noLoc.setVisibility(Gps.has() ? View.GONE : View.VISIBLE);
         if (web == null) {
-            if (Loc.has()) {
+            if (Gps.has()) {
                 noLoc.setVisibility(View.VISIBLE);
-                noLoc.setText(Loc.town != null ? Loc.town : "Map needs Android System WebView");
+                noLoc.setText(Gps.town != null ? Gps.town : "Map needs Android System WebView");
             }
             return;
         }
-        if (!pageReady || !running || !Loc.has()) return;
-        float b = Float.isNaN(Loc.bearing) ? -1 : Loc.bearing;
-        web.evaluateJavascript(String.format(Locale.US, "setPos(%.6f,%.6f,%.0f)", Loc.lat, Loc.lon, b), null);
+        if (!pageReady || !running || !Gps.has()) return;
+        float b = Float.isNaN(Gps.bearing) ? -1 : Gps.bearing;
+        web.evaluateJavascript(String.format(Locale.US, "setPos(%.6f,%.6f,%.0f)", Gps.lat, Gps.lon, b), null);
     }
 
     private FrameLayout bigHolder;
@@ -338,8 +338,8 @@ final class MapPanel {
 
     /** Tap on the map: it fills the 2×4 grid and the small panel shows the Go to or Speed tile. */
     void expand(boolean on) {
-        if (on && LyricsCard.isShown()) { // lyrics open: a tap on the map minimises them (the map comes back)
-            LyricsCard.hide();
+        if (on && LyricsView.isShown()) { // lyrics open: a tap on the map minimises them (the map comes back)
+            LyricsView.hide();
             return;
         }
         MainActivity m = MainActivity.I;
@@ -362,26 +362,26 @@ final class MapPanel {
 
     /** The Top Left Widget's current widget (the small panel while the map is big). */
     static String miniId() {
-        return TopLeft.current();
+        return LeftStages.current();
     }
 
     private void showMini(boolean on) {
         if (on && mini == null) {
             mini = new SwipeBox(c, this::swapMini);
-            mini.onHold(TopLeft::chooser); // hold: choose the Top Left Widget's widgets
-            if (TopLeft.MUSIC.equals(miniId()) && MainActivity.I != null && MainActivity.I.nowPlaying != null) {
+            mini.onHold(LeftStages::chooser); // hold: choose the Top Left Widget's widgets
+            if (LeftStages.MUSIC.equals(miniId()) && MainActivity.I != null && MainActivity.I.nowPlaying != null) {
                 View np = MainActivity.I.nowPlaying.view; // Music: the one Now playing moves up here
                 if (np.getParent() != null) ((android.view.ViewGroup) np.getParent()).removeView(np);
-                mini.addView(np, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+                mini.addView(np, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             } else try {
-                miniW = TopLeft.make(c, miniId()); // same settings as in the tiles, its own design
-                if (miniW != null && miniW.v != null) mini.addView(miniW.v, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+                miniW = LeftStages.make(c, miniId()); // same settings as in the tiles, its own design
+                if (miniW != null && miniW.v != null) mini.addView(miniW.v, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             } catch (Exception ignored) {
             }
-            view.addView(mini, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-            U.ui.post(miniTick);
+            view.addView(mini, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            Ui.ui.post(miniTick);
         } else if (!on && mini != null) {
-            U.ui.removeCallbacks(miniTick);
+            Ui.ui.removeCallbacks(miniTick);
             view.removeView(mini);
             mini = null;
             miniW = null;
@@ -399,20 +399,20 @@ final class MapPanel {
     private void swapMini() {
         if (mini == null) return;
         int dir = mini.dir;
-        if (TopLeft.list().size() < 2) return;
-        TopLeft.step(dir);
+        if (LeftStages.list().size() < 2) return;
+        LeftStages.step(dir);
         final View old = mini;
         float w = view.getWidth();
-        U.ui.removeCallbacks(miniTick);
+        Ui.ui.removeCallbacks(miniTick);
         mini = null;
         miniW = null;
         showMini(true);
         if (mini == null) return;
         mini.setTranslationX(dir * w);
-        mini.animate().translationX(0).setDuration(U.ms(260)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
-        old.animate().translationX(-dir * w).setDuration(U.ms(260)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f))
+        mini.animate().translationX(0).setDuration(Ui.ms(260)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+        old.animate().translationX(-dir * w).setDuration(Ui.ms(260)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f))
                 .withEndAction(() -> view.removeView(old)).start();
-        if (U.ms(260) == 0) view.removeView(old);
+        if (Ui.ms(260) == 0) view.removeView(old);
     }
 
     private final Runnable miniTick = new Runnable() {
@@ -423,7 +423,7 @@ final class MapPanel {
                 miniW.tick();
             } catch (Exception ignored) {
             }
-            U.ui.postDelayed(this, 1000);
+            Ui.ui.postDelayed(this, 1000);
         }
     };
 
@@ -433,27 +433,27 @@ final class MapPanel {
         if (a == null) return;
         if (on && bigHolder == null) {
             bigHolder = new FrameLayout(a);
-            MapPanel.clip(bigHolder, 16);
+            Maps.clip(bigHolder, 16);
             // a thin card-coloured rim, like the dark cards beside it, so the bright map doesn't look taller than them
             bigHolder.setForeground(rim(16, 2.5f));
             view.removeView(mapLayer);
-            bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             mapLayer.setVisibility(View.VISIBLE);
-            bigHolder.addView(controls(a), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            bigHolder.addView(controls(a), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             trafficLook(); // the big map has its own traffic button
             pill(true);
             js("setInteractive(true)");
-            U.ui.post(controlTick);
+            Ui.ui.post(controlTick);
             int at = a.tileArea.indexOfChild(a.sheetHost); // under panels and alerts
-            a.tileArea.addView(bigHolder, Math.max(0, at), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            a.tileArea.addView(bigHolder, Math.max(0, at), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         } else if (!on && bigHolder != null) {
-            U.ui.removeCallbacks(controlTick);
+            Ui.ui.removeCallbacks(controlTick);
             js("setInteractive(false)");
             pill(false);
             bigHolder.removeView(mapLayer);
             ((android.view.ViewGroup) bigHolder.getParent()).removeView(bigHolder);
             bigHolder = null;
-            view.addView(mapLayer, 0, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            view.addView(mapLayer, 0, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             trafficLook();
         }
     }
@@ -471,8 +471,8 @@ final class MapPanel {
 
     /** Live traffic on/off (official Google layer on the Google map, Google's tiles on the others). */
     private void toggleTraffic() {
-        boolean on = !Store.flag("map_traffic", true);
-        Store.put("map_traffic", on);
+        boolean on = !Prefs.flag("map_traffic", true);
+        Prefs.put("map_traffic", on);
         js("setTraffic(" + on + ")");
         trafficLook();
         updateControls();
@@ -480,8 +480,8 @@ final class MapPanel {
 
     private void trafficLook() {
         if (smallTraffic == null) return;
-        boolean on = Store.flag("map_traffic", true);
-        smallTraffic.setBackground(on ? U.oval(U.ACCENT) : U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 20));
+        boolean on = Prefs.flag("map_traffic", true);
+        smallTraffic.setBackground(on ? Ui.oval(Ui.ACCENT) : Ui.outline(0xD10B0E13, 0x2EFFFFFF, 1, 20));
         smallTraffic.setVisibility(bigHolder == null ? View.VISIBLE : View.GONE);
     }
 
@@ -491,127 +491,127 @@ final class MapPanel {
 
     /** Navigate: a full-width bar on the small map, a centred pill on the big one. */
     private void pill(boolean big) {
-        FrameLayout.LayoutParams gl = big ? new FrameLayout.LayoutParams(U.WRAP, U.u(42), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL)
-                : new FrameLayout.LayoutParams(U.MATCH, U.u(36), Gravity.BOTTOM);
-        gl.setMargins(U.u(10), 0, U.u(10), U.u(big ? 12 : 10));
+        FrameLayout.LayoutParams gl = big ? new FrameLayout.LayoutParams(Ui.WRAP, Ui.u(42), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL)
+                : new FrameLayout.LayoutParams(Ui.MATCH, Ui.u(36), Gravity.BOTTOM);
+        gl.setMargins(Ui.u(10), 0, Ui.u(10), Ui.u(big ? 12 : 10));
         go.setLayoutParams(gl);
-        U.pad(go, big ? 22 : 0, 0, big ? 22 : 0, 0);
-        go.setBackground(U.round(U.ACCENT, big ? 21 : 12));
-        go.setElevation(big ? U.uf(4) : 0);
+        Ui.pad(go, big ? 22 : 0, 0, big ? 22 : 0, 0);
+        go.setBackground(Ui.round(Ui.ACCENT, big ? 21 : 12));
+        go.setElevation(big ? Ui.uf(4) : 0);
     }
 
     private static final int BTN_BG = 0xEB141922, BTN_EDGE = 0x33FFFFFF;
 
     private View round(Context a, int icon, boolean tint, Runnable r) {
         FrameLayout f = new FrameLayout(a);
-        f.setBackground(U.outline(BTN_BG, BTN_EDGE, 1, 24));
-        f.setElevation(U.uf(4));
-        ImageView iv = tint ? U.icon(a, icon, U.TEXT) : new ImageView(a);
+        f.setBackground(Ui.outline(BTN_BG, BTN_EDGE, 1, 24));
+        f.setElevation(Ui.uf(4));
+        ImageView iv = tint ? Ui.icon(a, icon, Ui.TEXT) : new ImageView(a);
         if (!tint) iv.setImageResource(icon);
-        f.addView(iv, U.flpu(25, 25, Gravity.CENTER));
+        f.addView(iv, Ui.flpu(25, 25, Gravity.CENTER));
         f.setOnClickListener(v -> r.run());
-        U.press(f);
+        Ui.press(f);
         return f;
     }
 
     private FrameLayout controls(Context a) {
         FrameLayout o = new FrameLayout(a);
         // street you're on
-        street = U.line(a, "", 13, U.TEXT, true);
-        street.setBackground(U.outline(BTN_BG, BTN_EDGE, 1, 12));
-        U.pad(street, 12, 6, 12, 6);
-        street.setElevation(U.uf(4));
-        FrameLayout.LayoutParams rl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.START);
-        rl.setMargins(U.u(10), U.u(10), U.u(60), 0);
+        street = Ui.line(a, "", 13, Ui.TEXT, true);
+        street.setBackground(Ui.outline(BTN_BG, BTN_EDGE, 1, 12));
+        Ui.pad(street, 12, 6, 12, 6);
+        street.setElevation(Ui.uf(4));
+        FrameLayout.LayoutParams rl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.TOP | Gravity.START);
+        rl.setMargins(Ui.u(10), Ui.u(10), Ui.u(60), 0);
         o.addView(street, rl);
         // right-hand column: close, compass, traffic
-        LinearLayout col = U.col(a);
-        if (!MainActivity.mapHome()) col.addView(round(a, R.drawable.ic_x, true, () -> expand(false)), U.lpu(48, 48)); // the map is home: no close
+        LinearLayout col = Ui.col(a);
+        if (!MainActivity.mapHome()) col.addView(round(a, R.drawable.ic_x, true, () -> expand(false)), Ui.lpu(48, 48)); // the map is home: no close
         View cb = round(a, R.drawable.ic_compass, false, () -> { // direction of travel ⇄ north up
-            Store.put("map_heading_up", !headingUp());
+            Prefs.put("map_heading_up", !headingUp());
             applyHeading();
             updateControls();
         });
         compass = (ImageView) ((FrameLayout) cb).getChildAt(0);
-        LinearLayout.LayoutParams cbl = U.lpu(48, 48);
-        cbl.topMargin = col.getChildCount() > 0 ? U.u(8) : 0;
+        LinearLayout.LayoutParams cbl = Ui.lpu(48, 48);
+        cbl.topMargin = col.getChildCount() > 0 ? Ui.u(8) : 0;
         col.addView(cb, cbl);
         // day / night colours: tap goes Auto → Light → Dark (moon = dark, sun = light, blue = auto)
         View db = round(a, R.drawable.ic_sun, true, () -> {
             String m = colours();
-            Store.put("map_colours", "auto".equals(m) ? "light" : "light".equals(m) ? "dark" : "auto");
+            Prefs.put("map_colours", "auto".equals(m) ? "light" : "light".equals(m) ? "dark" : "auto");
             android.widget.Toast.makeText(a, "Map colours: " + ("auto".equals(colours()) ? "Auto (day / night)" : "light".equals(colours()) ? "Light" : "Dark"), android.widget.Toast.LENGTH_SHORT).show();
             styleDay();
             reload();
         });
         dayIcon = (ImageView) ((FrameLayout) db).getChildAt(0);
-        LinearLayout.LayoutParams dbl = U.lpu(48, 48);
-        dbl.topMargin = U.u(8);
+        LinearLayout.LayoutParams dbl = Ui.lpu(48, 48);
+        dbl.topMargin = Ui.u(8);
         col.addView(db, dbl);
         styleDay();
         if (GoogleTraffic.available()) {
             View tb = round(a, R.drawable.ic_traffic, true, this::toggleTraffic);
             tb.setTag("traffic");
-            LinearLayout.LayoutParams tl = U.lpu(48, 48);
-            tl.topMargin = U.u(8);
+            LinearLayout.LayoutParams tl = Ui.lpu(48, 48);
+            tl.topMargin = Ui.u(8);
             col.addView(tb, tl);
         }
-        FrameLayout.LayoutParams cl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.END);
-        cl.setMargins(0, U.u(10), U.u(10), 0);
+        FrameLayout.LayoutParams cl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.TOP | Gravity.END);
+        cl.setMargins(0, Ui.u(10), Ui.u(10), 0);
         o.addView(col, cl);
         // zoom
-        LinearLayout zoom = U.col(a);
-        zoom.setBackground(U.outline(BTN_BG, BTN_EDGE, 1, 24));
-        zoom.setElevation(U.uf(4));
-        View zin = U.icon(a, R.drawable.ic_plus, U.TEXT), zout = U.icon(a, R.drawable.ic_minus, U.TEXT);
-        U.pad(zin, 11, 11, 11, 11);
-        U.pad(zout, 11, 11, 11, 11);
+        LinearLayout zoom = Ui.col(a);
+        zoom.setBackground(Ui.outline(BTN_BG, BTN_EDGE, 1, 24));
+        zoom.setElevation(Ui.uf(4));
+        View zin = Ui.icon(a, R.drawable.ic_plus, Ui.TEXT), zout = Ui.icon(a, R.drawable.ic_minus, Ui.TEXT);
+        Ui.pad(zin, 11, 11, 11, 11);
+        Ui.pad(zout, 11, 11, 11, 11);
         zin.setOnClickListener(v -> js("zoomBy(1)"));
         zout.setOnClickListener(v -> js("zoomBy(-1)"));
-        zoom.addView(zin, U.lpu(48, 48));
+        zoom.addView(zin, Ui.lpu(48, 48));
         View sep = new View(a);
         sep.setBackgroundColor(0x33FFFFFF);
-        LinearLayout.LayoutParams sl = U.lpu(24, 1);
+        LinearLayout.LayoutParams sl = Ui.lpu(24, 1);
         sl.gravity = Gravity.CENTER_HORIZONTAL;
         zoom.addView(sep, sl);
-        zoom.addView(zout, U.lpu(48, 48));
-        FrameLayout.LayoutParams zl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.BOTTOM | Gravity.END);
-        zl.setMargins(0, 0, U.u(10), U.u(12)); // moves up above the locate button while you pan (updateControls)
+        zoom.addView(zout, Ui.lpu(48, 48));
+        FrameLayout.LayoutParams zl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.BOTTOM | Gravity.END);
+        zl.setMargins(0, 0, Ui.u(10), Ui.u(12)); // moves up above the locate button while you pan (updateControls)
         o.addView(zoom, zl);
         zoomBox = zoom;
         // back to my location (only once you've moved the map)
         recentre = round(a, R.drawable.ic_myloc, true, () -> js("recenter()"));
-        recentre.setBackground(U.oval(U.ACCENT));
-        FrameLayout.LayoutParams ml = U.flpu(48, 48, Gravity.BOTTOM | Gravity.END);
-        ml.setMargins(0, 0, U.u(10), U.u(12));
+        recentre.setBackground(Ui.oval(Ui.ACCENT));
+        FrameLayout.LayoutParams ml = Ui.flpu(48, 48, Gravity.BOTTOM | Gravity.END);
+        ml.setMargins(0, 0, Ui.u(10), Ui.u(12));
         o.addView(recentre, ml);
         // bottom left: limit sign, speed, scale
-        LinearLayout bl = U.row(a);
+        LinearLayout bl = Ui.row(a);
         bl.setGravity(Gravity.CENTER_VERTICAL);
-        limit = U.text(a, "", 13, 0xFF111111, true);
+        limit = Ui.text(a, "", 13, 0xFF111111, true);
         limit.setGravity(Gravity.CENTER);
-        android.graphics.drawable.GradientDrawable sign = U.oval(0xFFFFFFFF);
-        sign.setStroke(U.u(3), 0xFFD33A3A);
+        android.graphics.drawable.GradientDrawable sign = Ui.oval(0xFFFFFFFF);
+        sign.setStroke(Ui.u(3), 0xFFD33A3A);
         limit.setBackground(sign);
-        bl.addView(limit, U.lpu(40, 40));
-        spd = U.line(a, "", 13, U.TEXT, true);
-        spd.setBackground(U.outline(BTN_BG, BTN_EDGE, 1, 12));
-        U.pad(spd, 12, 6, 12, 6);
-        spd.setElevation(U.uf(4));
-        LinearLayout.LayoutParams pl = U.lp(U.WRAP, U.WRAP);
-        pl.leftMargin = U.u(8);
+        bl.addView(limit, Ui.lpu(40, 40));
+        spd = Ui.line(a, "", 13, Ui.TEXT, true);
+        spd.setBackground(Ui.outline(BTN_BG, BTN_EDGE, 1, 12));
+        Ui.pad(spd, 12, 6, 12, 6);
+        spd.setElevation(Ui.uf(4));
+        LinearLayout.LayoutParams pl = Ui.lp(Ui.WRAP, Ui.WRAP);
+        pl.leftMargin = Ui.u(8);
         bl.addView(spd, pl);
-        LinearLayout sc = U.col(a);
+        LinearLayout sc = Ui.col(a);
         scaleBar = new View(a);
-        scaleBar.setBackground(U.outline(0x00000000, 0xFFC8D0DC, 1, 0));
-        sc.addView(scaleBar, new LinearLayout.LayoutParams(U.u(50), U.u(5)));
-        scaleLbl = U.line(a, "", 11, 0xFFC8D0DC, false);
+        scaleBar.setBackground(Ui.outline(0x00000000, 0xFFC8D0DC, 1, 0));
+        sc.addView(scaleBar, new LinearLayout.LayoutParams(Ui.u(50), Ui.u(5)));
+        scaleLbl = Ui.line(a, "", 11, 0xFFC8D0DC, false);
         sc.addView(scaleLbl);
-        LinearLayout.LayoutParams scl = U.lp(U.WRAP, U.WRAP);
-        scl.leftMargin = U.u(10);
+        LinearLayout.LayoutParams scl = Ui.lp(Ui.WRAP, Ui.WRAP);
+        scl.leftMargin = Ui.u(10);
         bl.addView(sc, scl);
-        FrameLayout.LayoutParams bll = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.BOTTOM | Gravity.START);
-        bll.setMargins(U.u(10), 0, 0, U.u(13));
+        FrameLayout.LayoutParams bll = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.BOTTOM | Gravity.START);
+        bll.setMargins(Ui.u(10), 0, 0, Ui.u(13));
         o.addView(bl, bll);
         updateControls();
         return o;
@@ -623,7 +623,7 @@ final class MapPanel {
         if (dayIcon == null) return;
         boolean dark = darkNow();
         dayIcon.setImageResource(dark ? R.drawable.ic_moon : R.drawable.ic_sun);
-        dayIcon.setColorFilter("auto".equals(colours()) ? U.ACCENT_SOFT : U.TEXT);
+        dayIcon.setColorFilter("auto".equals(colours()) ? Ui.ACCENT_SOFT : Ui.TEXT);
     }
 
     private final Runnable controlTick = new Runnable() {
@@ -631,21 +631,21 @@ final class MapPanel {
         public void run() {
             if (bigHolder == null) return;
             updateControls();
-            U.ui.postDelayed(this, 1000);
+            Ui.ui.postDelayed(this, 1000);
         }
     };
 
     private void updateControls() {
         if (street == null || bigHolder == null) return;
-        String r = SpeedLimit.road != null && !SpeedLimit.road.isEmpty() ? SpeedLimit.road : Loc.town;
+        String r = SpeedLimit.road != null && !SpeedLimit.road.isEmpty() ? SpeedLimit.road : Gps.town;
         street.setText(r == null ? "" : r);
         street.setVisibility(r == null || r.isEmpty() ? View.GONE : View.VISIBLE);
         boolean mph = Widgets.mph();
         int lim = SpeedLimit.kmh;
         limit.setText(lim > 0 ? String.valueOf(mph ? Math.round(lim / 1.609f) : lim) : "");
         limit.setVisibility(lim > 0 ? View.VISIBLE : View.GONE);
-        if (Loc.speed >= 0 && Loc.fresh()) {
-            float v = Loc.speed * 3.6f;
+        if (Gps.speed >= 0 && Gps.fresh()) {
+            float v = Gps.speed * 3.6f;
             spd.setText(Math.round(mph ? v / 1.609f : v) + (mph ? " mph" : " km/h"));
             spd.setVisibility(View.VISIBLE);
         } else spd.setVisibility(View.GONE);
@@ -655,13 +655,13 @@ final class MapPanel {
             scaleLbl.setText(scaleText);
         }
         recentre.setVisibility(following ? View.GONE : View.VISIBLE);
-        float zy = following ? 0 : -U.u(66); // panning: zoom slides up, clear of the locate button
-        if (zoomBox != null && zoomBox.getTranslationY() != zy) zoomBox.animate().translationY(zy).setDuration(U.ms(200)).start();
+        float zy = following ? 0 : -Ui.u(66); // panning: zoom slides up, clear of the locate button
+        if (zoomBox != null && zoomBox.getTranslationY() != zy) zoomBox.animate().translationY(zy).setDuration(Ui.ms(200)).start();
         // compass needle points north on screen
-        boolean hu = headingUp() && following && !Float.isNaN(Loc.bearing);
-        compass.animate().rotation(hu ? -Loc.bearing : 0).setDuration(U.ms(600)).start();
+        boolean hu = headingUp() && following && !Float.isNaN(Gps.bearing);
+        compass.animate().rotation(hu ? -Gps.bearing : 0).setDuration(Ui.ms(600)).start();
         View tb = bigHolder.findViewWithTag("traffic");
-        if (tb != null) tb.setBackground(Store.flag("map_traffic", true) ? U.oval(U.ACCENT) : U.outline(0xD10B0E13, 0x2EFFFFFF, 1, 19));
+        if (tb != null) tb.setBackground(Prefs.flag("map_traffic", true) ? Ui.oval(Ui.ACCENT) : Ui.outline(0xD10B0E13, 0x2EFFFFFF, 1, 19));
     }
 
     private void updateNav() {
@@ -681,7 +681,7 @@ final class MapPanel {
         if (bm != null) turnIcon.setImageBitmap(bm);
         else turnIcon.setImageResource(R.drawable.ic_turn);
         dist.setText(n.distance != null ? n.distance : "");
-        dist.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, U.uf(n.distance != null && n.distance.length() > 7 ? 22 : 30));
+        dist.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.uf(n.distance != null && n.distance.length() > 7 ? 22 : 30));
         road.setText(n.instruction != null ? n.instruction : "");
         eta.setText(n.eta != null ? n.eta : "");
         navApp.setText(Apps.label(MediaListener.navPkg));

@@ -31,9 +31,9 @@ final class CallCard {
             shown = new FrameLayout(a);
             shown.setClickable(true);
             shown.setTag(CallCard.class); // so the navigation card stays underneath
-            a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH)); // on top of tiles and panels
+            a.tileArea.addView(shown, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH)); // on top of tiles and panels
             CallState.listen(update);
-            U.ui.post(tick);
+            Ui.ui.post(tick);
         }
         render();
     }
@@ -41,7 +41,7 @@ final class CallCard {
     static void hide() {
         if (shown == null) return;
         CallState.unlisten(update);
-        U.ui.removeCallbacks(tick);
+        Ui.ui.removeCallbacks(tick);
         if (shown.getParent() != null) ((android.view.ViewGroup) shown.getParent()).removeView(shown);
         shown = null;
         keypad = false;
@@ -51,7 +51,7 @@ final class CallCard {
         @Override
         public void run() {
             if (status != null && CallState.state == CallState.ACTIVE && CallState.activeSince > 0) status.setText(elapsed() + " · " + CallState.via);
-            U.ui.postDelayed(this, 1000);
+            Ui.ui.postDelayed(this, 1000);
         }
     };
 
@@ -68,11 +68,11 @@ final class CallCard {
         Context c = shown.getContext();
         shown.removeAllViews();
         boolean ringing = CallState.state == CallState.RINGING;
-        shown.setBackground(U.round(ringing ? 0xFF16324F : 0xFF123D2A, 16));
+        shown.setBackground(Ui.round(ringing ? 0xFF16324F : 0xFF123D2A, 16));
 
-        LinearLayout col = U.col(c);
+        LinearLayout col = Ui.col(c);
         col.setGravity(Gravity.CENTER);
-        U.pad(col, 16, 12, 16, 12);
+        Ui.pad(col, 16, 12, 16, 12);
         Widgets.Person p = new Widgets.Person();
         p.name = CallState.name == null ? "Unknown" : CallState.name;
         p.number = CallState.number;
@@ -81,63 +81,63 @@ final class CallCard {
             iv.setImageBitmap(CallState.photo);
             iv.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
             iv.setClipToOutline(true);
-            iv.setBackground(U.oval(U.CARD3));
-            col.addView(iv, U.lpu(72, 72));
-        } else col.addView(Widgets.avatar(c, p, 72), U.lpu(72, 72));
-        TextView nm = U.line(c, p.name, 24, U.TEXT, true);
+            iv.setBackground(Ui.oval(Ui.CARD3));
+            col.addView(iv, Ui.lpu(72, 72));
+        } else col.addView(Widgets.avatar(c, p, 72), Ui.lpu(72, 72));
+        TextView nm = Ui.line(c, p.name, 24, Ui.TEXT, true);
         nm.setGravity(Gravity.CENTER);
         col.addView(nm, Widgets.top(10));
         if (CallState.number != null && !CallState.number.isEmpty() && !CallState.number.equals(p.name)) {
-            TextView num = U.line(c, CallState.number, 14, U.TEXT2, false);
+            TextView num = Ui.line(c, CallState.number, 14, Ui.TEXT2, false);
             num.setGravity(Gravity.CENTER);
             col.addView(num, Widgets.top(2));
         }
-        status = U.line(c, ringing ? "Incoming call · " + CallState.via
+        status = Ui.line(c, ringing ? "Incoming call · " + CallState.via
                 : CallState.state == CallState.DIALING ? "Calling… · " + CallState.via
-                : CallState.state == CallState.HOLDING ? "On hold" : elapsed() + " · " + CallState.via, 13, ringing ? U.SUB : U.MINT, false);
+                : CallState.state == CallState.HOLDING ? "On hold" : elapsed() + " · " + CallState.via, 13, ringing ? Ui.SUB : Ui.MINT, false);
         status.setGravity(Gravity.CENTER);
         col.addView(status, Widgets.top(4));
 
-        LinearLayout btns = U.row(c);
+        LinearLayout btns = Ui.row(c);
         btns.setGravity(Gravity.CENTER);
         if (ringing) {
-            btns.addView(round(c, U.RED, R.drawable.ic_call, 135, CallState::decline), U.lpu(64, 64));
-            btns.addView(U.gap(c, 90, 1));
-            btns.addView(round(c, U.GREEN, R.drawable.ic_call, 0, CallState::answer), U.lpu(64, 64));
+            btns.addView(round(c, Ui.RED, R.drawable.ic_call, 135, CallState::decline), Ui.lpu(64, 64));
+            btns.addView(Ui.gap(c, 90, 1));
+            btns.addView(round(c, Ui.GREEN, R.drawable.ic_call, 0, CallState::answer), Ui.lpu(64, 64));
         } else {
             if (CallState.full()) {
-                btns.addView(chip(c, R.drawable.ic_mute, CallState.muted, () -> CallState.setMuted(!CallState.muted)), U.lpu(48, 48));
-                btns.addView(U.gap(c, 14, 1));
-                btns.addView(chip(c, R.drawable.ic_volup, false, CallState::toggleAudio), U.lpu(48, 48));
-                btns.addView(U.gap(c, 14, 1));
+                btns.addView(chip(c, R.drawable.ic_mute, CallState.muted, () -> CallState.setMuted(!CallState.muted)), Ui.lpu(48, 48));
+                btns.addView(Ui.gap(c, 14, 1));
+                btns.addView(chip(c, R.drawable.ic_volup, false, CallState::toggleAudio), Ui.lpu(48, 48));
+                btns.addView(Ui.gap(c, 14, 1));
             } else {
                 // a BT Phone call we can't fully control: one tap to its own screen
-                btns.addView(chip(c, R.drawable.ic_phone, false, CallState::openBtPhone), U.lpu(48, 48));
-                btns.addView(U.gap(c, 14, 1));
+                btns.addView(chip(c, R.drawable.ic_phone, false, CallState::openBtPhone), Ui.lpu(48, 48));
+                btns.addView(Ui.gap(c, 14, 1));
             }
-            btns.addView(round(c, U.RED, R.drawable.ic_call, 135, CallState::hangup), U.lpu(64, 64));
+            btns.addView(round(c, Ui.RED, R.drawable.ic_call, 135, CallState::hangup), Ui.lpu(64, 64));
         }
         col.addView(btns, Widgets.top(14));
-        shown.addView(col, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        shown.addView(col, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
     }
 
     private static View round(Context c, int color, int icon, float rotate, Runnable r) {
         FrameLayout f = new FrameLayout(c);
-        f.setBackground(U.oval(color));
-        View iv = U.icon(c, icon, U.TEXT);
+        f.setBackground(Ui.oval(color));
+        View iv = Ui.icon(c, icon, Ui.TEXT);
         iv.setRotation(rotate);
-        f.addView(iv, U.flpu(28, 28, Gravity.CENTER));
+        f.addView(iv, Ui.flpu(28, 28, Gravity.CENTER));
         f.setOnClickListener(v -> r.run());
-        U.press(f);
+        Ui.press(f);
         return f;
     }
 
     private static View chip(Context c, int icon, boolean on, Runnable r) {
         FrameLayout f = new FrameLayout(c);
-        f.setBackground(U.oval(on ? U.TEXT : 0x33FFFFFF));
-        f.addView(U.icon(c, icon, on ? U.BG : U.TEXT), U.flpu(22, 22, Gravity.CENTER));
+        f.setBackground(Ui.oval(on ? Ui.TEXT : 0x33FFFFFF));
+        f.addView(Ui.icon(c, icon, on ? Ui.BG : Ui.TEXT), Ui.flpu(22, 22, Gravity.CENTER));
         f.setOnClickListener(v -> r.run());
-        U.press(f);
+        Ui.press(f);
         return f;
     }
 }

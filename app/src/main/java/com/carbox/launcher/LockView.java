@@ -31,7 +31,7 @@ final class LockView extends View {
             return;
         }
         ValueAnimator a = ValueAnimator.ofFloat(open, to);
-        a.setDuration(U.ms(320));
+        a.setDuration(Ui.ms(320));
         a.setInterpolator(new OvershootInterpolator(2.2f));
         a.addUpdateListener(v -> {
             open = (float) v.getAnimatedValue();
@@ -45,7 +45,7 @@ final class LockView extends View {
         float s = Math.min(getWidth(), getHeight()), cx = getWidth() / 2f, cy = getHeight() / 2f, u = s / 30f;
         // button
         p.setStyle(Paint.Style.FILL);
-        p.setColor(locked ? U.AMBER : 0xFF141922);
+        p.setColor(locked ? Ui.AMBER : 0xFF141922);
         cv.drawCircle(cx, cy, s / 2 - u, p);
         if (!locked) {
             p.setStyle(Paint.Style.STROKE);
@@ -53,13 +53,13 @@ final class LockView extends View {
             p.setColor(0x40FFFFFF);
             cv.drawCircle(cx, cy, s / 2 - u, p);
         }
-        int ink = locked ? 0xFF0B0E13 : U.TEXT2;
+        int ink = locked ? 0xFF0B0E13 : Ui.TEXT2;
         // body
         p.setStyle(Paint.Style.FILL);
         p.setColor(ink);
         r.set(cx - 7 * u, cy - 1 * u, cx + 7 * u, cy + 9 * u);
         cv.drawRoundRect(r, 2.5f * u, 2.5f * u, p);
-        p.setColor(locked ? U.AMBER : 0xFF141922);
+        p.setColor(locked ? Ui.AMBER : 0xFF141922);
         cv.drawCircle(cx, cy + 4 * u, 1.6f * u, p);
         // shackle: lifts and swings open around its right foot
         cv.save();

@@ -20,8 +20,8 @@ import java.util.Locale;
  * The launcher's own large-key keyboard, so typing works on the car screen without the
  * box's (often tiny or missing) system keyboard. Tap a text box to open it; Done closes it.
  */
-final class Keyboard {
-    private Keyboard() {
+final class InAppKeyboard {
+    private InAppKeyboard() {
     }
 
     private static FrameLayout shown;
@@ -57,7 +57,7 @@ final class Keyboard {
         ViewGroup root = MainActivity.I.findViewById(android.R.id.content);
         shown = new FrameLayout(MainActivity.I);
         bubbleHost = null;
-        root.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        root.addView(shown, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         render();
     }
 
@@ -92,32 +92,32 @@ final class Keyboard {
         View scrim = new View(c);
         scrim.setBackgroundColor(0x8C000000);
         scrim.setOnClickListener(v -> hide());
-        shown.addView(scrim, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        shown.addView(scrim, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
 
-        LinearLayout kb = U.col(c);
+        LinearLayout kb = Ui.col(c);
         kb.setClickable(true);
-        kb.setBackgroundColor(U.CARD);
-        U.pad(kb, 8, 10, 8, 6);
+        kb.setBackgroundColor(Ui.CARD);
+        Ui.pad(kb, 8, 10, 8, 6);
 
         // the field being edited, with Paste / Clear
-        LinearLayout top = U.row(c);
-        LinearLayout box = U.col(c);
+        LinearLayout top = Ui.row(c);
+        LinearLayout box = Ui.col(c);
         box.setGravity(Gravity.CENTER_VERTICAL);
-        box.setBackground(U.outline(U.BG, U.ACCENT, 2, 10));
-        U.pad(box, 12, 0, 12, 0);
-        TextView lab = U.line(c, label.toUpperCase(Locale.ROOT), 10, U.SUB, false);
+        box.setBackground(Ui.outline(Ui.BG, Ui.ACCENT, 2, 10));
+        Ui.pad(box, 12, 0, 12, 0);
+        TextView lab = Ui.line(c, label.toUpperCase(Locale.ROOT), 10, Ui.SUB, false);
         lab.setLetterSpacing(0.04f);
         box.addView(lab);
-        preview = U.line(c, "", 18, U.TEXT, false);
+        preview = Ui.line(c, "", 18, Ui.TEXT, false);
         preview.setEllipsize(android.text.TextUtils.TruncateAt.START);
         box.addView(preview);
-        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(0, U.u(48), 1);
-        bl.setMargins(U.u(4), 0, 0, U.u(4));
+        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(0, Ui.u(48), 1);
+        bl.setMargins(Ui.u(4), 0, 0, Ui.u(4));
         top.addView(box, bl);
         if (listening) {
-            box.setBackground(U.outline(U.BG, U.RED, 2, 10));
+            box.setBackground(Ui.outline(Ui.BG, Ui.RED, 2, 10));
             lab.setText(label.toUpperCase(Locale.ROOT) + " · LISTENING");
-            top.addView(action(c, "Stop", Keyboard::stopVoice));
+            top.addView(action(c, "Stop", InAppKeyboard::stopVoice));
         } else if (secret) top.addView(action(c, reveal ? "Hide" : "Show", () -> {
             reveal = !reveal;
             render();
@@ -137,14 +137,14 @@ final class Keyboard {
             text.setLength(0);
             commit();
         }));
-        kb.addView(top, U.lp(U.MATCH, U.WRAP));
+        kb.addView(top, Ui.lp(Ui.MATCH, Ui.WRAP));
 
         String[][] rows = symbols
                 ? new String[][]{"1234567890".split(""), {"@", "#", "&", "_", "-", "/", ":", ";", "(", ")"}, {"=", ",", "+", "%", "'", "\"", "!", "?"}}
                 : new String[][]{"qwertyuiop".split(""), "asdfghjkl".split(""), "zxcvbnm".split("")};
         for (int r = 0; r < 3; r++) {
-            LinearLayout row = U.row(c);
-            if (r == 1 && !symbols) U.pad(row, 36, 0, 36, 0);
+            LinearLayout row = Ui.row(c);
+            if (r == 1 && !symbols) Ui.pad(row, 36, 0, 36, 0);
             if (r == 2) row.addView(special(c, symbols ? "=" : null, symbols ? 0 : R.drawable.ic_shift, () -> {
                 if (symbols) type("=");
                 else {
@@ -158,30 +158,30 @@ final class Keyboard {
                 row.addView(key(c, shownKey, () -> type(shownKey)), weightLp(1));
             }
             if (r == 2) {
-                View bs = special(c, null, R.drawable.ic_backspace, Keyboard::backspace, false);
+                View bs = special(c, null, R.drawable.ic_backspace, InAppKeyboard::backspace, false);
                 repeat(bs);
                 row.addView(bs, weightLp(1.5f));
             }
-            LinearLayout.LayoutParams rl = U.lpu(U.MATCH, KEY_H);
+            LinearLayout.LayoutParams rl = Ui.lpu(Ui.MATCH, KEY_H);
             kb.addView(row, rl);
         }
-        LinearLayout last = U.row(c);
+        LinearLayout last = Ui.row(c);
         last.addView(special(c, symbols ? "ABC" : "?123", 0, () -> {
             symbols = !symbols;
             render();
         }, false), weightLp(1.5f));
-        View mic = special(c, null, R.drawable.ic_mic, Keyboard::voice, false);
-        mic.findViewWithTag("face").setBackground(U.round(listening ? U.RED : 0xFF1F4E9A, 11));
+        View mic = special(c, null, R.drawable.ic_mic, InAppKeyboard::voice, false);
+        mic.findViewWithTag("face").setBackground(Ui.round(listening ? Ui.RED : 0xFF1F4E9A, 11));
         last.addView(mic, weightLp(1.5f));
         last.addView(key(c, "space", () -> type(" ")), weightLp(5));
         last.addView(key(c, ".", () -> type(".")), weightLp(1));
-        View done = special(c, "Done", 0, Keyboard::hide, false);
-        done.findViewWithTag("face").setBackground(U.round(U.ACCENT, 11));
+        View done = special(c, "Done", 0, InAppKeyboard::hide, false);
+        done.findViewWithTag("face").setBackground(Ui.round(Ui.ACCENT, 11));
         last.addView(done, weightLp(2));
-        LinearLayout.LayoutParams ll = U.lpu(U.MATCH, KEY_H);
+        LinearLayout.LayoutParams ll = Ui.lpu(Ui.MATCH, KEY_H);
         kb.addView(last, ll);
 
-        shown.addView(kb, new FrameLayout.LayoutParams(U.MATCH, U.WRAP, Gravity.BOTTOM));
+        shown.addView(kb, new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP, Gravity.BOTTOM));
         updatePreview();
     }
 
@@ -205,7 +205,7 @@ final class Keyboard {
 
     /** Hold backspace to keep deleting. */
     private static void repeat(View v) {
-        repeat(v, Keyboard::backspace);
+        repeat(v, InAppKeyboard::backspace);
     }
 
     /** Hold to repeat (backspace). */
@@ -213,16 +213,16 @@ final class Keyboard {
         final Runnable[] r = new Runnable[1];
         r[0] = () -> {
             action.run();
-            U.ui.postDelayed(r[0], 70);
+            Ui.ui.postDelayed(r[0], 70);
         };
         v.setOnTouchListener((view, e) -> {
             if (e.getAction() == MotionEvent.ACTION_DOWN) {
                 view.setAlpha(0.7f);
                 action.run();
-                U.ui.postDelayed(r[0], 450);
+                Ui.ui.postDelayed(r[0], 450);
             } else if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL) {
                 view.setAlpha(1f);
-                U.ui.removeCallbacks(r[0]);
+                Ui.ui.removeCallbacks(r[0]);
             }
             return true;
         });
@@ -231,31 +231,31 @@ final class Keyboard {
     static final float KEY_H = 66; // 58 du key + 8 du gap, and the gap is touchable too
 
     static LinearLayout.LayoutParams weightLp(float w) {
-        return new LinearLayout.LayoutParams(0, U.MATCH, w);
+        return new LinearLayout.LayoutParams(0, Ui.MATCH, w);
     }
 
     /** A cell that is touchable edge to edge, with the visible key face inset by 4 du. */
     static FrameLayout cell(Context c, View face, int color) {
         FrameLayout f = new FrameLayout(c);
         face.setTag("face");
-        face.setBackground(U.round(color, 11));
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(U.MATCH, U.MATCH);
-        lp.setMargins(U.u(4), U.u(4), U.u(4), U.u(4));
+        face.setBackground(Ui.round(color, 11));
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH);
+        lp.setMargins(Ui.u(4), Ui.u(4), Ui.u(4), Ui.u(4));
         f.addView(face, lp);
         f.setClipChildren(false);
         return f;
     }
 
     static View key(Context c, String s, Runnable r) {
-        TextView face = U.text(c, s, s.length() > 1 ? 17 : 25, U.TEXT, false);
+        TextView face = Ui.text(c, s, s.length() > 1 ? 17 : 25, Ui.TEXT, false);
         face.setGravity(Gravity.CENTER);
         FrameLayout f = cell(c, face, 0xFF3A4456);
         f.setOnTouchListener((v, e) -> {
             if (e.getAction() == MotionEvent.ACTION_DOWN) {
-                face.setBackground(U.round(0xFF55627A, 11));
+                face.setBackground(Ui.round(0xFF55627A, 11));
                 if (s.length() == 1) bubble(v, s);
             } else if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL) {
-                face.setBackground(U.round(0xFF3A4456, 11));
+                face.setBackground(Ui.round(0xFF3A4456, 11));
                 hideBubble();
             }
             return false;
@@ -274,17 +274,17 @@ final class Keyboard {
         FrameLayout host = bubbleHost != null && bubbleHost.isAttachedToWindow() ? bubbleHost : shown;
         if (host == null) return;
         Context c = host.getContext();
-        bubbleView = U.text(c, s, 38, U.TEXT, false);
+        bubbleView = Ui.text(c, s, 38, Ui.TEXT, false);
         bubbleView.setGravity(Gravity.CENTER);
-        bubbleView.setBackground(U.round(0xFF6B7A95, 14));
-        bubbleView.setElevation(U.uf(8));
+        bubbleView.setBackground(Ui.round(0xFF6B7A95, 14));
+        bubbleView.setElevation(Ui.uf(8));
         int[] k = new int[2], o = new int[2];
         keyView.getLocationInWindow(k);
         host.getLocationInWindow(o);
-        int w = U.u(64), h = U.u(76);
+        int w = Ui.u(64), h = Ui.u(76);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, h, Gravity.TOP | Gravity.START);
         lp.leftMargin = Math.max(0, k[0] - o[0] + keyView.getWidth() / 2 - w / 2);
-        lp.topMargin = Math.max(0, k[1] - o[1] - h + U.u(10));
+        lp.topMargin = Math.max(0, k[1] - o[1] - h + Ui.u(10));
         host.addView(bubbleView, lp);
     }
 
@@ -297,14 +297,14 @@ final class Keyboard {
         View face;
         if (icon != 0) {
             FrameLayout ff = new FrameLayout(c);
-            ff.addView(U.icon(c, icon, U.TEXT), U.flpu(26, 26, Gravity.CENTER));
+            ff.addView(Ui.icon(c, icon, Ui.TEXT), Ui.flpu(26, 26, Gravity.CENTER));
             face = ff;
         } else {
-            TextView t = U.text(c, label, 17, U.TEXT, "Done".equals(label));
+            TextView t = Ui.text(c, label, 17, Ui.TEXT, "Done".equals(label));
             t.setGravity(Gravity.CENTER);
             face = t;
         }
-        FrameLayout f = cell(c, face, on ? U.ACCENT : U.CARD3);
+        FrameLayout f = cell(c, face, on ? Ui.ACCENT : Ui.CARD3);
         f.setOnClickListener(v -> r.run());
         return f;
     }
@@ -426,11 +426,11 @@ final class Keyboard {
     }
 
     private static TextView action(Context c, String s, Runnable r) {
-        TextView t = U.button(c, s, false, r);
-        t.setMinHeight(U.u(48));
-        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, U.uf(15));
-        LinearLayout.LayoutParams lp = U.lp(U.WRAP, U.u(48));
-        lp.setMargins(U.u(10), 0, U.u(4), U.u(4));
+        TextView t = Ui.button(c, s, false, r);
+        t.setMinHeight(Ui.u(48));
+        t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.uf(15));
+        LinearLayout.LayoutParams lp = Ui.lp(Ui.WRAP, Ui.u(48));
+        lp.setMargins(Ui.u(10), 0, Ui.u(4), Ui.u(4));
         t.setLayoutParams(lp);
         return t;
     }

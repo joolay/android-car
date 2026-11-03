@@ -11,10 +11,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Everything the launcher remembers, kept in one SharedPreferences file. */
-final class Store {
+final class Prefs {
     private static SharedPreferences sp;
 
-    private Store() {
+    private Prefs() {
     }
 
     static void init(Context c) {

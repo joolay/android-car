@@ -16,8 +16,8 @@ public class CarInCallService extends InCallService {
     @Override
     public void onCreate() {
         super.onCreate();
-        U.init((android.content.Context) this);
-        Store.init(this);
+        Ui.init((android.content.Context) this);
+        Prefs.init(this);
         Apps.init(this);
     }
 

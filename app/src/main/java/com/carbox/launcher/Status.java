@@ -50,12 +50,12 @@ final class Status {
     static void start() {
         if (running) return;
         running = true;
-        U.ui.post(tick);
+        Ui.ui.post(tick);
     }
 
     static void stop() {
         running = false;
-        U.ui.removeCallbacks(tick);
+        Ui.ui.removeCallbacks(tick);
     }
 
     private static final Runnable tick = new Runnable() {
@@ -63,7 +63,7 @@ final class Status {
         public void run() {
             refresh();
             for (Runnable r : new ArrayList<>(listeners)) r.run();
-            if (running) U.ui.postDelayed(this, 3000);
+            if (running) Ui.ui.postDelayed(this, 3000);
         }
     };
 
@@ -170,7 +170,7 @@ final class Status {
             ctx.sendBroadcast(i);
         } catch (Exception ignored) {
         }
-        U.ui.postDelayed(Status::refreshAndNotify, 2500);
+        Ui.ui.postDelayed(Status::refreshAndNotify, 2500);
     }
 
     static void refreshAndNotify() {

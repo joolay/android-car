@@ -27,27 +27,27 @@ final class HomeApproach {
     }
 
     static void start() {
-        Loc.listen(HomeApproach::onFix);
+        Gps.listen(HomeApproach::onFix);
     }
 
     static int radius() {
-        return Store.num("home_radius", 500);
+        return Prefs.num("home_radius", 500);
     }
 
     static boolean hasHome() {
-        return !Store.str("home_lat", "").isEmpty();
+        return !Prefs.str("home_lat", "").isEmpty();
     }
 
     private static void onFix() {
-        if (!Store.flag(ON, true) || !hasHome() || !Loc.fresh()) return;
+        if (!Prefs.flag(ON, true) || !hasHome() || !Gps.fresh()) return;
         float[] d = new float[1];
-        Location.distanceBetween(Loc.lat, Loc.lon, Double.parseDouble(Store.str("home_lat", "0")), Double.parseDouble(Store.str("home_lon", "0")), d);
-        if (!inside && d[0] < radius() && Loc.speed > 2f) { // driving in towards home
+        Location.distanceBetween(Gps.lat, Gps.lon, Double.parseDouble(Prefs.str("home_lat", "0")), Double.parseDouble(Prefs.str("home_lon", "0")), d);
+        if (!inside && d[0] < radius() && Gps.speed > 2f) { // driving in towards home
             inside = true;
             near = true;
             if (Alerts.expand("home")) show();
             else Alerts.front("home");
-            U.ui.postDelayed(() -> {
+            Ui.ui.postDelayed(() -> {
                 near = false;
                 hide();
             }, 5 * 60000L);
@@ -60,7 +60,7 @@ final class HomeApproach {
 
     /** Entities from the first Home Assistant tile. */
     private static JSONArray entities() {
-        JSONArray s = Tiles.specs();
+        JSONArray s = TileDrawer.specs();
         for (int i = 0; i < s.length(); i++) {
             JSONObject o = s.optJSONObject(i);
             if (o != null && "ha".equals(o.optString("id"))) {
@@ -80,38 +80,38 @@ final class HomeApproach {
         HA.maybeRefresh();
         shown = new FrameLayout(a);
         shown.setClickable(true);
-        shown.setBackground(U.round(0xFF13284A, 16));
-        LinearLayout col = U.col(a);
-        U.pad(col, 18, 14, 18, 14);
-        col.addView(U.line(a, "ALMOST HOME", 12, U.ACCENT_SOFT, true));
-        col.addView(U.line(a, "Tap to switch · hold for gates, garage and locks", 12, U.SUB, false), Widgets.top(2));
+        shown.setBackground(Ui.round(0xFF13284A, 16));
+        LinearLayout col = Ui.col(a);
+        Ui.pad(col, 18, 14, 18, 14);
+        col.addView(Ui.line(a, "ALMOST HOME", 12, Ui.ACCENT_SOFT, true));
+        col.addView(Ui.line(a, "Tap to switch · hold for gates, garage and locks", 12, Ui.SUB, false), Widgets.top(2));
         java.util.List<View> cells = new java.util.ArrayList<>();
         for (int i = 0; i < ents.length(); i++) cells.add(button(a, ents.optString(i)));
         android.widget.ScrollView sv = new android.widget.ScrollView(a);
         sv.addView(AppPanels.grid(a, cells, Math.min(3, Math.max(2, cells.size())), 10));
-        LinearLayout.LayoutParams sl = U.weight(1, false);
-        sl.topMargin = U.u(12);
+        LinearLayout.LayoutParams sl = Ui.weight(1, false);
+        sl.topMargin = Ui.u(12);
         col.addView(sv, sl);
-        shown.addView(col, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        View x = U.icon(a, R.drawable.ic_x, U.TEXT2);
-        U.pad(x, 8, 8, 8, 8);
+        shown.addView(col, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        View x = Ui.icon(a, R.drawable.ic_x, Ui.TEXT2);
+        Ui.pad(x, 8, 8, 8, 8);
         x.setOnClickListener(v -> hide());
-        shown.addView(x, U.flpu(46, 46, Gravity.TOP | Gravity.END));
-        a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        shown.addView(x, Ui.flpu(46, 46, Gravity.TOP | Gravity.END));
+        a.tileArea.addView(shown, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         a.growIn(shown, a.alertRect("home")); // grows out of the Home Assistant tile
     }
 
     private static View button(Context c, String id) {
-        LinearLayout b = U.col(c);
+        LinearLayout b = Ui.col(c);
         b.setGravity(Gravity.CENTER);
-        b.setBackground(U.round(U.CARD2, 16));
-        U.pad(b, 10, 14, 10, 12);
-        b.setMinimumHeight(U.u(110));
-        b.addView(U.icon(c, HA.icon(id), HA.isOn(id) ? U.AMBER : U.TEXT), U.lpu(36, 36));
-        TextView n = U.line(c, HA.name(id), 15, U.TEXT, true);
+        b.setBackground(Ui.round(Ui.CARD2, 16));
+        Ui.pad(b, 10, 14, 10, 12);
+        b.setMinimumHeight(Ui.u(110));
+        b.addView(Ui.icon(c, HA.icon(id), HA.isOn(id) ? Ui.AMBER : Ui.TEXT), Ui.lpu(36, 36));
+        TextView n = Ui.line(c, HA.name(id), 15, Ui.TEXT, true);
         n.setGravity(Gravity.CENTER);
         b.addView(n, Widgets.top(8));
-        TextView st = U.line(c, HA.stateLabel(id), 12, U.SUB, false);
+        TextView st = Ui.line(c, HA.stateLabel(id), 12, Ui.SUB, false);
         st.setGravity(Gravity.CENTER);
         b.addView(st, Widgets.top(2));
         if (HA.needsHold(id) || id.startsWith("alarm_control_panel.")) { // never by accident: gates, garages, locks, alarms
@@ -122,7 +122,7 @@ final class HomeApproach {
                 return true;
             });
         } else b.setOnClickListener(v -> HA.activate(c, id));
-        U.press(b);
+        Ui.press(b);
         return b;
     }
 
@@ -134,33 +134,33 @@ final class HomeApproach {
 
     /** Settings rows (shown in Settings → Car location). */
     static void addSettings(Context c, LinearLayout b) {
-        b.addView(Sheets.section("Arriving home"));
-        b.addView(Sheets.switchRow(0, 0, "Show Home Assistant buttons near home", "Big buttons in the tile area; nothing happens until you press one", Store.flag(ON, true), v -> Store.put(ON, v)));
+        b.addView(Panels.section("Arriving home"));
+        b.addView(Panels.switchRow(0, 0, "Show Home Assistant buttons near home", "Big buttons in the tile area; nothing happens until you press one", Prefs.flag(ON, true), v -> Prefs.put(ON, v)));
         int r = radius();
-        b.addView(Sheets.row("When within", seg(c, 300, "300 m", r), seg(c, 500, "500 m", r), seg(c, 1000, "1 km", r)), Widgets.top(4));
-        LinearLayout row = U.row(c);
-        row.addView(U.button(c, "Home is here", false, () -> {
-            if (!Loc.has()) return;
-            Store.put("home_lat", String.valueOf(Loc.lat));
-            Store.put("home_lon", String.valueOf(Loc.lon));
-            Sheets.refresh();
+        b.addView(Panels.row("When within", seg(c, 300, "300 m", r), seg(c, 500, "500 m", r), seg(c, 1000, "1 km", r)), Widgets.top(4));
+        LinearLayout row = Ui.row(c);
+        row.addView(Ui.button(c, "Home is here", false, () -> {
+            if (!Gps.has()) return;
+            Prefs.put("home_lat", String.valueOf(Gps.lat));
+            Prefs.put("home_lon", String.valueOf(Gps.lon));
+            Panels.refresh();
         }));
-        row.addView(U.gap(c, 12, 1));
-        row.addView(U.text(c, hasHome() ? "Home saved" : "Tap at home to save it (or set Home in the Go to tile)", 12, U.SUB, false));
+        row.addView(Ui.gap(c, 12, 1));
+        row.addView(Ui.text(c, hasHome() ? "Home saved" : "Tap at home to save it (or set Home in the Go to tile)", 12, Ui.SUB, false));
         b.addView(row, Widgets.top(8));
     }
 
     private static View seg(Context c, int v, String label, int cur) {
-        return U.seg(c, label, v == cur, () -> {
-            Store.put("home_radius", v);
-            Sheets.refresh();
+        return Ui.seg(c, label, v == cur, () -> {
+            Prefs.put("home_radius", v);
+            Panels.refresh();
         });
     }
 
     /** No home saved yet: look up the Go to tile's Home address once. */
     static void fromGoTo() {
         if (hasHome() || !android.location.Geocoder.isPresent()) return;
-        JSONArray s = Tiles.specs();
+        JSONArray s = TileDrawer.specs();
         String addr = null;
         for (int i = 0; i < s.length(); i++) {
             JSONObject o = s.optJSONObject(i);
@@ -171,9 +171,9 @@ final class HomeApproach {
         Net.bg(() -> {
             try {
                 java.util.List<android.location.Address> r = new android.location.Geocoder(MainActivity.I).getFromLocationName(a, 1);
-                if (r != null && !r.isEmpty()) U.ui.post(() -> {
-                    Store.put("home_lat", String.valueOf(r.get(0).getLatitude()));
-                    Store.put("home_lon", String.valueOf(r.get(0).getLongitude()));
+                if (r != null && !r.isEmpty()) Ui.ui.post(() -> {
+                    Prefs.put("home_lat", String.valueOf(r.get(0).getLatitude()));
+                    Prefs.put("home_lon", String.valueOf(r.get(0).getLongitude()));
                 });
             } catch (Exception ignored) {
             }

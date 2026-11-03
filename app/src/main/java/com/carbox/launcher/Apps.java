@@ -83,7 +83,7 @@ final class Apps {
     static void reload() {
         bg.execute(() -> {
             List<App> loaded = load();
-            U.ui.post(() -> {
+            Ui.ui.post(() -> {
                 all.clear();
                 all.addAll(loaded);
                 byKey.clear();
@@ -200,17 +200,17 @@ final class Apps {
     }
 
     static void noteLaunch(String key) {
-        List<String> r = Store.list(Store.RECENTS);
+        List<String> r = Prefs.list(Prefs.RECENTS);
         r.remove(key);
         r.add(0, key);
         while (r.size() > 30) r.remove(r.size() - 1);
-        Store.putList(Store.RECENTS, r);
+        Prefs.putList(Prefs.RECENTS, r);
     }
 
     // ------------------------------------------------------------------ pins, hidden, recents
 
     static List<String> pins() {
-        return Store.list(Store.PINS);
+        return Prefs.list(Prefs.PINS);
     }
 
     static boolean pinned(String key) {
@@ -221,30 +221,30 @@ final class Apps {
         List<String> p = pins();
         p.remove(key);
         if (on) p.add(key);
-        Store.putList(Store.PINS, p);
+        Prefs.putList(Prefs.PINS, p);
     }
 
     static Set<String> hidden() {
-        return new HashSet<>(Store.list(Store.HIDDEN));
+        return new HashSet<>(Prefs.list(Prefs.HIDDEN));
     }
 
     /** Apps kept out of the dock (pinned or recent) but still in All apps. */
     static Set<String> dockHidden() {
-        return new HashSet<>(Store.list("dock_hidden"));
+        return new HashSet<>(Prefs.list("dock_hidden"));
     }
 
     static void setDockHidden(String key, boolean on) {
-        List<String> h = Store.list("dock_hidden");
+        List<String> h = Prefs.list("dock_hidden");
         h.remove(key);
         if (on) h.add(key);
-        Store.putList("dock_hidden", h);
+        Prefs.putList("dock_hidden", h);
     }
 
     static void setHidden(String key, boolean on) {
-        List<String> h = Store.list(Store.HIDDEN);
+        List<String> h = Prefs.list(Prefs.HIDDEN);
         h.remove(key);
         if (on) h.add(key);
-        Store.putList(Store.HIDDEN, h);
+        Prefs.putList(Prefs.HIDDEN, h);
     }
 
     static List<App> visible() {
@@ -286,7 +286,7 @@ final class Apps {
             } catch (Exception ignored) {
             }
         }
-        for (String k : Store.list(Store.RECENTS)) {
+        for (String k : Prefs.list(Prefs.RECENTS)) {
             App a = byKey.get(k);
             if (a == null || h.contains(k) || pins.contains(k) || out.contains(a)) continue;
             out.add(a);

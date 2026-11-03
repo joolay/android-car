@@ -50,13 +50,13 @@ final class OfflineMap {
         } catch (Exception ignored) {
         }
         close();
-        Store.put(URI, u.toString());
-        Store.put(NAME, name == null ? "map.pmtiles" : name);
-        Store.put(Store.MAP_PROVIDER, "pmtiles");
+        Prefs.put(URI, u.toString());
+        Prefs.put(NAME, name == null ? "map.pmtiles" : name);
+        Prefs.put(Prefs.MAP_PROVIDER, "pmtiles");
     }
 
     private static synchronized FileChannel channel(Context c) throws Exception {
-        String u = Store.str(URI, "");
+        String u = Prefs.str(URI, "");
         if (ch != null && u.equals(open)) return ch;
         close();
         pfd = u.startsWith("file://") // a map downloaded by Car Launcher itself

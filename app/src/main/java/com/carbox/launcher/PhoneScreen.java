@@ -36,7 +36,7 @@ final class PhoneScreen {
     static void show(String dialNumber) {
         MainActivity a = MainActivity.I;
         if (a == null) return;
-        Sheets.close();
+        Panels.close();
         if (dialNumber != null) {
             number.setLength(0);
             number.append(dialNumber.replaceAll("[^0-9+*#]", ""));
@@ -45,17 +45,17 @@ final class PhoneScreen {
         if (shown == null) {
             shown = new FrameLayout(a);
             shown.setClickable(true);
-            shown.setBackgroundColor(U.BG);
-            shown.setBackground(U.round(U.BG, 16));
+            shown.setBackgroundColor(Ui.BG);
+            shown.setBackground(Ui.round(Ui.BG, 16));
             // inside the tile area, under any open panel; a clipping holder keeps it inside the
             // tile area while it slides up out of the ticker, like the tile drawer
             holder = new FrameLayout(a);
-            holder.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-            a.tileArea.addView(holder, a.tileArea.indexOfChild(a.sheetHost), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-            shown.setTranslationY(a.tileArea.getHeight() + U.u(12));
-            shown.animate().translationY(0).setDuration(U.ms(340)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+            holder.addView(shown, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            a.tileArea.addView(holder, a.tileArea.indexOfChild(a.sheetHost), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            shown.setTranslationY(a.tileArea.getHeight() + Ui.u(12));
+            shown.animate().translationY(0).setDuration(Ui.ms(340)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
         }
-        Store.put("phone_seen", true);
+        Prefs.put("phone_seen", true);
         a.mapAside(true); // the big map steps aside for the dialler
         render();
     }
@@ -66,7 +66,7 @@ final class PhoneScreen {
 
     static boolean hide() {
         if (shown == null) return false;
-        Keyboard.hide();
+        InAppKeyboard.hide();
         // slides back down into the ticker, then goes
         final FrameLayout v = shown, h = holder;
         shown = null;
@@ -76,49 +76,49 @@ final class PhoneScreen {
             View x = h != null ? h : v;
             if (x.getParent() != null) ((ViewGroup) x.getParent()).removeView(x);
         };
-        float down = (h != null ? h.getHeight() : v.getHeight()) + U.u(12);
-        if (U.ms(300) == 0 || down <= U.u(12)) gone.run();
-        else v.animate().translationY(down).setDuration(U.ms(300)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).withEndAction(gone).start();
+        float down = (h != null ? h.getHeight() : v.getHeight()) + Ui.u(12);
+        if (Ui.ms(300) == 0 || down <= Ui.u(12)) gone.run();
+        else v.animate().translationY(down).setDuration(Ui.ms(300)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).withEndAction(gone).start();
         return true;
     }
 
     private static void render() {
         Context c = shown.getContext();
         shown.removeAllViews();
-        LinearLayout row = U.row(c);
+        LinearLayout row = Ui.row(c);
         row.setGravity(Gravity.TOP);
-        U.pad(row, 0);
+        Ui.pad(row, 0);
 
         // tabs
-        LinearLayout tabs = U.col(c);
+        LinearLayout tabs = Ui.col(c);
         String[][] t = {{"favourites", "Favourites"}, {"recents", "Recents"}, {"contacts", "Contacts"}, {"keypad", "Keypad"}};
         for (String[] x : t) {
-            TextView b = U.text(c, x[1], 14, U.TEXT, x[0].equals(tab));
+            TextView b = Ui.text(c, x[1], 14, Ui.TEXT, x[0].equals(tab));
             b.setGravity(Gravity.CENTER_VERTICAL);
-            U.pad(b, 12, 0, 6, 0);
-            b.setBackground(U.round(x[0].equals(tab) ? U.ACCENT : U.CARD2, 14));
+            Ui.pad(b, 12, 0, 6, 0);
+            b.setBackground(Ui.round(x[0].equals(tab) ? Ui.ACCENT : Ui.CARD2, 14));
             b.setOnClickListener(v -> {
                 tab = x[0];
                 render();
             });
-            LinearLayout.LayoutParams bl = U.lpu(U.MATCH, 52);
-            bl.bottomMargin = U.u(6);
+            LinearLayout.LayoutParams bl = Ui.lpu(Ui.MATCH, 52);
+            bl.bottomMargin = Ui.u(6);
             tabs.addView(b, bl);
         }
-        tabs.addView(new View(c), U.weight(1, false));
+        tabs.addView(new View(c), Ui.weight(1, false));
         String bt = Actions.btDialler();
-        TextView via = U.text(c, "Calls go through\n" + (Store.str(Store.CALLS, "bt").equals("bt") ? (bt == null ? "Bluetooth" : Apps.label(bt)) : Widgets.callsLabel()), 11, U.SUB, false);
-        via.setPadding(U.u(4), 0, 0, U.u(4));
+        TextView via = Ui.text(c, "Calls go through\n" + (Prefs.str(Prefs.CALLS, "bt").equals("bt") ? (bt == null ? "Bluetooth" : Apps.label(bt)) : Widgets.callsLabel()), 11, Ui.SUB, false);
+        via.setPadding(Ui.u(4), 0, 0, Ui.u(4));
         tabs.addView(via);
-        row.addView(tabs, U.lpu(104, U.MATCH));
+        row.addView(tabs, Ui.lpu(104, Ui.MATCH));
 
-        LinearLayout body = U.col(c);
-        body.setBackground(U.round(U.CARD, 18));
-        U.pad(body, 12, 10, 12, 10);
-        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(0, U.MATCH, 1);
-        bl.leftMargin = U.u(8);
+        LinearLayout body = Ui.col(c);
+        body.setBackground(Ui.round(Ui.CARD, 18));
+        Ui.pad(body, 12, 10, 12, 10);
+        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(0, Ui.MATCH, 1);
+        bl.leftMargin = Ui.u(8);
         row.addView(body, bl);
-        shown.addView(row, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        shown.addView(row, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
 
         if ("keypad".equals(tab)) keypad(c, body);
         else list(c, body);
@@ -127,49 +127,49 @@ final class PhoneScreen {
     // ------------------------------------------------------------------ lists
 
     private static void list(Context c, LinearLayout body) {
-        LinearLayout top = U.row(c);
-        LinearLayout results = U.col(c);
+        LinearLayout top = Ui.row(c);
+        LinearLayout results = Ui.col(c);
         if ("contacts".equals(tab)) {
-            LinearLayout sb = U.row(c);
-            sb.setBackground(U.round(U.CARD2, 12));
-            U.pad(sb, 12, 0, 6, 0);
-            sb.addView(U.icon(c, R.drawable.ic_search, U.SUB), U.lpu(20, 20));
+            LinearLayout sb = Ui.row(c);
+            sb.setBackground(Ui.round(Ui.CARD2, 12));
+            Ui.pad(sb, 12, 0, 6, 0);
+            sb.addView(Ui.icon(c, R.drawable.ic_search, Ui.SUB), Ui.lpu(20, 20));
             EditText e = Widgets.field("Search contacts", query, false, s -> {
                 query = s;
-                U.ui.removeCallbacks(search);
+                Ui.ui.removeCallbacks(search);
                 search = () -> fill(c, results);
-                U.ui.postDelayed(search, 250); // wait until typing pauses
+                Ui.ui.postDelayed(search, 250); // wait until typing pauses
             });
             e.setBackground(null);
-            sb.addView(e, new LinearLayout.LayoutParams(0, U.WRAP, 1));
-            top.addView(sb, new LinearLayout.LayoutParams(0, U.u(44), 1));
-            top.addView(U.gap(c, 10, 1));
+            sb.addView(e, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+            top.addView(sb, new LinearLayout.LayoutParams(0, Ui.u(44), 1));
+            top.addView(Ui.gap(c, 10, 1));
         } else {
-            top.addView(U.line(c, "favourites".equals(tab) ? "Favourites" : "Recent calls", 20, U.TEXT, true), new LinearLayout.LayoutParams(0, U.WRAP, 1));
+            top.addView(Ui.line(c, "favourites".equals(tab) ? "Favourites" : "Recent calls", 20, Ui.TEXT, true), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
         }
         View close = square(c, R.drawable.ic_x, PhoneScreen::hide);
-        top.addView(close, U.lpu(48, 48));
+        top.addView(close, Ui.lpu(48, 48));
         body.addView(top);
 
-        LinearLayout lr = U.row(c);
+        LinearLayout lr = Ui.row(c);
         lr.setGravity(Gravity.TOP);
         // a recycling list: only the rows on screen are built, so 800 contacts stay quick
         list = new android.widget.ListView(c);
-        list.setDivider(new android.graphics.drawable.ColorDrawable(U.LINE));
+        list.setDivider(new android.graphics.drawable.ColorDrawable(Ui.LINE));
         list.setDividerHeight(1);
         list.setVerticalScrollBarEnabled(false);
         list.setSelector(new android.graphics.drawable.ColorDrawable(0));
         FrameLayout area = new FrameLayout(c);
-        area.addView(list, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        area.addView(results, new FrameLayout.LayoutParams(U.MATCH, U.WRAP)); // messages (no contacts, permission…)
-        lr.addView(area, new LinearLayout.LayoutParams(0, U.MATCH, 1));
+        area.addView(list, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        area.addView(results, new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP)); // messages (no contacts, permission…)
+        lr.addView(area, new LinearLayout.LayoutParams(0, Ui.MATCH, 1));
         if ("contacts".equals(tab)) {
             // A–Z strip: tap a letter to jump
-            LinearLayout az = U.col(c);
+            LinearLayout az = Ui.col(c);
             az.setGravity(Gravity.CENTER_HORIZONTAL);
             for (char ch = 'A'; ch <= 'Z'; ch++) {
                 final char L = ch;
-                TextView tl = U.text(c, String.valueOf(ch), 10, U.ACCENT_SOFT, true);
+                TextView tl = Ui.text(c, String.valueOf(ch), 10, Ui.ACCENT_SOFT, true);
                 tl.setGravity(Gravity.CENTER);
                 tl.setOnClickListener(v -> {
                     for (char x = L; x <= 'Z'; x++) { // no one under this letter: next letter that has someone
@@ -180,14 +180,14 @@ final class PhoneScreen {
                         }
                     }
                 });
-                az.addView(tl, U.weight(1, false));
+                az.addView(tl, Ui.weight(1, false));
             }
-            LinearLayout.LayoutParams al = U.lpu(26, U.MATCH);
-            al.leftMargin = U.u(8);
+            LinearLayout.LayoutParams al = Ui.lpu(26, Ui.MATCH);
+            al.leftMargin = Ui.u(8);
             lr.addView(az, al);
         }
-        LinearLayout.LayoutParams ll = U.weight(1, false);
-        ll.topMargin = U.u(6);
+        LinearLayout.LayoutParams ll = Ui.weight(1, false);
+        ll.topMargin = Ui.u(6);
         body.addView(lr, ll);
         fill(c, results);
     }
@@ -206,7 +206,7 @@ final class PhoneScreen {
         Net.bg(() -> {
             List<String[]> rows = new ArrayList<>();
             String msg = load(c, rows, t, q);
-            U.ui.post(() -> {
+            Ui.ui.post(() -> {
                 if (seq != fillSeq || shown == null) return; // tab changed meanwhile
                 show(c, results, rows, msg, t, q);
             });
@@ -227,7 +227,7 @@ final class PhoneScreen {
                     String name = cur.getString(0);
                     int type = cur.getInt(2);
                     String kind = type == CallLog.Calls.MISSED_TYPE ? "Missed" : type == CallLog.Calls.OUTGOING_TYPE ? "Outgoing" : "Incoming";
-                    rows.add(new String[]{name == null || name.isEmpty() ? num : name, kind + " · " + Ticker.ago(cur.getLong(3)), num, null,
+                    rows.add(new String[]{name == null || name.isEmpty() ? num : name, kind + " · " + NewsTicker.ago(cur.getLong(3)), num, null,
                             type == CallLog.Calls.MISSED_TYPE ? "missed" : ""});
                 }
             } catch (Exception ignored) {
@@ -297,44 +297,44 @@ final class PhoneScreen {
 
     private static View row(Context c, String[] r) {
         {
-            LinearLayout row = U.row(c);
-            row.setMinimumHeight(U.u(60));
-            U.pad(row, 4, 6, 4, 6);
+            LinearLayout row = Ui.row(c);
+            row.setMinimumHeight(Ui.u(60));
+            Ui.pad(row, 4, 6, 4, 6);
             Widgets.Person p = new Widgets.Person();
             p.name = r[0];
             p.number = r[2];
             p.photo = r[3];
-            row.addView(Widgets.avatar(c, p, 40), U.lpu(40, 40));
-            LinearLayout t = U.col(c);
-            t.addView(U.line(c, r[0], 17, "missed".equals(r[4]) ? U.RED : U.TEXT, false));
-            t.addView(U.line(c, r[1], 12, U.SUB, false), Widgets.top(2));
-            LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-            tl.leftMargin = U.u(14);
+            row.addView(Widgets.avatar(c, p, 40), Ui.lpu(40, 40));
+            LinearLayout t = Ui.col(c);
+            t.addView(Ui.line(c, r[0], 17, "missed".equals(r[4]) ? Ui.RED : Ui.TEXT, false));
+            t.addView(Ui.line(c, r[1], 12, Ui.SUB, false), Widgets.top(2));
+            LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
+            tl.leftMargin = Ui.u(14);
             row.addView(t, tl);
             FrameLayout call = new FrameLayout(c);
-            call.setBackground(U.oval(U.DGREEN));
-            call.addView(U.icon(c, R.drawable.ic_call, U.TEXT), U.flpu(22, 22, Gravity.CENTER));
+            call.setBackground(Ui.oval(Ui.DGREEN));
+            call.addView(Ui.icon(c, R.drawable.ic_call, Ui.TEXT), Ui.flpu(22, 22, Gravity.CENTER));
             call.setOnClickListener(v -> dial(r[2]));
-            U.press(call);
-            row.addView(call, U.lpu(48, 48));
+            Ui.press(call);
+            row.addView(call, Ui.lpu(48, 48));
             row.setOnClickListener(v -> dial(r[2]));
             return row;
         }
     }
 
     private static void note(Context c, LinearLayout results, String s) {
-        TextView t = U.text(c, s, 14, U.SUB, false);
-        t.setPadding(0, U.u(16), 0, 0);
+        TextView t = Ui.text(c, s, 14, Ui.SUB, false);
+        t.setPadding(0, Ui.u(16), 0, 0);
         results.addView(t);
     }
 
     private static void permission(Context c, LinearLayout results, String s, String perm) {
         note(c, results, s);
-        TextView b = U.button(c, "Allow", true, () -> {
+        TextView b = Ui.button(c, "Allow", true, () -> {
             if (MainActivity.I != null) MainActivity.I.requestPermissions(new String[]{perm}, 61);
         });
-        LinearLayout.LayoutParams lp = U.lp(U.WRAP, U.WRAP);
-        lp.topMargin = U.u(12);
+        LinearLayout.LayoutParams lp = Ui.lp(Ui.WRAP, Ui.WRAP);
+        lp.topMargin = Ui.u(12);
         results.addView(b, lp);
     }
 
@@ -345,8 +345,8 @@ final class PhoneScreen {
 
     private static View square(Context c, int icon, Runnable r) {
         FrameLayout f = new FrameLayout(c);
-        f.setBackground(U.round(U.CARD2, 12));
-        f.addView(U.icon(c, icon, U.TEXT), U.flpu(22, 22, Gravity.CENTER));
+        f.setBackground(Ui.round(Ui.CARD2, 12));
+        f.addView(Ui.icon(c, icon, Ui.TEXT), Ui.flpu(22, 22, Gravity.CENTER));
         f.setOnClickListener(v -> r.run());
         return f;
     }
@@ -357,31 +357,31 @@ final class PhoneScreen {
     private static Runnable matchLookup;
 
     private static void keypad(Context c, LinearLayout body) {
-        LinearLayout col = U.col(c);
+        LinearLayout col = Ui.col(c);
 
         // top: close, the number (and a contact match), backspace
-        LinearLayout top = U.row(c);
+        LinearLayout top = Ui.row(c);
         top.setGravity(Gravity.CENTER_VERTICAL);
-        top.addView(square(c, R.drawable.ic_x, PhoneScreen::hide), U.lpu(42, 42));
-        LinearLayout num = U.col(c);
+        top.addView(square(c, R.drawable.ic_x, PhoneScreen::hide), Ui.lpu(42, 42));
+        LinearLayout num = Ui.col(c);
         num.setGravity(Gravity.CENTER);
-        display = U.text(c, "", 26, U.TEXT, true);
+        display = Ui.text(c, "", 26, Ui.TEXT, true);
         display.setGravity(Gravity.CENTER);
         display.setMaxLines(1);
         display.setHint("Enter a number");
-        display.setHintTextColor(U.MUTED);
+        display.setHintTextColor(Ui.MUTED);
         display.setEllipsize(android.text.TextUtils.TruncateAt.START);
-        num.addView(display, U.lp(U.MATCH, U.WRAP));
-        match = U.line(c, "", 12, U.ACCENT_SOFT, false);
+        num.addView(display, Ui.lp(Ui.MATCH, Ui.WRAP));
+        match = Ui.line(c, "", 12, Ui.ACCENT_SOFT, false);
         match.setGravity(Gravity.CENTER);
-        num.addView(match, U.lp(U.MATCH, U.WRAP));
-        LinearLayout.LayoutParams nl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-        nl.setMargins(U.u(10), 0, U.u(10), 0);
+        num.addView(match, Ui.lp(Ui.MATCH, Ui.WRAP));
+        LinearLayout.LayoutParams nl = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
+        nl.setMargins(Ui.u(10), 0, Ui.u(10), 0);
         top.addView(num, nl);
         FrameLayout del = new FrameLayout(c);
-        del.setBackground(U.oval(U.CARD2));
-        del.addView(U.icon(c, R.drawable.ic_backspace, U.TEXT2), U.flpu(26, 26, Gravity.CENTER));
-        Keyboard.repeat(del, () -> {
+        del.setBackground(Ui.oval(Ui.CARD2));
+        del.addView(Ui.icon(c, R.drawable.ic_backspace, Ui.TEXT2), Ui.flpu(26, 26, Gravity.CENTER));
+        InAppKeyboard.repeat(del, () -> {
             if (number.length() > 0) number.setLength(number.length() - 1);
             updateNumber(c);
         });
@@ -390,27 +390,27 @@ final class PhoneScreen {
             updateNumber(c);
             return true;
         });
-        top.addView(del, U.lpu(48, 48));
-        col.addView(top, U.lp(U.MATCH, U.WRAP));
+        top.addView(del, Ui.lpu(48, 48));
+        col.addView(top, Ui.lp(Ui.MATCH, Ui.WRAP));
 
         // below: a big 3 × 4 keypad filling the space, with the call button beside it
-        LinearLayout lower = U.row(c);
-        LinearLayout pad = U.col(c);
+        LinearLayout lower = Ui.row(c);
+        LinearLayout pad = Ui.col(c);
         String[][] keys = {{"1", " "}, {"2", "ABC"}, {"3", "DEF"}, {"4", "GHI"}, {"5", "JKL"}, {"6", "MNO"}, {"7", "PQRS"}, {"8", "TUV"}, {"9", "WXYZ"}, {"*", " "}, {"0", "+"}, {"#", " "}};
         for (int r = 0; r < 4; r++) {
-            LinearLayout kr = U.row(c);
+            LinearLayout kr = Ui.row(c);
             for (int k = 0; k < 3; k++) {
                 String[] key = keys[r * 3 + k];
-                LinearLayout b = U.col(c);
+                LinearLayout b = Ui.col(c);
                 b.setGravity(Gravity.CENTER);
-                b.setBackground(U.round(U.CARD2, 18));
-                TextView d = U.text(c, key[0], 26, U.TEXT, false);
+                b.setBackground(Ui.round(Ui.CARD2, 18));
+                TextView d = Ui.text(c, key[0], 26, Ui.TEXT, false);
                 d.setGravity(Gravity.CENTER);
-                b.addView(d, new LinearLayout.LayoutParams(U.WRAP, U.WRAP));
-                TextView l = U.text(c, key[1], 10, U.SUB, true);
+                b.addView(d, new LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP));
+                TextView l = Ui.text(c, key[1], 10, Ui.SUB, true);
                 l.setGravity(Gravity.CENTER);
                 l.setLetterSpacing(0.15f);
-                b.addView(l, new LinearLayout.LayoutParams(U.WRAP, U.WRAP));
+                b.addView(l, new LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP));
                 b.setOnClickListener(v -> {
                     number.append(key[0]);
                     updateNumber(c);
@@ -420,28 +420,28 @@ final class PhoneScreen {
                     updateNumber(c);
                     return true;
                 });
-                U.press(b);
-                LinearLayout.LayoutParams kl = new LinearLayout.LayoutParams(0, U.MATCH, 1);
-                kl.setMargins(U.u(3), U.u(3), U.u(3), U.u(3));
+                Ui.press(b);
+                LinearLayout.LayoutParams kl = new LinearLayout.LayoutParams(0, Ui.MATCH, 1);
+                kl.setMargins(Ui.u(3), Ui.u(3), Ui.u(3), Ui.u(3));
                 kr.addView(b, kl);
             }
-            pad.addView(kr, new LinearLayout.LayoutParams(U.MATCH, 0, 1)); // the rows share the height
+            pad.addView(kr, new LinearLayout.LayoutParams(Ui.MATCH, 0, 1)); // the rows share the height
         }
-        lower.addView(pad, new LinearLayout.LayoutParams(0, U.MATCH, 1));
+        lower.addView(pad, new LinearLayout.LayoutParams(0, Ui.MATCH, 1));
         FrameLayout call = new FrameLayout(c);
-        call.setBackground(U.oval(U.GREEN));
-        call.addView(U.icon(c, R.drawable.ic_call, U.TEXT), U.flpu(36, 36, Gravity.CENTER));
+        call.setBackground(Ui.oval(Ui.GREEN));
+        call.addView(Ui.icon(c, R.drawable.ic_call, Ui.TEXT), Ui.flpu(36, 36, Gravity.CENTER));
         call.setOnClickListener(v -> {
             if (number.length() > 0) dial(number.toString());
         });
-        U.press(call);
+        Ui.press(call);
         FrameLayout callBox = new FrameLayout(c);
-        callBox.addView(call, U.flpu(72, 72, Gravity.CENTER));
-        lower.addView(callBox, U.lpu(96, U.MATCH));
-        LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(U.MATCH, 0, 1);
-        ll.topMargin = U.u(6);
+        callBox.addView(call, Ui.flpu(72, 72, Gravity.CENTER));
+        lower.addView(callBox, Ui.lpu(96, Ui.MATCH));
+        LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(Ui.MATCH, 0, 1);
+        ll.topMargin = Ui.u(6);
         col.addView(lower, ll);
-        body.addView(col, new LinearLayout.LayoutParams(U.MATCH, U.MATCH));
+        body.addView(col, new LinearLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         updateNumber(c);
     }
 
@@ -450,18 +450,18 @@ final class PhoneScreen {
         display.setText(number.length() == 0 ? "" : number.toString());
         int len = number.length(); // shrink long numbers so they fit on one line
         display.setSingleLine(true);
-        display.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, U.uf(len == 0 ? 18 : len <= 10 ? 26 : len <= 14 ? 22 : 18));
+        display.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.uf(len == 0 ? 18 : len <= 10 ? 26 : len <= 14 ? 22 : 18));
         match.setText("");
-        U.ui.removeCallbacks(matchLookup);
+        Ui.ui.removeCallbacks(matchLookup);
         if (number.length() >= 4 && c.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
             final String n = number.toString();
             matchLookup = () -> Net.bg(() -> {
                 String name = lookup(c, n);
-                U.ui.post(() -> {
+                Ui.ui.post(() -> {
                     if (match != null && name != null && n.equals(number.toString())) match.setText("Matches: " + name);
                 });
             });
-            U.ui.postDelayed(matchLookup, 300);
+            Ui.ui.postDelayed(matchLookup, 300);
         }
     }
 

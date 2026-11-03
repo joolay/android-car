@@ -65,7 +65,7 @@ final class Actions {
     /** What the voice button did last (shown in Settings → Assistant, to see why it didn't work). */
     static void assistLog(String s) {
         Trace.event("Voice button: " + s.replace("\n", " / "));
-        Store.put("assist_log", new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(new java.util.Date()) + "\n" + s);
+        Prefs.put("assist_log", new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(new java.util.Date()) + "\n" + s);
     }
 
     private static void tryVoice(Context c, String[][] tries, int k, StringBuilder log) {
@@ -78,7 +78,7 @@ final class Actions {
                 }
                 log.append("Asked Android for the assistant pop-up\n");
                 final int next = i + 1;
-                U.ui.postDelayed(() -> { // the Call helper can see whether the pop-up is on screen
+                Ui.ui.postDelayed(() -> { // the Call helper can see whether the pop-up is on screen
                     Boolean shown = assistShown();
                     if (Boolean.FALSE.equals(shown)) {
                         log.append("  …nothing appeared\n");
@@ -94,7 +94,7 @@ final class Actions {
                 c.startActivity(in);
                 log.append("Opened: ").append(name).append("\n");
                 final int next = i + 1;
-                U.ui.postDelayed(() -> { // came straight back to Home: that way doesn't work here
+                Ui.ui.postDelayed(() -> { // came straight back to Home: that way doesn't work here
                     if (MainActivity.frontAt != 0 && android.os.SystemClock.elapsedRealtime() - MainActivity.frontAt < 1400) {
                         log.append("  …it closed at once\n");
                         tryVoice(c, tries, next, log);
@@ -139,8 +139,8 @@ final class Actions {
     }
 
     static void assistant(Context c) {
-        if ("external".equals(Store.str(Store.ASSIST, "gemini"))) {
-            String pkg = Store.str(Store.ASSIST_PKG, null);
+        if ("external".equals(Prefs.str(Prefs.ASSIST, "gemini"))) {
+            String pkg = Prefs.str(Prefs.ASSIST_PKG, null);
             if (pkg != null && Apps.launchPkg(c, pkg)) {
                 assistLog("Set to External: opened " + Apps.label(pkg) + " (choose Gemini in Settings → Assistant for Gemini)");
                 return;
@@ -174,7 +174,7 @@ final class Actions {
     // ------------------------------------------------------------------ navigation
 
     static String navPkg() {
-        String p = Store.str(Store.NAV_PKG, null);
+        String p = Prefs.str(Prefs.NAV_PKG, null);
         if (p != null && Apps.installed(p)) return p;
         for (String n : NAV_APPS) if (Apps.byPkg(n) != null) return n;
         return null;
@@ -183,7 +183,7 @@ final class Actions {
     static void openNavigation(Context c) {
         String p = navPkg();
         if (p == null || !Apps.launchPkg(c, p)) AppPanels.appPicker("Choose navigation app", a -> {
-            Store.put(Store.NAV_PKG, a.pkg);
+            Prefs.put(Prefs.NAV_PKG, a.pkg);
             Apps.launch(c, a);
         });
     }
@@ -218,7 +218,7 @@ final class Actions {
     }
 
     static void call(Activity a, String number) {
-        String mode = Store.str(Store.CALLS, "bt");
+        String mode = Prefs.str(Prefs.CALLS, "bt");
         if ("connect".equals(mode)) {
             Apps.App app = connectApp("carplay");
             if (app == null || !Apps.launch(a, app)) AppPanels.connect();
@@ -228,18 +228,18 @@ final class Actions {
             // Car Launcher is the box's Phone app and Android has a Bluetooth calling account: call directly
             if (placeOverBluetooth(a, number)) return;
             String pkg = btDialler();
-            if (pkg == null && !Store.flag("bt_asked", false)) {
+            if (pkg == null && !Prefs.flag("bt_asked", false)) {
                 // first call and no BT phone app recognised: ask once which app it is, then dial
-                Store.put("bt_asked", true);
+                Prefs.put("bt_asked", true);
                 AppPanels.btPhonePicker(chosen -> {
-                    Store.put(Store.CALLS_BT_PKG, chosen.pkg);
+                    Prefs.put(Prefs.CALLS_BT_PKG, chosen.pkg);
                     btReset();
-                    Sheets.close();
+                    Panels.close();
                     call(a, number);
                 });
                 return;
             }
-            if (pkg != null && BtAuto.active() && Store.flag("bt_type", true)) {
+            if (pkg != null && BtAuto.active() && Prefs.flag("bt_type", true)) {
                 // BT Phone ignores numbers sent to it: open it and type the number in for you
                 BtAuto.dial(a, number, pkg);
                 return;
@@ -261,7 +261,7 @@ final class Actions {
                 }
                 if (Apps.launchPkg(a, pkg)) return;
             }
-            String fb = Store.str(Store.CALLS_FALLBACK, "ask");
+            String fb = Prefs.str(Prefs.CALLS_FALLBACK, "ask");
             if ("none".equals(fb)) return;
             if ("ask".equals(fb)) {
                 Toast.makeText(a, "Bluetooth phone isn't available, using the box dialler", Toast.LENGTH_SHORT).show();
@@ -324,13 +324,13 @@ final class Actions {
     static String connectKey(String which) {
         switch (which) {
             case "carplay":
-                return Store.CARPLAY_PKG;
+                return Prefs.CARPLAY_PKG;
             case "aa":
-                return Store.AA_PKG;
+                return Prefs.AA_PKG;
             case "mirror":
-                return Store.MIRROR_PKG;
+                return Prefs.MIRROR_PKG;
             default:
-                return Store.NATIVE_PKG;
+                return Prefs.NATIVE_PKG;
         }
     }
 
@@ -349,10 +349,10 @@ final class Actions {
 
     /** The app a Car Connect line opens: the one you chose, otherwise a good guess by name. */
     static Apps.App connectApp(String which) {
-        Apps.App a = Apps.byPkg(Store.str(connectKey(which), null));
+        Apps.App a = Apps.byPkg(Prefs.str(connectKey(which), null));
         if (a != null) return a;
         if ("carplay".equals(which) || "aa".equals(which)) {
-            a = Apps.byPkg(Store.str(Store.BRIDGE_PKG, null));
+            a = Apps.byPkg(Prefs.str(Prefs.BRIDGE_PKG, null));
             return a != null ? a : findBridge();
         }
         if ("mirror".equals(which)) return byLabel("mirror", false);
@@ -386,7 +386,7 @@ final class Actions {
     }
 
     private static String findBtDialler() {
-        String p = Store.str(Store.CALLS_BT_PKG, null);
+        String p = Prefs.str(Prefs.CALLS_BT_PKG, null);
         if (p != null && Apps.installed(p)) return p;
         Apps.App a = guessBtPhone();
         return a == null ? null : a.pkg;
@@ -421,7 +421,7 @@ final class Actions {
     static void carConnect(Context c, String which) {
         Apps.App a = connectApp(which);
         if (a != null && Apps.launch(c, a)) {
-            Sheets.close();
+            Panels.close();
             return;
         }
         AppPanels.bridgePicker(connectTitle(which) + " app", connectKey(which));
@@ -460,8 +460,8 @@ final class Actions {
 
     /** Connections that happen quietly in the background: Tailscale and joining the phone's hotspot. */
     static void connectionsAtStart(Activity a) {
-        if (Store.flag(Store.CONN_TS, false) && Status.tailscaleInstalled()) Status.tailscale(true);
-        if (Store.flag(Store.CONN_PHONE, false)) joinPhoneHotspot(a);
+        if (Prefs.flag(Prefs.CONN_TS, false) && Status.tailscaleInstalled()) Status.tailscale(true);
+        if (Prefs.flag(Prefs.CONN_PHONE, false)) joinPhoneHotspot(a);
     }
 
     /**
@@ -470,27 +470,27 @@ final class Actions {
      */
     static void afterSplash(MainActivity a) {
         long bootAt = System.currentTimeMillis() - SystemClock.elapsedRealtime();
-        boolean firstThisBoot = Math.abs(Store.lng("hotspot_boot", 0) - bootAt) >= 60000;
-        if (firstThisBoot && Store.flag(Store.CONN_HOTSPOT, false)) {
-            Store.put("hotspot_boot", bootAt);
+        boolean firstThisBoot = Math.abs(Prefs.lng("hotspot_boot", 0) - bootAt) >= 60000;
+        if (firstThisBoot && Prefs.flag(Prefs.CONN_HOTSPOT, false)) {
+            Prefs.put("hotspot_boot", bootAt);
             Status.refresh();
             if (!Status.hotspotOn) {
                 // Android 13 only lets Settings turn the hotspot on; auto start waits until you come back
                 a.pendingAutostart = true;
-                U.ui.postDelayed(() -> Status.tetherSettings(a), 1500);
+                Ui.ui.postDelayed(() -> Status.tetherSettings(a), 1500);
                 return;
             }
         }
         // auto-start apps wait for the music to get going (up to 15 s), so they don't interrupt it
-        U.ui.postDelayed(() -> Music.whenStarted(a, () -> runAutostart(a), 15000), 1200);
+        Ui.ui.postDelayed(() -> Music.whenStarted(a, () -> runAutostart(a), 15000), 1200);
     }
 
     static void joinPhoneHotspot(Context c) {
-        String ssid = Store.str(Store.CONN_PHONE_SSID, null);
+        String ssid = Prefs.str(Prefs.CONN_PHONE_SSID, null);
         if (ssid == null || Build.VERSION.SDK_INT < 29) return;
         try {
             WifiNetworkSuggestion.Builder b = new WifiNetworkSuggestion.Builder().setSsid(ssid).setIsAppInteractionRequired(false);
-            String pass = Store.str(Store.CONN_PHONE_PASS, null);
+            String pass = Prefs.str(Prefs.CONN_PHONE_PASS, null);
             if (pass != null && !pass.isEmpty()) b.setWpa2Passphrase(pass);
             List<WifiNetworkSuggestion> l = new ArrayList<>();
             l.add(b.build());
@@ -505,16 +505,16 @@ final class Actions {
     static final Runnable tsWatch = new Runnable() {
         @Override
         public void run() {
-            if (Store.flag(Store.CONN_TS, false) && Store.flag(Store.CONN_TS_RETRY, true) && Status.tailscaleInstalled() && !Status.vpnOn)
+            if (Prefs.flag(Prefs.CONN_TS, false) && Prefs.flag(Prefs.CONN_TS_RETRY, true) && Status.tailscaleInstalled() && !Status.vpnOn)
                 Status.tailscale(true);
-            U.ui.postDelayed(this, 60000);
+            Ui.ui.postDelayed(this, 60000);
         }
     };
 
     // ------------------------------------------------------------------ auto start
 
     static JSONArray autostart() {
-        return Store.arr(Store.AUTOSTART);
+        return Prefs.arr(Prefs.AUTOSTART);
     }
 
     static void addAutostart(String key) {
@@ -528,7 +528,7 @@ final class Actions {
         } catch (Exception ignored) {
         }
         a.put(o);
-        Store.put(Store.AUTOSTART, a);
+        Prefs.put(Prefs.AUTOSTART, a);
     }
 
     static boolean isAutostart(String key) {
@@ -539,14 +539,14 @@ final class Actions {
 
     /** Runs once per boot: opens each app in order, then returns home. */
     static void runAutostart(Activity act) {
-        if (!Store.flag(Store.AUTOSTART_ON, true)) return;
+        if (!Prefs.flag(Prefs.AUTOSTART_ON, true)) return;
         long bootAt = System.currentTimeMillis() - SystemClock.elapsedRealtime();
-        if (Math.abs(Store.lng("autostart_boot", 0) - bootAt) < 60000) return; // already ran this boot
+        if (Math.abs(Prefs.lng("autostart_boot", 0) - bootAt) < 60000) return; // already ran this boot
         if (SystemClock.elapsedRealtime() > 10 * 60 * 1000L) {
-            Store.put("autostart_boot", bootAt);
+            Prefs.put("autostart_boot", bootAt);
             return; // launcher restarted long after boot; don't surprise the driver
         }
-        Store.put("autostart_boot", bootAt);
+        Prefs.put("autostart_boot", bootAt);
         JSONArray a = autostart();
         long delay = 1500;
         String last = null;
@@ -555,12 +555,12 @@ final class Actions {
             final Apps.App app = Apps.get(o.optString("key"));
             if (app == null) continue;
             delay += o.optInt("wait", 3) * 1000L;
-            U.ui.postDelayed(() -> Apps.launch(act, app), delay);
+            Ui.ui.postDelayed(() -> Apps.launch(act, app), delay);
             if ("stay".equals(o.optString("mode"))) last = app.key;
             delay += 1500;
         }
-        if (a.length() > 0 && "home".equals(Store.str(Store.AUTOSTART_SHOW, "home")) && last == null) {
-            U.ui.postDelayed(() -> act.startActivity(new Intent(act, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)), delay + 2000);
+        if (a.length() > 0 && "home".equals(Prefs.str(Prefs.AUTOSTART_SHOW, "home")) && last == null) {
+            Ui.ui.postDelayed(() -> act.startActivity(new Intent(act, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)), delay + 2000);
         }
     }
 }

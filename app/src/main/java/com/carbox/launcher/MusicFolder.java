@@ -30,24 +30,24 @@ final class MusicFolder {
     /** The folder's apps (package names), installed ones only. First time: the music apps on the box. */
     static List<String> apps(Context c) {
         List<String> out = new ArrayList<>();
-        if (!Store.has(KEY)) {
+        if (!Prefs.has(KEY)) {
             for (Apps.App a : Music.players(c)) {
                 boolean known = false;
                 for (String m : Actions.MUSIC) if (m.equals(a.pkg)) known = true;
                 if ((known || !a.system) && !a.pkg.equals(c.getPackageName()) && !out.contains(a.pkg)) out.add(a.pkg);
             }
             for (String p : MORE) if (Apps.installed(p) && !out.contains(p)) out.add(p);
-            Store.putList(KEY, out);
+            Prefs.putList(KEY, out);
             return out;
         }
-        for (String p : Store.list(KEY)) if (Apps.installed(p) && !out.contains(p)) out.add(p);
+        for (String p : Prefs.list(KEY)) if (Apps.installed(p) && !out.contains(p)) out.add(p);
         return out;
     }
 
     static void add(Context c, String pkg) {
         List<String> l = apps(c);
         if (!l.contains(pkg)) l.add(pkg);
-        Store.putList(KEY, l);
+        Prefs.putList(KEY, l);
         changed();
     }
 
@@ -56,20 +56,20 @@ final class MusicFolder {
         List<String> l = apps(c);
         if (from < 0 || from >= l.size() || to < 0 || to >= l.size()) return;
         l.add(to, l.remove(from));
-        Store.putList(KEY, l);
+        Prefs.putList(KEY, l);
         changed();
     }
 
     static void remove(Context c, String pkg) {
         List<String> l = apps(c);
         l.remove(pkg);
-        Store.putList(KEY, l);
+        Prefs.putList(KEY, l);
         changed();
     }
 
     private static void changed() {
         if (NowPlaying.I != null) NowPlaying.I.update();
-        Sheets.refresh();
+        Panels.refresh();
     }
 
     static MusicFolder I;
@@ -79,18 +79,18 @@ final class MusicFolder {
         this.c = c;
         I = this;
         view = new FrameLayout(c);
-        LinearLayout box = U.col(c);
-        U.pad(box, 8, 8, 8, 8);
+        LinearLayout box = Ui.col(c);
+        Ui.pad(box, 8, 8, 8, 8);
         // no title: the icons fill the tile
-        grid = U.col(c);
-        box.addView(grid, new LinearLayout.LayoutParams(U.MATCH, 0, 1));
-        dots = U.row(c); // which page (swipe the tile for the next 4 apps)
+        grid = Ui.col(c);
+        box.addView(grid, new LinearLayout.LayoutParams(Ui.MATCH, 0, 1));
+        dots = Ui.row(c); // which page (swipe the tile for the next 4 apps)
         dots.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams dl = U.lp(U.MATCH, U.u(10));
-        dl.topMargin = U.u(2);
+        LinearLayout.LayoutParams dl = Ui.lp(Ui.MATCH, Ui.u(10));
+        dl.topMargin = Ui.u(2);
         box.addView(dots, dl);
-        view.setBackground(Glass.card(U.CARD, 16)); // solid, so a song playing underneath doesn't show through
-        view.addView(box, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        view.setBackground(Themes.card(Ui.CARD, 16)); // solid, so a song playing underneath doesn't show through
+        view.addView(box, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         view.setOnTouchListener((v, e) -> { // editing: a tap on an empty spot finishes
             if (!editing) return false;
             if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP) endEdit();
@@ -99,13 +99,13 @@ final class MusicFolder {
 
         // maximise, overlapping the top-right corner (only with more than 4 apps)
         FrameLayout m = new FrameLayout(c);
-        m.setBackground(Glass.inner(U.CARD2, 20));
-        m.addView(U.icon(c, R.drawable.ic_maximize, U.TEXT), U.flpu(20, 20, Gravity.CENTER));
+        m.setBackground(Themes.inner(Ui.CARD2, 20));
+        m.addView(Ui.icon(c, R.drawable.ic_maximize, Ui.TEXT), Ui.flpu(20, 20, Gravity.CENTER));
         m.setContentDescription("Show all music apps");
         m.setOnClickListener(v -> showAll(c));
-        U.press(m);
-        FrameLayout.LayoutParams ml = U.flpu(40, 40, Gravity.TOP | Gravity.END);
-        ml.setMargins(0, U.u(4), U.u(4), 0);
+        Ui.press(m);
+        FrameLayout.LayoutParams ml = Ui.flpu(40, 40, Gravity.TOP | Gravity.END);
+        ml.setMargins(0, Ui.u(4), Ui.u(4), 0);
         view.addView(m, ml);
         max = m;
     }
@@ -140,14 +140,14 @@ final class MusicFolder {
         if (n < 2) return;
         page = ((page + dir) % n + n) % n;
         float w = grid.getWidth();
-        if (U.ms(1) == 0 || w == 0) {
+        if (Ui.ms(1) == 0 || w == 0) {
             render();
             return;
         }
-        grid.animate().translationX(-dir * w).alpha(0f).setDuration(U.ms(150)).withEndAction(() -> {
+        grid.animate().translationX(-dir * w).alpha(0f).setDuration(Ui.ms(150)).withEndAction(() -> {
             render();
             grid.setTranslationX(dir * w);
-            grid.animate().translationX(0).alpha(1f).setDuration(U.ms(200))
+            grid.animate().translationX(0).alpha(1f).setDuration(Ui.ms(200))
                     .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
         }).start();
     }
@@ -188,8 +188,8 @@ final class MusicFolder {
     void render() {
         grid.removeAllViews();
         stopJiggle();
-        U.ui.removeCallbacks(editTimeout);
-        if (editing) U.ui.postDelayed(editTimeout, 12000);
+        Ui.ui.removeCallbacks(editTimeout);
+        if (editing) Ui.ui.postDelayed(editTimeout, 12000);
         List<String> l = apps(c);
         int n = pages(l.size());
         if (page >= n) page = n - 1;
@@ -215,20 +215,20 @@ final class MusicFolder {
         dots.removeAllViews();
         if (n > 1) for (int i = 0; i < n; i++) {
             View d = new View(c);
-            d.setBackground(U.oval(i == page ? U.ACCENT : U.LINE));
-            LinearLayout.LayoutParams p = U.lpu(6, 6);
-            p.setMargins(U.u(3), 0, U.u(3), 0);
+            d.setBackground(Ui.oval(i == page ? Ui.ACCENT : Ui.LINE));
+            LinearLayout.LayoutParams p = Ui.lpu(6, 6);
+            p.setMargins(Ui.u(3), 0, Ui.u(3), 0);
             dots.addView(d, p);
         }
         dots.setVisibility(n > 1 ? View.VISIBLE : View.GONE);
         for (int r = 0; r < 2; r++) {
-            LinearLayout row = U.row(c);
+            LinearLayout row = Ui.row(c);
             for (int k = 0; k < 2; k++) {
                 int i = r * 2 + k;
                 View v = i < cells.size() ? cells.get(i) : new View(c);
-                row.addView(v, new LinearLayout.LayoutParams(0, U.MATCH, 1));
+                row.addView(v, new LinearLayout.LayoutParams(0, Ui.MATCH, 1));
             }
-            grid.addView(row, new LinearLayout.LayoutParams(U.MATCH, 0, 1));
+            grid.addView(row, new LinearLayout.LayoutParams(Ui.MATCH, 0, 1));
         }
     }
 
@@ -237,29 +237,29 @@ final class MusicFolder {
     private static View cell(Context c, String pkg, int mode) {
         boolean editable = mode == 2;
         FrameLayout f = new FrameLayout(c);
-        LinearLayout col = U.col(c);
+        LinearLayout col = Ui.col(c);
         col.setGravity(Gravity.CENTER);
         ImageView iv = new ImageView(c);
         iv.setImageDrawable(Apps.iconOf(pkg));
         if (editable) { // big grid: icon and name
-            col.addView(iv, U.lpu(44, 44));
-            TextView t = U.line(c, Apps.label(pkg), 10, U.SUB, false);
+            col.addView(iv, Ui.lpu(44, 44));
+            TextView t = Ui.line(c, Apps.label(pkg), 10, Ui.SUB, false);
             t.setGravity(Gravity.CENTER);
-            LinearLayout.LayoutParams tl = U.lp(U.MATCH, U.WRAP);
-            tl.topMargin = U.u(3);
+            LinearLayout.LayoutParams tl = Ui.lp(Ui.MATCH, Ui.WRAP);
+            tl.topMargin = Ui.u(3);
             col.addView(t, tl);
         } else { // in the tile: just the icon, as big as the spot allows
             iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            U.pad(iv, 6, 6, 6, 6);
-            col.addView(iv, U.lp(U.MATCH, U.MATCH));
+            Ui.pad(iv, 6, 6, 6, 6);
+            col.addView(iv, Ui.lp(Ui.MATCH, Ui.MATCH));
         }
-        f.addView(col, new FrameLayout.LayoutParams(U.MATCH, U.MATCH, Gravity.CENTER));
+        f.addView(col, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH, Gravity.CENTER));
         f.setOnClickListener(v -> {
             if (mode == 1) { // editing: a tap finishes
                 if (I != null) I.endEdit();
                 return;
             }
-            if (Sheets.open()) Sheets.close();
+            if (Panels.open()) Panels.close();
             if (NowPlaying.I != null) NowPlaying.I.closeFolder(); // opened from over a song: back to the song
             Apps.launchPkg(c, pkg);
         });
@@ -272,25 +272,25 @@ final class MusicFolder {
             return true;
         });
         f.setContentDescription(Apps.label(pkg));
-        U.press(f);
+        Ui.press(f);
         if (editable) {
             FrameLayout minus = new FrameLayout(c);
-            minus.setBackground(U.oval(U.RED));
-            minus.addView(U.icon(c, R.drawable.ic_minus, U.TEXT), U.flpu(14, 14, Gravity.CENTER));
+            minus.setBackground(Ui.oval(Ui.RED));
+            minus.addView(Ui.icon(c, R.drawable.ic_minus, Ui.TEXT), Ui.flpu(14, 14, Gravity.CENTER));
             minus.setContentDescription("Remove " + Apps.label(pkg));
             minus.setOnClickListener(v -> remove(c, pkg));
-            FrameLayout.LayoutParams ml = U.flpu(22, 22, Gravity.TOP | Gravity.END);
-            ml.setMargins(0, U.u(2), U.u(10), 0);
+            FrameLayout.LayoutParams ml = Ui.flpu(22, 22, Gravity.TOP | Gravity.END);
+            ml.setMargins(0, Ui.u(2), Ui.u(10), 0);
             f.addView(minus, ml);
         }
         if (mode == 1) { // red − on the icon's top-right corner
             FrameLayout minus = new FrameLayout(c);
-            minus.setBackground(U.oval(U.RED));
-            minus.setElevation(U.uf(2));
-            minus.addView(U.icon(c, R.drawable.ic_minus, U.TEXT), U.flpu(17, 17, Gravity.CENTER));
+            minus.setBackground(Ui.oval(Ui.RED));
+            minus.setElevation(Ui.uf(2));
+            minus.addView(Ui.icon(c, R.drawable.ic_minus, Ui.TEXT), Ui.flpu(17, 17, Gravity.CENTER));
             minus.setContentDescription("Remove " + Apps.label(pkg));
             minus.setOnClickListener(v -> remove(c, pkg));
-            final int b = U.u(28), pad = U.u(6);
+            final int b = Ui.u(28), pad = Ui.u(6);
             f.addView(minus, new FrameLayout.LayoutParams(b, b, Gravity.TOP | Gravity.START));
             f.addOnLayoutChangeListener((v, l, t, r, bo, ol, ot, or, ob) -> { // follow the drawn icon's corner
                 int w = r - l, h = bo - t, size = Math.min(w, h) - 2 * pad;
@@ -304,20 +304,20 @@ final class MusicFolder {
     private static View plus(Context c) {
         FrameLayout f = new FrameLayout(c);
         FrameLayout ring = new FrameLayout(c);
-        ring.setBackground(U.outline(0, U.LINE, 1.5f, 10));
-        ring.addView(U.icon(c, R.drawable.ic_plus, U.SUB), U.flpu(24, 24, Gravity.CENTER));
-        f.addView(ring, U.flpu(48, 48, Gravity.CENTER));
+        ring.setBackground(Ui.outline(0, Ui.LINE, 1.5f, 10));
+        ring.addView(Ui.icon(c, R.drawable.ic_plus, Ui.SUB), Ui.flpu(24, 24, Gravity.CENTER));
+        f.addView(ring, Ui.flpu(48, 48, Gravity.CENTER));
         f.setContentDescription("Add a music app");
         f.setOnClickListener(v -> pickApp());
-        U.press(f);
+        Ui.press(f);
         return f;
     }
 
     private static void pickApp() {
         AppPanels.appPicker("Add to Music", a -> {
-            add(Sheets.ctx(), a.pkg);
-            if (Sheets.depth() > 1) Sheets.back();
-            else Sheets.close();
+            add(Panels.ctx(), a.pkg);
+            if (Panels.depth() > 1) Panels.back();
+            else Panels.close();
         });
     }
 
@@ -325,14 +325,14 @@ final class MusicFolder {
     static void showAll(Context c0) {
         maximised = true;
         if (I != null) I.max.setVisibility(View.GONE);
-        U.ui.post(() -> Sheets.whenClosed(() -> { // back on the tile when the grid closes
+        Ui.ui.post(() -> Panels.whenClosed(() -> { // back on the tile when the grid closes
             maximised = false;
             if (I != null) I.render();
         }));
-        Sheets.show(() -> {
-            Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Tap to open. − takes an app out of the folder, + adds one.", 12, U.SUB, false));
+        Panels.show(() -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
+            b.addView(Ui.text(c, "Tap to open. − takes an app out of the folder, + adds one.", 12, Ui.SUB, false));
             List<View> cells = new ArrayList<>();
             List<String> all = apps(c);
             for (String p : all) cells.add(cell(c, p, 2));
@@ -344,20 +344,20 @@ final class MusicFolder {
             cells.add(plus(c));
             final int COLS = 5;
             for (int i = 0; i < cells.size(); i += COLS) {
-                LinearLayout row = U.row(c);
+                LinearLayout row = Ui.row(c);
                 for (int k = 0; k < COLS; k++) {
                     View v = i + k < cells.size() ? cells.get(i + k) : new View(c);
-                    row.addView(v, new LinearLayout.LayoutParams(0, U.u(82), 1));
+                    row.addView(v, new LinearLayout.LayoutParams(0, Ui.u(82), 1));
                 }
-                LinearLayout.LayoutParams rl = U.lp(U.MATCH, U.WRAP);
-                rl.topMargin = U.u(8);
+                LinearLayout.LayoutParams rl = Ui.lp(Ui.MATCH, Ui.WRAP);
+                rl.topMargin = Ui.u(8);
                 b.addView(row, rl);
             }
-            b.addView(Sheets.item("Reset", "Back to the music apps on this box", () -> {
-                Store.put(KEY, (String) null);
+            b.addView(Panels.item("Reset", "Back to the music apps on this box", () -> {
+                Prefs.put(KEY, (String) null);
                 changed();
-            }), U.lp(U.MATCH, U.WRAP));
-            return Sheets.panel("Music", b);
+            }), Ui.lp(Ui.MATCH, Ui.WRAP));
+            return Panels.panel("Music", b);
         });
     }
 }

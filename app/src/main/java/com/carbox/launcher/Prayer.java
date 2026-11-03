@@ -16,15 +16,15 @@ final class Prayer {
 
     /** Six times in local hours for the given day offset from today (0 = today). */
     static double[] times(int dayOffset) {
-        if (!Loc.has()) return null;
+        if (!Gps.has()) return null;
         Calendar c = Calendar.getInstance();
         c.add(Calendar.DAY_OF_YEAR, dayOffset);
         double tz = TimeZone.getDefault().getOffset(c.getTimeInMillis()) / 3600000.0;
-        int method = Store.num(Store.PRAY_METHOD, 0);
-        int asrF = Store.num(Store.PRAY_ASR, 2);
-        double[] t = compute(c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH), Loc.lat, Loc.lon, tz,
+        int method = Prefs.num(Prefs.PRAY_METHOD, 0);
+        int asrF = Prefs.num(Prefs.PRAY_ASR, 2);
+        double[] t = compute(c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH), Gps.lat, Gps.lon, tz,
                 ANGLES[method][0], ANGLES[method][1], asrF);
-        JSONArray adj = Store.arr(Store.PRAY_ADJ);
+        JSONArray adj = Prefs.arr(Prefs.PRAY_ADJ);
         for (int i = 0; i < 6; i++) t[i] += adj.optInt(i, 0) / 60.0;
         return t;
     }
@@ -99,15 +99,15 @@ final class Prayer {
     static final double KAABA_LAT = 21.4225, KAABA_LON = 39.8262;
 
     static double qibla() {
-        double la1 = Math.toRadians(Loc.lat), la2 = Math.toRadians(KAABA_LAT), dl = Math.toRadians(KAABA_LON - Loc.lon);
+        double la1 = Math.toRadians(Gps.lat), la2 = Math.toRadians(KAABA_LAT), dl = Math.toRadians(KAABA_LON - Gps.lon);
         double y = Math.sin(dl) * Math.cos(la2);
         double x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dl);
         return (Math.toDegrees(Math.atan2(y, x)) + 360) % 360;
     }
 
     static double kmToKaaba() {
-        double la1 = Math.toRadians(Loc.lat), la2 = Math.toRadians(KAABA_LAT);
-        double dla = la2 - la1, dlo = Math.toRadians(KAABA_LON - Loc.lon);
+        double la1 = Math.toRadians(Gps.lat), la2 = Math.toRadians(KAABA_LAT);
+        double dla = la2 - la1, dlo = Math.toRadians(KAABA_LON - Gps.lon);
         double a = Math.sin(dla / 2) * Math.sin(dla / 2) + Math.cos(la1) * Math.cos(la2) * Math.sin(dlo / 2) * Math.sin(dlo / 2);
         return 2 * 6371 * Math.asin(Math.sqrt(a));
     }

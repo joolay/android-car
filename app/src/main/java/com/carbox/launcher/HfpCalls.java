@@ -46,7 +46,7 @@ final class HfpCalls {
                         }
                         final int st = state;
                         final String num = number;
-                        U.ui.post(() -> CallState.fromHfp(ctx, st, num));
+                        Ui.ui.post(() -> CallState.fromHfp(ctx, st, num));
                     } catch (Exception ignored) {
                     }
                 }

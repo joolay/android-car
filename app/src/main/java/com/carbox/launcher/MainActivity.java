@@ -34,10 +34,10 @@ public class MainActivity extends Activity {
     FrameLayout tileArea, sheetHost;
     private LinearLayout middle;
     private FrameLayout tickerSlot;
-    MapPanel map;
+    Maps map;
     NowPlaying nowPlaying;
-    Tiles tiles;
-    Ticker ticker;
+    TileDrawer tiles;
+    NewsTicker ticker;
     Dock dock;
     Rail rail;
     private boolean resumed;
@@ -50,13 +50,13 @@ public class MainActivity extends Activity {
         Window w = getWindow();
         w.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         w.getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-        U.init(this);
-        Store.init(this);
+        Ui.init(this);
+        Prefs.init(this);
         Trace.atStart(this); // troubleshooting mode: log from here on
         About.catchCrashes(this);
         Apps.init(this);
         Status.init(this);
-        Loc.init(this);
+        Gps.init(this);
         Rest.init(this);
         Salah.start(this);
         HfpCalls.start(this);
@@ -66,56 +66,56 @@ public class MainActivity extends Activity {
         SpeedCard.start();
         CarHA.start();
         HomeApproach.start();
-        U.ui.postDelayed(HomeApproach::fromGoTo, 8000);
+        Ui.ui.postDelayed(HomeApproach::fromGoTo, 8000);
         build();
         immersive();
         askPermissions();
         Actions.connectionsAtStart(this);
-        U.ui.postDelayed(Actions.tsWatch, 60000);
+        Ui.ui.postDelayed(Actions.tsWatch, 60000);
         // music starts first: at a car start the music app is opened (so it wakes and plays), then
         // Home comes back with the splash; hotspot settings and auto-start apps once it has closed
         Runnable splash = () -> {
             if (!Splash.maybeShow(this, "start", () -> Actions.afterSplash(this))) Actions.afterSplash(this);
-            U.ui.post(() -> { // no splash voice this time: the music starts now
+            Ui.ui.post(() -> { // no splash voice this time: the music starts now
                 if (!Splash.voiceStarted) Music.go("no splash voice");
             });
         };
-        if (Music.atStart(this) && Music.open(this)) U.ui.postDelayed(() -> {
+        if (Music.atStart(this) && Music.open(this)) Ui.ui.postDelayed(() -> {
             NowPlaying.pressHome();
             // the splash once Home is really back in front: shown straight away, the Home press
             // arriving a moment later closed it again (only its voice was left)
             final long until = android.os.SystemClock.elapsedRealtime() + 4000;
-            U.ui.post(new Runnable() {
+            Ui.ui.post(new Runnable() {
                 @Override
                 public void run() {
                     long now = android.os.SystemClock.elapsedRealtime();
                     if ((frontAt != 0 && now - frontAt > 600) || now > until) splash.run();
-                    else U.ui.postDelayed(this, 150);
+                    else Ui.ui.postDelayed(this, 150);
                 }
             });
         }, 2500);
         else splash.run();
-        U.ui.post(() -> handleOpen(getIntent()));
-        U.ui.postDelayed(this::afterUpdate, 2500);
-        U.ui.postDelayed(About::offerReport, 4000); // crashed last time? offer the report
+        Ui.ui.post(() -> handleOpen(getIntent()));
+        Ui.ui.postDelayed(this::afterUpdate, 2500);
+        Ui.ui.postDelayed(About::offerReport, 4000); // crashed last time? offer the report
         Updater.start(this); // new versions from GitHub (needs the key in Settings → System → Updates)
         // start with the big map in the tile area and Go to in the small map panel (setting)
         // the home view: the big map in the tile area, Go to in the small map panel, Now playing
         // below; the tiles are a drawer that slides in from the Rail Bar (All apps button)
-        if (mapHome()) U.ui.post(() -> { // already open when the home screen first shows
+        if (mapHome()) Ui.ui.post(() -> { // already open when the home screen first shows
             if (map != null && !map.expanded()) {
-                Store.put("map_mini", TopLeft.list().get(0)); // the Top Left Widget starts on its first widget
+                Prefs.put("map_mini", LeftStages.list().get(0)); // the Top Left Widget starts on its first widget
                 map.expand(true);
             }
         });
         // traffic for the drive, once per car start (after the splash and auto-start apps settle)
         long bootAt = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime();
-        if (Math.abs(Store.lng("traffic_boot", 0) - bootAt) > 60000) {
-            Store.put("traffic_boot", bootAt);
-            U.ui.postDelayed(() -> ticker.trafficAtStart(0), 12000);
+        if (Math.abs(Prefs.lng("traffic_boot", 0) - bootAt) > 60000) {
+            Prefs.put("traffic_boot", bootAt);
+            Ui.ui.postDelayed(() -> ticker.trafficAtStart(0), 12000);
         }
         // the launcher can be restarted when it becomes the Home app: carry on with the checklist
-        U.ui.postDelayed(() -> {
+        Ui.ui.postDelayed(() -> {
             if (SettingsPanels.backFromChecklist()) SettingsPanels.reopenChecklist();
         }, 400);
     }
@@ -124,59 +124,59 @@ public class MainActivity extends Activity {
         root = new FrameLayout(this);
         applyWallpaper();
 
-        LinearLayout main = U.row(this);
+        LinearLayout main = Ui.row(this);
         main.setGravity(0);
-        U.pad(main, 8);
-        root.addView(main, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        Ui.pad(main, 8);
+        root.addView(main, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
 
         // left column: map over now playing
-        LinearLayout left = U.col(this);
-        map = new MapPanel(this);
-        left.addView(map.view, U.weight(1, false));
+        LinearLayout left = Ui.col(this);
+        map = new Maps(this);
+        left.addView(map.view, Ui.weight(1, false));
         nowPlaying = new NowPlaying(this);
-        LinearLayout.LayoutParams np = U.weight(1, false);
-        np.topMargin = U.u(8);
+        LinearLayout.LayoutParams np = Ui.weight(1, false);
+        np.topMargin = Ui.u(8);
         bottomSlot = new FrameLayout(this); // the Bottom Left Widget: Music (Now playing) or another widget
         left.addView(bottomSlot, np);
         bottomLeft();
-        main.addView(left, U.lpu(200, U.MATCH));
+        main.addView(left, Ui.lpu(200, Ui.MATCH));
 
         // middle: tiles, ticker, dock
-        middle = U.col(this);
-        tiles = new Tiles(this);
+        middle = Ui.col(this);
+        tiles = new TileDrawer(this);
         // the tile area also hosts panels (All apps, settings, phone...) so they stay inside the 2×4 grid
         tileArea = new FrameLayout(this);
         tilesClip = new FrameLayout(this); // the tiles stay inside the tile area as they rise and sink
-        tilesClip.addView(tiles.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        tileArea.addView(tilesClip, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        tilesClip.addView(tiles.view, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        tileArea.addView(tilesClip, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         sheetHost = new FrameLayout(this);
-        tileArea.addView(sheetHost, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        tileArea.addView(sheetHost, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         tickerSlot = new FrameLayout(this);
-        ticker = new Ticker(this);
-        tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        LinearLayout tickerRow = U.row(this); // ticker, then "Tiles" + lock while the drawer is open
-        tickerRow.addView(tickerSlot, new LinearLayout.LayoutParams(0, U.MATCH, 1));
-        boolean tickerOn = Store.flag("ticker_on", true);
+        ticker = new NewsTicker(this);
+        tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        LinearLayout tickerRow = Ui.row(this); // ticker, then "Tiles" + lock while the drawer is open
+        tickerRow.addView(tickerSlot, new LinearLayout.LayoutParams(0, Ui.MATCH, 1));
+        boolean tickerOn = Prefs.flag("ticker_on", true);
         if (tickerOn) buildChip(tickerRow);
         // the ticker sits at the top of the middle column, above the tiles / big map
-        LinearLayout.LayoutParams tl = U.lpu(U.MATCH, 30);
-        tl.bottomMargin = U.u(8);
+        LinearLayout.LayoutParams tl = Ui.lpu(Ui.MATCH, 30);
+        tl.bottomMargin = Ui.u(8);
         middle.addView(tickerRow, tl);
         this.tickerRow = tickerRow;
         tickerRow.setVisibility(tickerOn ? View.VISIBLE : View.GONE); // off: the map / tiles take its space (still shown while editing tiles)
-        middle.addView(tileArea, U.weight(1, false));
+        middle.addView(tileArea, Ui.weight(1, false));
         tilePad(tickerOn);
         dock = new Dock(this);
-        LinearLayout dockRow = U.row(this);
+        LinearLayout dockRow = Ui.row(this);
         dockRow.setGravity(Gravity.CENTER_VERTICAL);
-        dockRow.addView(dock.view, new LinearLayout.LayoutParams(0, U.MATCH, 1));
+        dockRow.addView(dock.view, new LinearLayout.LayoutParams(0, Ui.MATCH, 1));
         if (!tickerOn) buildChip(dockRow); // "Tiles" + lock at the end of the dock instead
-        LinearLayout.LayoutParams dl = U.lpu(U.MATCH, 64); // same height with or without the ticker (the map / tiles give way)
-        dl.topMargin = U.u(8);
+        LinearLayout.LayoutParams dl = Ui.lpu(Ui.MATCH, 64); // same height with or without the ticker (the map / tiles give way)
+        dl.topMargin = Ui.u(8);
         middle.addView(dockRow, dl);
-        LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(0, U.MATCH, 1);
-        ml.leftMargin = U.u(8);
-        ml.rightMargin = U.u(8);
+        LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(0, Ui.MATCH, 1);
+        ml.leftMargin = Ui.u(8);
+        ml.rightMargin = Ui.u(8);
         main.addView(middle, ml);
         main.setClipChildren(false); // the big map shrinks across into the small map panel
         middle.setClipChildren(false);
@@ -184,7 +184,7 @@ public class MainActivity extends Activity {
 
         // right rail
         rail = new Rail(this);
-        main.addView(rail.view, U.lpu(72, U.MATCH));
+        main.addView(rail.view, Ui.lpu(72, Ui.MATCH));
         // a video's picture-in-picture window keeps off the map, Now playing, ticker, dock and Rail Bar,
         // so it settles over the tiles (Android 13+)
         if (android.os.Build.VERSION.SDK_INT >= 33) {
@@ -192,8 +192,8 @@ public class MainActivity extends Activity {
         }
 
         overlay = new FrameLayout(this);
-        root.addView(overlay, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        Sheets.attach(sheetHost, overlay);
+        root.addView(overlay, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        Panels.attach(sheetHost, overlay);
         setContentView(root);
         dock.render();
     }
@@ -214,32 +214,32 @@ public class MainActivity extends Activity {
                 bottomW.tick();
             } catch (Exception ignored) {
             }
-            U.ui.postDelayed(this, 1000);
+            Ui.ui.postDelayed(this, 1000);
         }
     };
 
     /** Show the chosen Bottom Left Widget (Music is the one Now playing; others in their Left Widget design). */
     void bottomLeft() {
         if (bottomSlot == null) return;
-        U.ui.removeCallbacks(bottomTick);
+        Ui.ui.removeCallbacks(bottomTick);
         bottomW = null;
         bottomSlot.removeAllViews();
-        String id = TopLeft.bottom();
-        if (TopLeft.MUSIC.equals(id)) {
+        String id = LeftStages.bottom();
+        if (LeftStages.MUSIC.equals(id)) {
             View np = nowPlaying.view;
             if (np.getParent() != null) ((android.view.ViewGroup) np.getParent()).removeView(np);
-            bottomSlot.addView(np, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            bottomSlot.addView(np, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             return;
         }
         SwipeBox box = new SwipeBox(this, () -> { });
-        box.onHold(() -> TopLeft.chooser(true)); // hold: change it
+        box.onHold(() -> LeftStages.chooser(true)); // hold: change it
         try {
-            bottomW = TopLeft.make(this, id);
-            if (bottomW != null && bottomW.v != null) box.addView(bottomW.v, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            bottomW = LeftStages.make(this, id);
+            if (bottomW != null && bottomW.v != null) box.addView(bottomW.v, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         } catch (Exception ignored) {
         }
-        bottomSlot.addView(box, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        U.ui.post(bottomTick);
+        bottomSlot.addView(box, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        Ui.ui.post(bottomTick);
     }
 
     /**
@@ -249,8 +249,8 @@ public class MainActivity extends Activity {
     private void tilePad(boolean tickerShown) {
         // ticker hidden: wider, even gaps (12 between tiles, and 12 down to the dock), the tops lined up
         // with the map and the Rail Bar, and the tiles taller with what's left
-        Tiles.gapDu = tickerShown ? 8 : 12;
-        tilesClip.setPadding(0, 0, 0, tickerShown ? 0 : U.u(4));
+        TileDrawer.gapDu = tickerShown ? 8 : 12;
+        tilesClip.setPadding(0, 0, 0, tickerShown ? 0 : Ui.u(4));
         if (tiles != null) tiles.view.requestLayout();
     }
 
@@ -268,31 +268,31 @@ public class MainActivity extends Activity {
         tickerSlot.removeAllViews();
         if (head != null) {
             if (head.getParent() != null) ((android.view.ViewGroup) head.getParent()).removeView(head);
-            tickerSlot.addView(head, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            tickerSlot.addView(head, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             head.setAlpha(0f);
-            head.animate().alpha(1f).setDuration(U.ms(200)).start();
-        } else tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            head.animate().alpha(1f).setDuration(Ui.ms(200)).start();
+        } else tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
     }
 
     void editMode(boolean on) {
         title = null;
-        if (tickerRow != null && !Store.flag("ticker_on", true)) {
+        if (tickerRow != null && !Prefs.flag("ticker_on", true)) {
             tickerRow.setVisibility(on ? View.VISIBLE : View.GONE);
             tilePad(on); // the edit bar takes the padding's place while editing
         }
         tickerSlot.removeAllViews();
-        if (on) tickerSlot.addView(Ticker.editBar(this, () -> tiles.setEditing(false)), new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        else tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        if (on) tickerSlot.addView(NewsTicker.editBar(this, () -> tiles.setEditing(false)), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        else tickerSlot.addView(ticker.view, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
     }
 
     // ------------------------------------------------------------------ wallpaper
 
     void applyWallpaper() {
-        String mode = Store.str(Store.WALL, "black");
+        String mode = Prefs.str(Prefs.WALL, "black");
         if ("color".equals(mode)) {
-            root.setBackground(new ColorDrawable(Store.num(Store.WALL_COLOR, U.BG)));
+            root.setBackground(new ColorDrawable(Prefs.num(Prefs.WALL_COLOR, Ui.BG)));
         } else if ("image".equals(mode)) {
-            String uri = Store.str("wall_uri", null);
+            String uri = Prefs.str("wall_uri", null);
             Bitmap bm = null;
             if (uri != null) {
                 try (InputStream in = getContentResolver().openInputStream(Uri.parse(uri))) {
@@ -309,10 +309,10 @@ public class MainActivity extends Activity {
             } else root.setBackground(new ColorDrawable(0xFF000000));
         } else if ("road".equals(mode)) { // a long tarred road to the horizon, drawn for this screen
             android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
-            BitmapDrawable d = new BitmapDrawable(getResources(), Glass.road(Math.max(dm.widthPixels, dm.heightPixels), Math.min(dm.widthPixels, dm.heightPixels)));
+            BitmapDrawable d = new BitmapDrawable(getResources(), Themes.road(Math.max(dm.widthPixels, dm.heightPixels), Math.min(dm.widthPixels, dm.heightPixels)));
             root.setBackground(new CenterCrop(d));
         } else root.setBackground(new ColorDrawable(0xFF000000));
-        Glass.refresh(); // glass cards show the new wallpaper
+        Themes.refresh(); // glass cards show the new wallpaper
     }
 
     /** Draws a bitmap like ImageView's centerCrop. */
@@ -375,21 +375,21 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
-        if (req == Keyboard.REQ_VOICE && res == RESULT_OK) Keyboard.voiceResult(data);
-        if (req == 62) Sheets.refresh(); // back from "make Car Launcher the Phone app"
+        if (req == InAppKeyboard.REQ_VOICE && res == RESULT_OK) InAppKeyboard.voiceResult(data);
+        if (req == 62) Panels.refresh(); // back from "make Car Launcher the Phone app"
         if (req == REQ_AUDIO && res == RESULT_OK && data != null && data.getData() != null) {
             try {
                 getContentResolver().takePersistableUriPermission(data.getData(), Intent.FLAG_GRANT_READ_URI_PERMISSION);
             } catch (Exception ignored) {
             }
-            Store.put("splash_audio_uri", data.getData().toString());
-            Store.put("splash_audio", "own");
-            Sheets.refresh();
+            Prefs.put("splash_audio_uri", data.getData().toString());
+            Prefs.put("splash_audio", "own");
+            Panels.refresh();
         }
         if (req == OfflineMap.REQ_PICK && res == RESULT_OK && data != null && data.getData() != null) {
             OfflineMap.picked(this, data.getData());
             if (map != null) map.reload();
-            Sheets.refresh();
+            Panels.refresh();
         }
         if (req == REQ_WALLPAPER && res == RESULT_OK && data != null && data.getData() != null) {
             Uri u = data.getData();
@@ -397,10 +397,10 @@ public class MainActivity extends Activity {
                 getContentResolver().takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION);
             } catch (Exception ignored) {
             }
-            Store.put("wall_uri", u.toString());
-            Store.put(Store.WALL, "image");
+            Prefs.put("wall_uri", u.toString());
+            Prefs.put(Prefs.WALL, "image");
             applyWallpaper();
-            Sheets.refresh();
+            Panels.refresh();
         }
     }
 
@@ -444,17 +444,17 @@ public class MainActivity extends Activity {
                 android.os.Build.VERSION.SDK_INT >= 31 ? Manifest.permission.BLUETOOTH_CONNECT : Manifest.permission.READ_CONTACTS}; // Bluetooth: to see BT calls
         List<String> need = new ArrayList<>();
         for (String p : want) if (checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) need.add(p);
-        if (!need.isEmpty() && !Store.flag("asked_perms2", false)) {
-            Store.put("asked_perms2", true); // asked again once, for the new Bluetooth permission
+        if (!need.isEmpty() && !Prefs.flag("asked_perms2", false)) {
+            Prefs.put("asked_perms2", true); // asked again once, for the new Bluetooth permission
             requestPermissions(need.toArray(new String[0]), 1); // the set-up checklist follows when this closes
-        } else U.ui.postDelayed(this::firstRunChecklist, 1500);
+        } else Ui.ui.postDelayed(this::firstRunChecklist, 1500);
     }
 
     /** First run: the checklist for permissions Android only grants in its own settings screens. */
     /** After installing a new version: offer to run the set-up checklist again (new steps may have been added). */
     /** Close Car Launcher and open it again a moment later (a fresh start). */
     void restartApp() {
-        Store.flush();
+        Prefs.flush();
         Trace.event(this, "Restart Car Launcher (from Settings)");
         android.content.Intent i = new android.content.Intent(this, MainActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
         android.app.PendingIntent pi = android.app.PendingIntent.getActivity(this, 7, i, android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_CANCEL_CURRENT);
@@ -483,45 +483,45 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             return;
         }
-        long last = Store.lng("last_version", -1);
-        Store.put("last_version", code);
+        long last = Prefs.lng("last_version", -1);
+        Prefs.put("last_version", code);
         // no record yet: an older version that didn't keep one counts as an update (it had shown the checklist)
-        boolean updated = last < 0 ? Store.flag("setup_shown", false) : last != code;
+        boolean updated = last < 0 ? Prefs.flag("setup_shown", false) : last != code;
         if (!updated || isFinishing()) return; // first install (the checklist runs anyway) or no change
-        if (Sheets.open() || CallState.state != CallState.NONE) return; // don't interrupt
+        if (Panels.open() || CallState.state != CallState.NONE) return; // don't interrupt
         final String[] news = changes(ver);
-        Sheets.show(() -> {
-            android.content.Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Now on " + ver + ". Restart the box so everything starts fresh?", 17, U.TEXT, true));
+        Panels.show(() -> {
+            android.content.Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
+            b.addView(Ui.text(c, "Now on " + ver + ". Restart the box so everything starts fresh?", 17, Ui.TEXT, true));
             if (news.length > 0) { // a very short outline of what's new
-                LinearLayout list = U.col(c);
+                LinearLayout list = Ui.col(c);
                 for (String n : news) {
                     if (n.trim().isEmpty()) continue;
-                    android.widget.TextView t = U.text(c, "•  " + n.trim(), 16, U.TEXT2, false);
+                    android.widget.TextView t = Ui.text(c, "•  " + n.trim(), 16, Ui.TEXT2, false);
                     list.addView(t, Widgets.top(5));
                 }
                 b.addView(list, Widgets.top(8));
             }
-            LinearLayout btns = U.row(c);
-            btns.addView(U.button(c, "Restart box", true, () -> {
-                Sheets.close();
+            LinearLayout btns = Ui.row(c);
+            btns.addView(Ui.button(c, "Restart box", true, () -> {
+                Panels.close();
                 restartBox();
             }));
-            btns.addView(U.gap(c, 10, 1));
-            btns.addView(U.button(c, "Run set-up", false, () -> {
-                Sheets.close();
+            btns.addView(Ui.gap(c, 10, 1));
+            btns.addView(Ui.button(c, "Run set-up", false, () -> {
+                Panels.close();
                 SettingsPanels.setupChecklist();
             }));
-            btns.addView(U.gap(c, 10, 1));
-            btns.addView(U.button(c, "Not now", false, Sheets::close));
+            btns.addView(Ui.gap(c, 10, 1));
+            btns.addView(Ui.button(c, "Not now", false, Panels::close));
             b.addView(btns, Widgets.top(18));
-            b.addView(U.text(c, "Closes by itself in 15 s · set-up ticks stay ticked", 13, U.SUB, false), Widgets.top(8));
+            b.addView(Ui.text(c, "Closes by itself in 15 s · set-up ticks stay ticked", 13, Ui.SUB, false), Widgets.top(8));
             // closes by itself after 15 s, if it's still the page showing
             b.postDelayed(() -> {
-                if (b.isAttachedToWindow()) Sheets.close();
+                if (b.isAttachedToWindow()) Panels.close();
             }, 15000);
-            return Sheets.panel("Updated", b, 560, 400);
+            return Panels.panel("Updated", b, 560, 400);
         });
     }
 
@@ -537,8 +537,8 @@ public class MainActivity extends Activity {
     }
 
     private void firstRunChecklist() {
-        if (Store.flag("setup_shown", false) || isFinishing()) return;
-        Store.put("setup_shown", true);
+        if (Prefs.flag("setup_shown", false) || isFinishing()) return;
+        Prefs.put("setup_shown", true);
         if (!MediaListener.hasAccess(this) || !SettingsPanels.isDefaultHome(this)) SettingsPanels.setupChecklist();
     }
 
@@ -550,18 +550,18 @@ public class MainActivity extends Activity {
             return;
         }
         if (req == 54) { // microphone for the Car keyboard
-            Sheets.refresh();
+            Panels.refresh();
             return;
         }
-        if (req == Keyboard.REQ_MIC) {
-            if (r.length > 0 && r[0] == PackageManager.PERMISSION_GRANTED) Keyboard.micGranted();
+        if (req == InAppKeyboard.REQ_MIC) {
+            if (r.length > 0 && r[0] == PackageManager.PERMISSION_GRANTED) InAppKeyboard.micGranted();
             return;
         }
-        Loc.stop();
-        Loc.start();
+        Gps.stop();
+        Gps.start();
         Status.refreshAndNotify();
         tiles.refresh();
-        if (req == 1) U.ui.postDelayed(this::firstRunChecklist, 600);
+        if (req == 1) Ui.ui.postDelayed(this::firstRunChecklist, 600);
     }
 
     // ------------------------------------------------------------------ lifecycle
@@ -576,7 +576,7 @@ public class MainActivity extends Activity {
         resumed = true;
         immersive();
         applyNight();
-        Loc.start();
+        Gps.start();
         Status.start();
         if (CallState.state != CallState.NONE) CallCard.show(); // back home during a call
         NavCard.update();
@@ -588,13 +588,13 @@ public class MainActivity extends Activity {
         rail.paused(false);
         dock.render();
         // back from Android's keyboard settings: show the updated steps
-        if (Sheets.open() && Sheets.top() != null && (Sheets.top() == SettingsPanels.keyboardPage || Sheets.top() == SettingsPanels.setupPage || Sheets.top() == SettingsPanels.floatPage || Sheets.top() == Optimiser.page)) {
-            Sheets.refresh();
+        if (Panels.open() && Panels.top() != null && (Panels.top() == SettingsPanels.keyboardPage || Panels.top() == SettingsPanels.setupPage || Panels.top() == SettingsPanels.floatPage || Panels.top() == Optimiser.page)) {
+            Panels.refresh();
         }
         if (pendingAutostart) {
             // back from hotspot settings: now open the auto-start apps
             pendingAutostart = false;
-            U.ui.postDelayed(() -> Actions.runAutostart(this), 1200);
+            Ui.ui.postDelayed(() -> Actions.runAutostart(this), 1200);
         }
     }
 
@@ -616,7 +616,7 @@ public class MainActivity extends Activity {
     // ---- idle: panels and pop-ups in the tile area minimise 15 s after the last touch anywhere.
     // Calls and turn-by-turn stay; full-screen pages (settings, widgets, All apps) stay.
     private final Runnable idle = () -> {
-        if (WhatsWeb.isOpen()) { /* WhatsApp stays open: it doesn't time out */ } else if (Sheets.minimisable() || (AppPanels.galleryRef != null && Sheets.top() == AppPanels.galleryRef)) Sheets.close();
+        if (WhatsWeb.isOpen()) { /* WhatsApp stays open: it doesn't time out */ } else if (Panels.minimisable() || (AppPanels.galleryRef != null && Panels.top() == AppPanels.galleryRef)) Panels.close();
         PhoneScreen.hide();
         SalahCard.hide();
         SpeedCard.hide();
@@ -627,8 +627,8 @@ public class MainActivity extends Activity {
     };
 
     void resetIdle() {
-        U.ui.removeCallbacks(idle);
-        U.ui.postDelayed(idle, Store.num("card_secs", 15) > 0 ? Math.max(15, Store.num("card_secs", 15)) * 1000L : 15000);
+        Ui.ui.removeCallbacks(idle);
+        Ui.ui.postDelayed(idle, Prefs.num("card_secs", 15) > 0 ? Math.max(15, Prefs.num("card_secs", 15)) * 1000L : 15000);
     }
 
     @Override
@@ -637,7 +637,7 @@ public class MainActivity extends Activity {
         if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && tiles != null) noteTile(ev);
         if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && rail != null) noteRail(ev);
         // editing tiles: a touch outside the grid (and its edit bar) finishes editing, and does nothing else
-        if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && tiles != null && tiles.editing() && !Sheets.open()
+        if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && tiles != null && tiles.editing() && !Panels.open()
                 && !inside(tileArea, ev) && !inside(tickerSlot, ev)) {
             tiles.setEditing(false);
             swallow = true;
@@ -719,7 +719,7 @@ public class MainActivity extends Activity {
             v.setScaleX(sx);
             v.setScaleY(sy);
             v.setAlpha(0.4f);
-            v.animate().scaleX(1).scaleY(1).alpha(1f).setDuration(U.ms(300))
+            v.animate().scaleX(1).scaleY(1).alpha(1f).setDuration(Ui.ms(300))
                     .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
         });
     }
@@ -727,14 +727,14 @@ public class MainActivity extends Activity {
     /** Where an alert's tile is on screen (or the first spot, over the map). */
     android.graphics.Rect alertRect(String kind) {
         android.graphics.Rect r = new android.graphics.Rect();
-        org.json.JSONArray s = Tiles.specs();
+        org.json.JSONArray s = TileDrawer.specs();
         for (int i = 0; i < s.length() && i < tiles.view.getChildCount(); i++) {
             org.json.JSONObject o = s.optJSONObject(i);
-            if (o != null && kind.equals(Alerts.kindOf(o.optString("id"))) && tiles.view.getChildAt(i).getGlobalVisibleRect(r) && r.width() > U.u(40)) return r;
+            if (o != null && kind.equals(Alerts.kindOf(o.optString("id"))) && tiles.view.getChildAt(i).getGlobalVisibleRect(r) && r.width() > Ui.u(40)) return r;
         }
         int[] ta = new int[2];
         tileArea.getLocationOnScreen(ta);
-        int cw = (tileArea.getWidth() - U.u(8) * 3) / 4, ch = (tileArea.getHeight() - U.u(8)) / 2;
+        int cw = (tileArea.getWidth() - Ui.u(8) * 3) / 4, ch = (tileArea.getHeight() - Ui.u(8)) / 2;
         return new android.graphics.Rect(ta[0], ta[1], ta[0] + cw, ta[1] + ch);
     }
 
@@ -757,7 +757,7 @@ public class MainActivity extends Activity {
             v.setScaleX(src.width() / (float) v.getWidth());
             v.setScaleY(src.height() / (float) v.getHeight());
             v.setAlpha(0.7f);
-            v.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).alpha(1f).setDuration(U.ms(320))
+            v.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).alpha(1f).setDuration(Ui.ms(320))
                     .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
         });
     }
@@ -777,15 +777,15 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent i) {
         super.onNewIntent(i);
         // Home pressed while already home: close any panel and leave edit mode
-        Keyboard.hide();
+        InAppKeyboard.hide();
         if (handleOpen(i)) return;
         // Android sends Home after you pick Car Launcher as the Home app: go back to the checklist
         if (SettingsPanels.backFromChecklist()) {
-            U.ui.post(SettingsPanels::reopenChecklist);
+            Ui.ui.post(SettingsPanels::reopenChecklist);
             return;
         }
         PhoneScreen.hide();
-        if (Sheets.open()) Sheets.close();
+        if (Panels.open()) Panels.close();
         if (tiles.editing()) tiles.setEditing(false);
         if (drawerOpen || peeking) drawer(false);
         Splash.cancel();
@@ -795,7 +795,7 @@ public class MainActivity extends Activity {
     boolean drawerOpen;
 
     static boolean mapHome() {
-        return Store.flag("map_start_big", true);
+        return Prefs.flag("map_start_big", true);
     }
 
     /** All apps button: the tiles rise out of the news ticker, the map lifts away. */
@@ -809,30 +809,30 @@ public class MainActivity extends Activity {
     private LockView lock;
 
     static boolean drawerLocked() {
-        return Store.flag("drawer_lock", false);
+        return Prefs.flag("drawer_lock", false);
     }
 
     private void buildChip(LinearLayout row) {
-        tilesChip = U.row(this);
+        tilesChip = Ui.row(this);
         tilesChip.setGravity(Gravity.CENTER_VERTICAL);
-        TextView w = U.line(this, "Tiles", 13, U.TEXT2, true);
-        if (!Store.flag("ticker_on", true)) w.setVisibility(View.GONE); // in the dock: just the lock
+        TextView w = Ui.line(this, "Tiles", 13, Ui.TEXT2, true);
+        if (!Prefs.flag("ticker_on", true)) w.setVisibility(View.GONE); // in the dock: just the lock
         tilesChip.addView(w);
         lock = new LockView(this);
         lock.set(drawerLocked(), false);
         lock.setOnClickListener(v -> {
-            Store.put("drawer_lock", !drawerLocked());
+            Prefs.put("drawer_lock", !drawerLocked());
             lock.set(drawerLocked(), true);
             resetIdle();
-            U.ui.removeCallbacks(lockAway); // pressed: it goes 2 s later
-            U.ui.postDelayed(lockAway, 2000);
+            Ui.ui.removeCallbacks(lockAway); // pressed: it goes 2 s later
+            Ui.ui.postDelayed(lockAway, 2000);
         });
-        LinearLayout.LayoutParams ll = U.lpu(30, 30);
-        ll.leftMargin = U.u(8);
+        LinearLayout.LayoutParams ll = Ui.lpu(30, 30);
+        ll.leftMargin = Ui.u(8);
         tilesChip.addView(lock, ll);
         tilesChip.setVisibility(View.GONE);
-        LinearLayout.LayoutParams cl = U.lp(U.WRAP, U.MATCH);
-        cl.leftMargin = U.u(8);
+        LinearLayout.LayoutParams cl = Ui.lp(Ui.WRAP, Ui.MATCH);
+        cl.leftMargin = Ui.u(8);
         row.addView(tilesChip, cl);
     }
 
@@ -840,18 +840,18 @@ public class MainActivity extends Activity {
 
     private void lockButton(boolean show) {
         if (tilesChip == null) return;
-        if (!show) U.ui.removeCallbacks(lockAway);
+        if (!show) Ui.ui.removeCallbacks(lockAway);
         tilesChip.animate().cancel();
         if (show) {
             lock.set(drawerLocked(), false);
             tilesChip.setVisibility(View.VISIBLE);
             tilesChip.setAlpha(0f);
-            tilesChip.setTranslationX(U.u(40));
-            tilesChip.animate().alpha(1f).translationX(0).setDuration(U.ms(300)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+            tilesChip.setTranslationX(Ui.u(40));
+            tilesChip.animate().alpha(1f).translationX(0).setDuration(Ui.ms(300)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
             // ticker hidden: the lock sits in the dock for 5 s, then goes so the dock has its room back
-            U.ui.removeCallbacks(lockAway);
-            if (!Store.flag("ticker_on", true)) U.ui.postDelayed(lockAway, 5000);
-        } else tilesChip.animate().alpha(0f).translationX(U.u(40)).setDuration(U.ms(220)).withEndAction(() -> tilesChip.setVisibility(View.GONE)).start();
+            Ui.ui.removeCallbacks(lockAway);
+            if (!Prefs.flag("ticker_on", true)) Ui.ui.postDelayed(lockAway, 5000);
+        } else tilesChip.animate().alpha(0f).translationX(Ui.u(40)).setDuration(Ui.ms(220)).withEndAction(() -> tilesChip.setVisibility(View.GONE)).start();
     }
 
     // ---- an alert's tile shown over the map in the first spot, with a highlight border
@@ -865,13 +865,13 @@ public class MainActivity extends Activity {
                 alertW.tick();
             } catch (Exception ignored) {
             }
-            U.ui.postDelayed(this, 1000);
+            Ui.ui.postDelayed(this, 1000);
         }
     };
 
     void alertTile(int index) {
         hideAlertTile();
-        org.json.JSONObject spec = Tiles.specs().optJSONObject(index);
+        org.json.JSONObject spec = TileDrawer.specs().optJSONObject(index);
         if (spec == null || !"w".equals(spec.optString("t"))) return;
         try {
             alertW = Widgets.make(this, index, spec);
@@ -879,14 +879,14 @@ public class MainActivity extends Activity {
             return;
         }
         if (alertW == null || alertW.v == null) return;
-        float gap = U.u(8), cw = (tileArea.getWidth() - gap * (Tiles.COLS - 1)) / Tiles.COLS, ch = (tileArea.getHeight() - gap) / Tiles.ROWS;
+        float gap = Ui.u(8), cw = (tileArea.getWidth() - gap * (TileDrawer.COLS - 1)) / TileDrawer.COLS, ch = (tileArea.getHeight() - gap) / TileDrawer.ROWS;
         alertTile = new FrameLayout(this);
-        alertTile.addView(alertW.v, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        MapPanel.clip(alertTile, 16);
+        alertTile.addView(alertW.v, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        Maps.clip(alertTile, 16);
         View ring = new View(this);
-        ring.setBackground(U.outline(0, U.ACCENT, 3, 16));
-        alertTile.addView(ring, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        alertTile.setElevation(U.uf(8));
+        ring.setBackground(Ui.outline(0, Ui.ACCENT, 3, 16));
+        alertTile.addView(ring, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        alertTile.setElevation(Ui.uf(8));
         alertTile.setOnClickListener(v -> { // tap: open the tiles
             hideAlertTile();
             drawer(true);
@@ -896,17 +896,17 @@ public class MainActivity extends Activity {
         alertTile.setScaleX(0.85f);
         alertTile.setScaleY(0.85f);
         alertTile.setAlpha(0f);
-        alertTile.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(U.ms(260)).setInterpolator(new android.view.animation.OvershootInterpolator(1.6f)).start();
-        U.ui.post(alertTick);
+        alertTile.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(Ui.ms(260)).setInterpolator(new android.view.animation.OvershootInterpolator(1.6f)).start();
+        Ui.ui.post(alertTick);
     }
 
     void hideAlertTile() {
-        U.ui.removeCallbacks(alertTick);
+        Ui.ui.removeCallbacks(alertTick);
         alertW = null;
         if (alertTile != null) {
             final View t = alertTile;
             alertTile = null;
-            t.animate().alpha(0f).scaleX(0.9f).scaleY(0.9f).setDuration(U.ms(200)).withEndAction(() -> {
+            t.animate().alpha(0f).scaleX(0.9f).scaleY(0.9f).setDuration(Ui.ms(200)).withEndAction(() -> {
                 if (t.getParent() != null) ((android.view.ViewGroup) t.getParent()).removeView(t);
             }).start();
         }
@@ -920,14 +920,14 @@ public class MainActivity extends Activity {
         if (big == null || drawerOpen) return;
         peeking = true;
         // the top row of tiles (the alert tile is first) rises from the ticker; the map lifts by a row
-        float h = tileArea.getHeight() + U.u(12), row = tileArea.getHeight() / 2f + U.u(4);
+        float h = tileArea.getHeight() + Ui.u(12), row = tileArea.getHeight() / 2f + Ui.u(4);
         android.view.animation.Interpolator ease = new android.view.animation.DecelerateInterpolator(1.8f);
         tiles.view.setTranslationX(0);
         big.setTranslationX(0);
         tiles.view.setVisibility(View.VISIBLE);
         if (tiles.view.getTranslationY() == 0) tiles.view.setTranslationY(h);
-        tiles.view.animate().translationY(h - row).setDuration(U.ms(340)).setInterpolator(ease).start();
-        big.animate().translationY(-row).setDuration(U.ms(340)).setInterpolator(ease).start();
+        tiles.view.animate().translationY(h - row).setDuration(Ui.ms(340)).setInterpolator(ease).start();
+        big.animate().translationY(-row).setDuration(Ui.ms(340)).setInterpolator(ease).start();
     }
 
     // ---- the big map steps aside (into the small map panel) while lyrics, a dialler or a panel use the tile area
@@ -954,9 +954,9 @@ public class MainActivity extends Activity {
             });
         } else {
             if (!mapAside) return;
-            U.ui.post(() -> { // a moment later, so one thing replacing another doesn't bounce the map
+            Ui.ui.post(() -> { // a moment later, so one thing replacing another doesn't bounce the map
                 if (!mapAside || drawerOpen) return;
-                if (Sheets.inTiles() || LyricsCard.isShown() || PhoneScreen.isShown()) return; // something still there
+                if (Panels.inTiles() || LyricsView.isShown() || PhoneScreen.isShown()) return; // something still there
                 mapAside = false;
                 if (quiet) map.expand(true); // already open, no grow animation
                 else growMap();
@@ -983,14 +983,14 @@ public class MainActivity extends Activity {
         lockButton(open);
         // the tiles rise up out of the news ticker, while the big map shrinks into the small map
         // panel on the left (and grows back out of it when the tiles go down)
-        float h = tileArea.getHeight() + U.u(12);
+        float h = tileArea.getHeight() + Ui.u(12);
         android.view.animation.Interpolator ease = new android.view.animation.DecelerateInterpolator(1.8f);
         tiles.view.setTranslationX(0);
         if (open) {
-            if (Sheets.open()) Sheets.close();
+            if (Panels.open()) Panels.close();
             tiles.view.setVisibility(View.VISIBLE);
             if (!fromPeek) tiles.view.setTranslationY(h); // from a peek it carries on from where it is
-            tiles.view.animate().translationY(0).setDuration(U.ms(340)).setInterpolator(ease).start();
+            tiles.view.animate().translationY(0).setDuration(Ui.ms(340)).setInterpolator(ease).start();
             View big = map != null ? map.bigView() : null;
             if (big == null) return;
             morph(big, true, () -> {
@@ -999,7 +999,7 @@ public class MainActivity extends Activity {
         } else {
             if (tiles.editing()) tiles.setEditing(false);
             // once down, hide them so no bits of tiles show between the ticker and the dock
-            tiles.view.animate().translationY(h).setDuration(U.ms(300)).setInterpolator(ease)
+            tiles.view.animate().translationY(h).setDuration(Ui.ms(300)).setInterpolator(ease)
                     .withEndAction(() -> { if (!drawerOpen && !peeking) tiles.view.setVisibility(View.INVISIBLE); }).start();
             if (map == null) return;
             if (!map.expanded()) map.expand(true);
@@ -1052,7 +1052,7 @@ public class MainActivity extends Activity {
             big.setClipBounds(clip);
         };
         android.animation.ValueAnimator va = android.animation.ValueAnimator.ofFloat(0f, 1f);
-        va.setDuration(U.ms(360));
+        va.setDuration(Ui.ms(360));
         va.setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f));
         va.addUpdateListener(step);
         va.addListener(new android.animation.AnimatorListenerAdapter() {
@@ -1120,11 +1120,11 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (Keyboard.hide()) return;
+        if (InAppKeyboard.hide()) return;
         if (PhoneScreen.hide()) return;
         if (Splash.dismiss()) return;
-        if (Sheets.open()) {
-            Sheets.back();
+        if (Panels.open()) {
+            Panels.back();
             return;
         }
         if (tiles.editing()) tiles.setEditing(false);

@@ -27,7 +27,7 @@ final class Cal {
             {"indian", "Indian (Saka)"}, {"persian", "Persian"}, {"ethiopic", "Ethiopian"}, {"buddhist", "Buddhist"}, {"none", "None"}};
 
     static String alt() {
-        String a = Store.str(Store.CAL_ALT, "islamic-umalqura");
+        String a = Prefs.str(Prefs.CAL_ALT, "islamic-umalqura");
         return Faith.calendarAllowed(a) ? a : "none"; // Hijri / Hebrew only with that faith add-on
     }
 
@@ -59,14 +59,14 @@ final class Cal {
     /** An ICU calendar of the given type set to a day (ms), applying the Hijri adjustment. */
     static android.icu.util.Calendar at(String cal, long ms) {
         android.icu.util.Calendar c = android.icu.util.Calendar.getInstance(locale(cal));
-        long adj = cal.startsWith("islamic") ? Store.num(Store.CAL_ADJ, 0) * 86400000L : 0;
+        long adj = cal.startsWith("islamic") ? Prefs.num(Prefs.CAL_ADJ, 0) * 86400000L : 0;
         c.setTimeInMillis(ms + adj);
         return c;
     }
 
     static String format(String cal, long ms, String pattern) {
         SimpleDateFormat f = new SimpleDateFormat(pattern, locale(cal));
-        long adj = cal.startsWith("islamic") ? Store.num(Store.CAL_ADJ, 0) * 86400000L : 0;
+        long adj = cal.startsWith("islamic") ? Prefs.num(Prefs.CAL_ADJ, 0) * 86400000L : 0;
         return f.format(new Date(ms + adj));
     }
 
@@ -97,8 +97,8 @@ final class Cal {
             {0, 1, "Lunar New Year"}, {0, 15, "Lantern Festival"}, {4, 5, "Dragon Boat Festival"}, {7, 15, "Mid-Autumn Festival"}};
 
     static List<String> specials() {
-        List<String> l = Store.list(Store.CAL_SPECIAL);
-        if (!Store.has(Store.CAL_SPECIAL)) {
+        List<String> l = Prefs.list(Prefs.CAL_SPECIAL);
+        if (!Prefs.has(Prefs.CAL_SPECIAL)) {
             l = new ArrayList<>();
             l.add("islamic");
         }
@@ -151,7 +151,7 @@ final class Cal {
         Uri.Builder b = CalendarContract.Instances.CONTENT_URI.buildUpon();
         ContentUris.appendId(b, now - 3600000L);
         ContentUris.appendId(b, now + days * 86400000L);
-        List<String> ids = Store.list(Store.CAL_IDS);
+        List<String> ids = Prefs.list(Prefs.CAL_IDS);
         try (Cursor cur = c.getContentResolver().query(b.build(), new String[]{CalendarContract.Instances.BEGIN, CalendarContract.Instances.TITLE,
                         CalendarContract.Instances.ALL_DAY, CalendarContract.Instances.CALENDAR_ID, CalendarContract.Instances.END},
                 CalendarContract.Instances.VISIBLE + "=1", null, CalendarContract.Instances.BEGIN + " ASC")) {

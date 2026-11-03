@@ -43,7 +43,7 @@ final class QuickActions {
     }
 
     static List<String> chosen() {
-        List<String> l = Store.has("fb_menu") ? Store.list("fb_menu") : new ArrayList<>(java.util.Arrays.asList(DEFAULT));
+        List<String> l = Prefs.has("fb_menu") ? Prefs.list("fb_menu") : new ArrayList<>(java.util.Arrays.asList(DEFAULT));
         List<String> ok = new ArrayList<>();
         for (String s : l) if (find(s) != null && !ok.contains(s)) ok.add(s);
         if (ok.size() < MIN) for (String d : DEFAULT) if (ok.size() < MIN && !ok.contains(d)) ok.add(d);
@@ -67,7 +67,7 @@ final class QuickActions {
             case "lastapp":
                 // double "recents" switches to the previous app on standard Android
                 s.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
-                U.ui.postDelayed(() -> s.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS), 250);
+                Ui.ui.postDelayed(() -> s.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS), 250);
                 break;
             case "notifications":
                 s.performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS);

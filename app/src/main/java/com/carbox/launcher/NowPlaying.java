@@ -65,11 +65,11 @@ final class NowPlaying {
 
     private View videoBtn(int icon, String desc, Runnable r) {
         FrameLayout f = new FrameLayout(c);
-        f.setBackground(U.outline(0xBF0B0E13, U.ACCENT_SOFT, 1.5f, 15));
-        f.addView(U.icon(c, icon, U.ACCENT_SOFT), U.flpu(16, 16, Gravity.CENTER));
+        f.setBackground(Ui.outline(0xBF0B0E13, Ui.ACCENT_SOFT, 1.5f, 15));
+        f.addView(Ui.icon(c, icon, Ui.ACCENT_SOFT), Ui.flpu(16, 16, Gravity.CENTER));
         f.setContentDescription(desc);
         f.setOnClickListener(v -> r.run());
-        U.press(f);
+        Ui.press(f);
         return f;
     }
 
@@ -119,7 +119,7 @@ final class NowPlaying {
         public void run() {
             if (durationMs <= 0 || MediaListener.controller == null) return;
             if (!dragging) showProgress(MediaListener.position() / (float) durationMs);
-            U.ui.postDelayed(this, 500);
+            Ui.ui.postDelayed(this, 500);
         }
     };
 
@@ -127,27 +127,27 @@ final class NowPlaying {
         this.c = c;
         I = this;
         view = new SwipeBox(c, this::swapArt); // swipe: album art ⇄ the music app's icon
-        view.setBackground(Glass.card(U.CARD, 16));
-        MapPanel.clip(view, 16);
+        view.setBackground(Themes.card(Ui.CARD, 16));
+        Maps.clip(view, 16);
 
         art = new ImageView(c);
         art.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        view.addView(art, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        view.addView(art, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         View shade = new View(c);
         shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x33000000, 0x22000000, 0xE6000000}));
-        view.addView(shade, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        view.addView(shade, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
 
         // lyrics, centred in the upper part of the art
-        lyricBox = U.col(c);
+        lyricBox = Ui.col(c);
         lyricBox.setGravity(Gravity.CENTER);
-        U.pad(lyricBox, 12, 10, 12, 0);
+        Ui.pad(lyricBox, 12, 10, 12, 0);
         for (int i = 0; i < 3; i++) {
-            TextView t = U.text(c, "", i == 1 ? 14 : 12, i == 1 ? U.TEXT : 0x99FFFFFF, i == 1);
+            TextView t = Ui.text(c, "", i == 1 ? 14 : 12, i == 1 ? Ui.TEXT : 0x99FFFFFF, i == 1);
             t.setGravity(Gravity.CENTER);
             t.setMaxLines(2);
-            t.setShadowLayer(U.uf(4), 0, 0, 0xCC000000);
-            LinearLayout.LayoutParams lp = U.lp(U.MATCH, U.WRAP);
-            lp.topMargin = i == 0 ? 0 : U.u(5);
+            t.setShadowLayer(Ui.uf(4), 0, 0, 0xCC000000);
+            LinearLayout.LayoutParams lp = Ui.lp(Ui.MATCH, Ui.WRAP);
+            lp.topMargin = i == 0 ? 0 : Ui.u(5);
             lyricBox.addView(t, lp);
             lyricLines[i] = t;
         }
@@ -156,30 +156,30 @@ final class NowPlaying {
             lyricsHidden = true;
             lyricBox.setVisibility(View.GONE);
         });
-        FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams(U.MATCH, U.u(110), Gravity.TOP);
+        FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams(Ui.MATCH, Ui.u(110), Gravity.TOP);
         view.addView(lyricBox, ll);
 
         // which app is playing: its icon on the album art's top-left corner
         appBadge = new ImageView(c);
         appBadge.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        appBadge.setElevation(U.uf(3));
+        appBadge.setElevation(Ui.uf(3));
         appBadge.setVisibility(View.GONE);
-        FrameLayout.LayoutParams abl = U.flpu(34, 34, Gravity.TOP | Gravity.START);
-        abl.setMargins(U.u(10), U.u(10), 0, 0);
+        FrameLayout.LayoutParams abl = Ui.flpu(34, 34, Gravity.TOP | Gravity.START);
+        abl.setMargins(Ui.u(10), Ui.u(10), 0, 0);
         view.addView(appBadge, abl);
         // ♪ Lyrics button: only when this song has lyrics; opens them in the tile area
-        lyricsBtn = U.icon(c, R.drawable.ic_lyrics, U.ACCENT_SOFT);
-        lyricsBtn.setBackground(U.outline(0xBF0B0E13, U.ACCENT_SOFT, 1.5f, 15));
-        U.pad(lyricsBtn, 9, 9, 9, 9);
+        lyricsBtn = Ui.icon(c, R.drawable.ic_lyrics, Ui.ACCENT_SOFT);
+        lyricsBtn.setBackground(Ui.outline(0xBF0B0E13, Ui.ACCENT_SOFT, 1.5f, 15));
+        Ui.pad(lyricsBtn, 9, 9, 9, 9);
         lyricsBtn.setContentDescription("Lyrics");
         lyricsBtn.setVisibility(View.GONE);
-        lyricsBtn.setOnClickListener(v -> LyricsCard.toggle());
-        U.press(lyricsBtn);
-        FrameLayout.LayoutParams bl = U.flpu(40, 40, Gravity.TOP | Gravity.END);
-        bl.setMargins(0, U.u(10), U.u(10), 0); // same corner spot and size as the map's traffic button
+        lyricsBtn.setOnClickListener(v -> LyricsView.toggle());
+        Ui.press(lyricsBtn);
+        FrameLayout.LayoutParams bl = Ui.flpu(40, 40, Gravity.TOP | Gravity.END);
+        bl.setMargins(0, Ui.u(10), Ui.u(10), 0); // same corner spot and size as the map's traffic button
         view.addView(lyricsBtn, bl);
         // video apps: watch it in the tile area, or full screen
-        videoBtns = U.row(c);
+        videoBtns = Ui.row(c);
         // watch in the tiles: the video app comes up and a real Home press sends it into its
         // picture-in-picture window, which keeps clear of the map, dock and Rail Bar (so over the tiles)
         View pipBtn = videoBtn(R.drawable.ic_apps, "Watch video over the tiles", () -> {
@@ -187,64 +187,64 @@ final class NowPlaying {
             if (m == null) return;
             String pkg = m.getPackageName();
             Apps.launchPkg(c, pkg);
-            U.ui.postDelayed(NowPlaying::pressHome, 1200);
+            Ui.ui.postDelayed(NowPlaying::pressHome, 1200);
         });
         pipBtn.setOnLongClickListener(v -> { // hold: that app's App info (Picture-in-picture is switched on there)
             MediaController m = MediaListener.controller;
             if (m != null) Apps.appInfo(c, m.getPackageName());
             return true;
         });
-        videoBtns.addView(pipBtn, U.lpu(30, 30));
-        LinearLayout.LayoutParams vg = U.lpu(30, 30);
-        vg.leftMargin = U.u(6);
+        videoBtns.addView(pipBtn, Ui.lpu(30, 30));
+        LinearLayout.LayoutParams vg = Ui.lpu(30, 30);
+        vg.leftMargin = Ui.u(6);
         videoBtns.addView(videoBtn(R.drawable.ic_maximize, "Video full screen", () -> {
             MediaController m = MediaListener.controller;
             if (m != null) Apps.launchPkg(c, m.getPackageName());
         }), vg);
         videoBtns.setVisibility(View.GONE);
-        FrameLayout.LayoutParams vl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.END);
-        vl.setMargins(0, U.u(15), U.u(58), 0); // left of the Lyrics button, clear of the app icon
+        FrameLayout.LayoutParams vl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.TOP | Gravity.END);
+        vl.setMargins(0, Ui.u(15), Ui.u(58), 0); // left of the Lyrics button, clear of the app icon
         view.addView(videoBtns, vl);
         // live equaliser where the album art would be, when the art is hidden (app icon view)
         eq = new EqView(c, 18, 0x993D8BFD);
         eq.setVisibility(View.GONE);
-        FrameLayout.LayoutParams el = new FrameLayout.LayoutParams(U.MATCH, U.u(70), Gravity.TOP);
-        el.setMargins(U.u(14), U.u(54), U.u(14), 0); // centred across the tile
+        FrameLayout.LayoutParams el = new FrameLayout.LayoutParams(Ui.MATCH, Ui.u(70), Gravity.TOP);
+        el.setMargins(Ui.u(14), Ui.u(54), Ui.u(14), 0); // centred across the tile
         view.addView(eq, view.indexOfChild(lyricsBtn), el);
         // the animation itself is chosen in Music settings (hold Now playing)
 
 
-        content = U.col(c);
-        U.pad(content, 12, 0, 12, 10);
+        content = Ui.col(c);
+        Ui.pad(content, 12, 0, 12, 10);
         content.setGravity(Gravity.BOTTOM);
-        title = U.line(c, "", 15, U.TEXT, true);
+        title = Ui.line(c, "", 15, Ui.TEXT, true);
         content.addView(title);
-        artist = U.line(c, "", 12, 0xCCFFFFFF, false);
-        LinearLayout.LayoutParams al = U.lp(U.MATCH, U.WRAP);
-        al.topMargin = U.u(2);
+        artist = Ui.line(c, "", 12, 0xCCFFFFFF, false);
+        LinearLayout.LayoutParams al = Ui.lp(Ui.MATCH, Ui.WRAP);
+        al.topMargin = Ui.u(2);
         content.addView(artist, al);
         // how far into the song: a thin bar with a dot under the artist; drag the dot (or tap the bar) to jump
         FrameLayout bar = new FrameLayout(c);
         View track = new View(c);
-        track.setBackground(U.round(0x33FFFFFF, 2));
-        bar.addView(track, new FrameLayout.LayoutParams(U.MATCH, U.u(3), Gravity.CENTER_VERTICAL));
+        track.setBackground(Ui.round(0x33FFFFFF, 2));
+        bar.addView(track, new FrameLayout.LayoutParams(Ui.MATCH, Ui.u(3), Gravity.CENTER_VERTICAL));
         progress = new View(c);
-        progress.setBackground(U.round(U.TEXT, 2));
+        progress.setBackground(Ui.round(Ui.TEXT, 2));
         progress.setPivotX(0);
         progress.setScaleX(0);
-        bar.addView(progress, new FrameLayout.LayoutParams(U.MATCH, U.u(3), Gravity.CENTER_VERTICAL));
+        bar.addView(progress, new FrameLayout.LayoutParams(Ui.MATCH, Ui.u(3), Gravity.CENTER_VERTICAL));
         dot = new View(c);
-        dot.setBackground(U.oval(U.TEXT));
-        dot.setElevation(U.uf(2));
-        bar.addView(dot, U.flpu(12, 12, Gravity.CENTER_VERTICAL | Gravity.START));
+        dot.setBackground(Ui.oval(Ui.TEXT));
+        dot.setElevation(Ui.uf(2));
+        bar.addView(dot, Ui.flpu(12, 12, Gravity.CENTER_VERTICAL | Gravity.START));
         bar.setOnTouchListener((v, e) -> {
             if (durationMs <= 0) return false;
-            float f = Math.max(0f, Math.min(1f, (e.getX() - U.u(6)) / Math.max(1f, v.getWidth() - U.u(12))));
+            float f = Math.max(0f, Math.min(1f, (e.getX() - Ui.u(6)) / Math.max(1f, v.getWidth() - Ui.u(12))));
             switch (e.getActionMasked()) {
                 case android.view.MotionEvent.ACTION_DOWN:
                     v.getParent().requestDisallowInterceptTouchEvent(true); // a drag here isn't a swipe of the tile
                     dragging = true;
-                    dot.animate().scaleX(1.4f).scaleY(1.4f).setDuration(U.ms(120)).start();
+                    dot.animate().scaleX(1.4f).scaleY(1.4f).setDuration(Ui.ms(120)).start();
                     showProgress(f);
                     return true;
                 case android.view.MotionEvent.ACTION_MOVE:
@@ -259,45 +259,45 @@ final class NowPlaying {
                     // fall through
                 case android.view.MotionEvent.ACTION_CANCEL:
                     dragging = false;
-                    dot.animate().scaleX(1f).scaleY(1f).setDuration(U.ms(120)).start();
+                    dot.animate().scaleX(1f).scaleY(1f).setDuration(Ui.ms(120)).start();
                     return true;
             }
             return false;
         });
-        LinearLayout.LayoutParams brl = U.lp(U.MATCH, U.u(18)); // taller than it looks, easy to grab
-        brl.topMargin = U.u(2);
+        LinearLayout.LayoutParams brl = Ui.lp(Ui.MATCH, Ui.u(18)); // taller than it looks, easy to grab
+        brl.topMargin = Ui.u(2);
         content.addView(bar, brl);
         progressBar = bar;
-        LinearLayout ctl = U.row(c);
+        LinearLayout ctl = Ui.row(c);
         ctl.setGravity(Gravity.CENTER);
-        View prev = U.icon(c, R.drawable.ic_prev, U.TEXT);
+        View prev = Ui.icon(c, R.drawable.ic_prev, Ui.TEXT);
         prev.setOnClickListener(v -> transport(0));
-        ctl.addView(prev, U.lpu(36, 36));
+        ctl.addView(prev, Ui.lpu(36, 36));
         FrameLayout play = new FrameLayout(c);
-        play.setBackground(U.oval(U.TEXT));
-        playBtn = U.icon(c, R.drawable.ic_play, 0xFF000000);
-        play.addView(playBtn, U.flpu(26, 26, Gravity.CENTER));
+        play.setBackground(Ui.oval(Ui.TEXT));
+        playBtn = Ui.icon(c, R.drawable.ic_play, 0xFF000000);
+        play.addView(playBtn, Ui.flpu(26, 26, Gravity.CENTER));
         play.setOnClickListener(v -> transport(1));
-        U.press(play);
-        LinearLayout.LayoutParams pl = U.lpu(50, 50);
-        pl.setMargins(U.u(20), 0, U.u(20), 0);
+        Ui.press(play);
+        LinearLayout.LayoutParams pl = Ui.lpu(50, 50);
+        pl.setMargins(Ui.u(20), 0, Ui.u(20), 0);
         ctl.addView(play, pl);
-        View next = U.icon(c, R.drawable.ic_next, U.TEXT);
+        View next = Ui.icon(c, R.drawable.ic_next, Ui.TEXT);
         next.setOnClickListener(v -> transport(2));
-        ctl.addView(next, U.lpu(36, 36));
-        LinearLayout.LayoutParams cl = U.lp(U.MATCH, U.WRAP);
-        cl.topMargin = U.u(2);
+        ctl.addView(next, Ui.lpu(36, 36));
+        LinearLayout.LayoutParams cl = Ui.lp(Ui.MATCH, Ui.WRAP);
+        cl.topMargin = Ui.u(2);
         content.addView(ctl, cl);
-        view.addView(content, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        view.addView(content, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
 
-        empty = U.text(c, "", 13, U.SUB, false);
+        empty = Ui.text(c, "", 13, Ui.SUB, false);
         empty.setGravity(Gravity.CENTER);
-        U.pad(empty, 14);
-        view.addView(empty, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        Ui.pad(empty, 14);
+        view.addView(empty, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         // nothing playing: a folder of music apps instead of the empty message
         folder = new MusicFolder(c);
         folder.view.setVisibility(View.GONE);
-        view.addView(folder.view, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        view.addView(folder.view, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         Apps.listen(() -> { if (folder.view.getVisibility() == View.VISIBLE) folder.render(); });
 
         view.setOnClickListener(v -> {
@@ -313,7 +313,7 @@ final class NowPlaying {
     }
 
     static boolean showIcon() {
-        return "icon".equals(Store.str("np_show", "art"));
+        return "icon".equals(Prefs.str("np_show", "art"));
     }
 
     // a song loaded: swipe 1 album art ⇄ animation, swipe 2 the music folder, swipe 3 its second page
@@ -350,10 +350,10 @@ final class NowPlaying {
             return;
         }
         swappedOnce = true;
-        Store.put("np_show", showIcon() ? "art" : "icon");
+        Prefs.put("np_show", showIcon() ? "art" : "icon");
         art.setAlpha(0f);
         update();
-        art.animate().alpha(1f).setDuration(U.ms(220)).start();
+        art.animate().alpha(1f).setDuration(Ui.ms(220)).start();
     }
 
     private void openMusicApp() {
@@ -384,19 +384,19 @@ final class NowPlaying {
         running = true;
         MediaListener.attach(c);
         update();
-        U.ui.post(tick);
+        Ui.ui.post(tick);
     }
 
     void stop() {
         running = false;
-        U.ui.removeCallbacks(tick);
+        Ui.ui.removeCallbacks(tick);
     }
 
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
             showLyric();
-            if (running) U.ui.postDelayed(this, 300);
+            if (running) Ui.ui.postDelayed(this, 300);
         }
     };
 
@@ -436,7 +436,7 @@ final class NowPlaying {
         if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_ART);
         if (bm == null) bm = md.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
         android.graphics.drawable.Drawable appIcon = Apps.iconOf(m.getPackageName());
-        boolean iconView = showIcon() && !(LyricsCard.isShown() && bm != null); // lyrics open: the album art
+        boolean iconView = showIcon() && !(LyricsView.isShown() && bm != null); // lyrics open: the album art
         if (eq != null) eq.setVisibility(iconView || bm == null ? View.VISIBLE : View.GONE);
         appBadge.setImageDrawable(appIcon);
         appBadge.setVisibility(!(iconView && appIcon != null) && appIcon != null ? View.VISIBLE : View.GONE); // album art: app icon on its corner
@@ -444,7 +444,7 @@ final class NowPlaying {
             art.setImageDrawable(appIcon);
             art.setScaleType(ImageView.ScaleType.FIT_CENTER);
             // small, top left, with the live equaliser beside and below it
-            art.setPadding(U.u(12), U.u(10), Math.max(0, view.getWidth() - U.u(52)), Math.max(0, view.getHeight() - U.u(50)));
+            art.setPadding(Ui.u(12), Ui.u(10), Math.max(0, view.getWidth() - Ui.u(52)), Math.max(0, view.getHeight() - Ui.u(50)));
         } else {
             art.setPadding(0, 0, 0, 0);
             if (bm != null) {
@@ -457,8 +457,8 @@ final class NowPlaying {
         }
         durationMs = md.getLong(MediaMetadata.METADATA_KEY_DURATION);
         progressBar.setVisibility(durationMs > 0 ? View.VISIBLE : View.INVISIBLE);
-        U.ui.removeCallbacks(progressTick);
-        if (durationMs > 0) U.ui.post(progressTick);
+        Ui.ui.removeCallbacks(progressTick);
+        if (durationMs > 0) Ui.ui.post(progressTick);
         String t = md.getString(MediaMetadata.METADATA_KEY_TITLE);
         String a = md.getString(MediaMetadata.METADATA_KEY_ARTIST);
         if (a == null) a = md.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
@@ -529,6 +529,6 @@ final class NowPlaying {
         lyricLines[1].setText(idx >= 0 ? (lyricText.get(idx).isEmpty() ? "♪" : lyricText.get(idx)) : "♪");
         lyricLines[2].setText(idx + 1 < lyricText.size() ? lyricText.get(idx + 1) : "");
         lyricLines[1].setAlpha(0f);
-        lyricLines[1].animate().alpha(1f).setDuration(U.ms(250)).start();
+        lyricLines[1].animate().alpha(1f).setDuration(Ui.ms(250)).start();
     }
 }

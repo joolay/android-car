@@ -33,22 +33,22 @@ final class Logbook {
     }
 
     static void start() {
-        String s = Store.str(CUR, "");
+        String s = Prefs.str(CUR, "");
         try {
             if (!s.isEmpty()) cur = new JSONObject(s);
         } catch (Exception ignored) {
         }
         // the box was off: finish the trip that was going when it switched off
         if (cur != null && System.currentTimeMillis() - cur.optLong("last", 0) > 5 * 60000L) finish();
-        Loc.listen(Logbook::onFix);
+        Gps.listen(Logbook::onFix);
     }
 
     private static void onFix() {
-        if (!Loc.fresh()) return;
+        if (!Gps.fresh()) return;
         long now = System.currentTimeMillis();
-        double trip = Loc.tripMeters, dd = lastTrip < 0 ? 0 : trip - lastTrip;
+        double trip = Gps.tripMeters, dd = lastTrip < 0 ? 0 : trip - lastTrip;
         lastTrip = trip;
-        boolean moving = Loc.speed > 3f;
+        boolean moving = Gps.speed > 3f;
         if (cur == null && moving) begin();
         if (cur == null) return;
         try {
@@ -68,8 +68,8 @@ final class Logbook {
             cur = new JSONObject();
             cur.put("start", System.currentTimeMillis());
             cur.put("last", System.currentTimeMillis());
-            cur.put("from", Loc.town == null ? "" : Loc.town);
-            cur.put("purpose", Store.str("log_default", "Personal"));
+            cur.put("from", Gps.town == null ? "" : Gps.town);
+            cur.put("purpose", Prefs.str("log_default", "Personal"));
             cur.put("odo0", odometer());
             save();
         } catch (Exception ignored) {
@@ -80,30 +80,30 @@ final class Logbook {
         if (cur == null) return;
         try {
             cur.put("end", cur.optLong("last", System.currentTimeMillis()));
-            cur.put("to", Loc.town == null ? "" : Loc.town);
+            cur.put("to", Gps.town == null ? "" : Gps.town);
             double km = cur.optDouble("m", 0) / 1000.0;
             cur.put("km", Math.round(km * 10) / 10.0);
             if (km >= 0.3) { // ignore moving the car a few metres
-                JSONArray a = Store.arr(TRIPS);
+                JSONArray a = Prefs.arr(TRIPS);
                 a.put(cur);
                 while (a.length() > 1000) a.remove(0);
-                Store.put(TRIPS, a);
-                Store.put("log_odo_km", Store.lng("log_odo_km", 0) + Math.round(km * 10)); // tenths of km driven since the start reading
+                Prefs.put(TRIPS, a);
+                Prefs.put("log_odo_km", Prefs.lng("log_odo_km", 0) + Math.round(km * 10)); // tenths of km driven since the start reading
             }
         } catch (Exception ignored) {
         }
         cur = null;
-        Store.put(CUR, "");
+        Prefs.put(CUR, "");
     }
 
     private static void save() {
         savedAt = System.currentTimeMillis();
-        if (cur != null) Store.put(CUR, cur.toString());
+        if (cur != null) Prefs.put(CUR, cur.toString());
     }
 
     /** Current odometer: the reading you entered plus what's been logged since. */
     static double odometer() {
-        return Store.num("log_odo_start", 0) + Store.lng("log_odo_km", 0) / 10.0;
+        return Prefs.num("log_odo_start", 0) + Prefs.lng("log_odo_km", 0) / 10.0;
     }
 
     static boolean driving() {
@@ -115,13 +115,13 @@ final class Logbook {
     }
 
     static String purpose() {
-        return cur != null ? cur.optString("purpose", "Personal") : Store.str("log_default", "Personal");
+        return cur != null ? cur.optString("purpose", "Personal") : Prefs.str("log_default", "Personal");
     }
 
     /** Business ⇄ Personal for this trip (and the next ones). */
     static void togglePurpose() {
         String p = "Business".equals(purpose()) ? "Personal" : "Business";
-        Store.put("log_default", p);
+        Prefs.put("log_default", p);
         try {
             if (cur != null) cur.put("purpose", p);
         } catch (Exception ignored) {
@@ -133,7 +133,7 @@ final class Logbook {
     static double[] month() {
         double[] t = new double[2];
         String m = new SimpleDateFormat("yyyyMM", Locale.US).format(new Date());
-        JSONArray a = Store.arr(TRIPS);
+        JSONArray a = Prefs.arr(TRIPS);
         for (int i = 0; i < a.length(); i++) {
             JSONObject o = a.optJSONObject(i);
             if (o == null || !m.equals(new SimpleDateFormat("yyyyMM", Locale.US).format(new Date(o.optLong("start"))))) continue;
@@ -147,7 +147,7 @@ final class Logbook {
     static String csv() {
         StringBuilder b = new StringBuilder("Date,Start,End,From,To,Purpose,Odometer start,Odometer end,Distance (km)\n");
         SimpleDateFormat d = new SimpleDateFormat("yyyy-MM-dd", Locale.US), t = new SimpleDateFormat("HH:mm", Locale.US);
-        JSONArray a = Store.arr(TRIPS);
+        JSONArray a = Prefs.arr(TRIPS);
         for (int i = 0; i < a.length(); i++) {
             JSONObject o = a.optJSONObject(i);
             if (o == null) continue;
@@ -187,7 +187,7 @@ final class Logbook {
                 .putExtra(Intent.EXTRA_SUBJECT, "Car logbook")
                 .putExtra(Intent.EXTRA_TEXT, "Car logbook from Car Launcher (CSV attached).")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        String to = Store.str("log_email", "");
+        String to = Prefs.str("log_email", "");
         if (!to.isEmpty()) i.putExtra(Intent.EXTRA_EMAIL, new String[]{to});
         if (u != null) i.putExtra(Intent.EXTRA_STREAM, u);
         try {
@@ -200,66 +200,66 @@ final class Logbook {
     // ------------------------------------------------------------------ settings (the widget's deeper page)
 
     static void settings() {
-        Sheets.Page p = () -> {
-            Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
+        Panels.Page p = () -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
             double[] m = month();
-            b.addView(U.text(c, String.format(Locale.US, "This month: %.0f km business · %.0f km personal", m[0], m[1]), 14, U.TEXT2, true));
-            b.addView(Sheets.section("Odometer"));
+            b.addView(Ui.text(c, String.format(Locale.US, "This month: %.0f km business · %.0f km personal", m[0], m[1]), 14, Ui.TEXT2, true));
+            b.addView(Panels.section("Odometer"));
             b.addView(Widgets.field("Odometer reading now (km)", odometer() > 0 ? String.format(Locale.US, "%.0f", odometer()) : "", false, t -> {
                 try {
-                    Store.put("log_odo_start", Integer.parseInt(t.replaceAll("[^0-9]", "")));
-                    Store.put("log_odo_km", 0L);
+                    Prefs.put("log_odo_start", Integer.parseInt(t.replaceAll("[^0-9]", "")));
+                    Prefs.put("log_odo_km", 0L);
                 } catch (Exception ignored) {
                 }
-            }), U.lp(U.MATCH, U.WRAP));
-            b.addView(Sheets.section("Export"));
-            b.addView(Widgets.field("Email address for the logbook", Store.str("log_email", ""), false, t -> Store.put("log_email", t.trim())), U.lp(U.MATCH, U.WRAP));
-            LinearLayout r = U.row(c);
-            r.addView(U.button(c, "Export to file", false, () -> {
+            }), Ui.lp(Ui.MATCH, Ui.WRAP));
+            b.addView(Panels.section("Export"));
+            b.addView(Widgets.field("Email address for the logbook", Prefs.str("log_email", ""), false, t -> Prefs.put("log_email", t.trim())), Ui.lp(Ui.MATCH, Ui.WRAP));
+            LinearLayout r = Ui.row(c);
+            r.addView(Ui.button(c, "Export to file", false, () -> {
                 Uri u = exportFile(c);
                 android.widget.Toast.makeText(c, u != null ? "Saved in Downloads" : "Couldn't save the file", android.widget.Toast.LENGTH_SHORT).show();
             }));
-            r.addView(U.gap(c, 10, 1));
-            r.addView(U.button(c, "Email", true, () -> email(c)));
+            r.addView(Ui.gap(c, 10, 1));
+            r.addView(Ui.button(c, "Email", true, () -> email(c)));
             b.addView(r, Widgets.top(10));
-            b.addView(Sheets.section("Recent trips (tap to switch Business / Personal)"));
-            JSONArray a = Store.arr(TRIPS);
+            b.addView(Panels.section("Recent trips (tap to switch Business / Personal)"));
+            JSONArray a = Prefs.arr(TRIPS);
             SimpleDateFormat f = new SimpleDateFormat("d MMM HH:mm", Locale.getDefault());
-            if (a.length() == 0) b.addView(U.text(c, "No trips yet. They're logged by themselves while you drive.", 12, U.SUB, false));
+            if (a.length() == 0) b.addView(Ui.text(c, "No trips yet. They're logged by themselves while you drive.", 12, Ui.SUB, false));
             for (int i = a.length() - 1; i >= Math.max(0, a.length() - 30); i--) {
                 JSONObject o = a.optJSONObject(i);
                 if (o == null) continue;
                 final int k = i;
-                LinearLayout row = U.row(c);
-                row.setMinimumHeight(U.u(40));
+                LinearLayout row = Ui.row(c);
+                row.setMinimumHeight(Ui.u(40));
                 String route = o.optString("from") + (o.optString("to").isEmpty() || o.optString("to").equals(o.optString("from")) ? "" : " → " + o.optString("to"));
-                row.addView(U.line(c, f.format(new Date(o.optLong("start"))) + "  " + route, 13, U.TEXT2, false), new LinearLayout.LayoutParams(0, U.WRAP, 1));
-                row.addView(U.line(c, String.format(Locale.US, "%.1f km", o.optDouble("km", 0)), 13, U.TEXT, true));
-                TextView pu = U.text(c, o.optString("purpose"), 11, U.TEXT, true);
+                row.addView(Ui.line(c, f.format(new Date(o.optLong("start"))) + "  " + route, 13, Ui.TEXT2, false), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+                row.addView(Ui.line(c, String.format(Locale.US, "%.1f km", o.optDouble("km", 0)), 13, Ui.TEXT, true));
+                TextView pu = Ui.text(c, o.optString("purpose"), 11, Ui.TEXT, true);
                 pu.setGravity(Gravity.CENTER);
-                pu.setBackground(U.round("Business".equals(o.optString("purpose")) ? U.ACCENT : U.CARD3, 10));
-                U.pad(pu, 8, 3, 8, 3);
-                LinearLayout.LayoutParams pl = U.lp(U.WRAP, U.WRAP);
-                pl.leftMargin = U.u(8);
+                pu.setBackground(Ui.round("Business".equals(o.optString("purpose")) ? Ui.ACCENT : Ui.CARD3, 10));
+                Ui.pad(pu, 8, 3, 8, 3);
+                LinearLayout.LayoutParams pl = Ui.lp(Ui.WRAP, Ui.WRAP);
+                pl.leftMargin = Ui.u(8);
                 row.addView(pu, pl);
                 row.setOnClickListener(v -> {
                     try {
-                        JSONArray all = Store.arr(TRIPS);
+                        JSONArray all = Prefs.arr(TRIPS);
                         JSONObject t = all.getJSONObject(k);
                         t.put("purpose", "Business".equals(t.optString("purpose")) ? "Personal" : "Business");
-                        Store.put(TRIPS, all);
+                        Prefs.put(TRIPS, all);
                     } catch (Exception ignored) {
                     }
-                    Sheets.refresh();
+                    Panels.refresh();
                 });
-                b.addView(U.hr(c));
+                b.addView(Ui.hr(c));
                 b.addView(row);
             }
-            return Sheets.panel("Logbook", b, 680, 440);
+            return Panels.panel("Logbook", b, 680, 440);
         };
-        if (Sheets.open()) Sheets.push(p);
-        else Sheets.show(p);
+        if (Panels.open()) Panels.push(p);
+        else Panels.show(p);
     }
 
     // ------------------------------------------------------------------ the tile
@@ -269,26 +269,26 @@ final class Logbook {
 
         Tile(Context c, int i, JSONObject s) {
             super(c, i, s);
-            LinearLayout l = Widgets.card(c, U.CARD);
+            LinearLayout l = Widgets.card(c, Ui.CARD);
             l.addView(Widgets.label(c, "LOGBOOK"));
-            l.addView(new View(c), U.weight(1, false));
-            km = U.text(c, "", 26, U.TEXT, true);
+            l.addView(new View(c), Ui.weight(1, false));
+            km = Ui.text(c, "", 26, Ui.TEXT, true);
             l.addView(km);
-            sub = U.text(c, "", 12, U.SUB, false);
+            sub = Ui.text(c, "", 12, Ui.SUB, false);
             sub.setMaxLines(2);
             l.addView(sub, Widgets.top(2));
-            l.addView(new View(c), U.weight(1, false));
-            btn = U.text(c, "", 13, U.TEXT, true);
+            l.addView(new View(c), Ui.weight(1, false));
+            btn = Ui.text(c, "", 13, Ui.TEXT, true);
             btn.setGravity(Gravity.CENTER);
-            U.pad(btn, 8, 7, 8, 7);
+            Ui.pad(btn, 8, 7, 8, 7);
             btn.setOnClickListener(v -> {
                 togglePurpose();
                 tick();
             });
-            U.press(btn);
-            l.addView(btn, U.lp(U.MATCH, U.WRAP));
+            Ui.press(btn);
+            l.addView(btn, Ui.lp(Ui.MATCH, Ui.WRAP));
             l.setOnClickListener(v -> settings());
-            U.press(l);
+            Ui.press(l);
             v = l;
             tick();
         }
@@ -305,7 +305,7 @@ final class Logbook {
                 sub.setText(String.format(Locale.US, "This month\n%.0f km business", m[0]));
             }
             btn.setText(b ? "Business" : "Personal");
-            btn.setBackground(U.round(b ? U.ACCENT : U.CARD3, 12));
+            btn.setBackground(Ui.round(b ? Ui.ACCENT : Ui.CARD3, 12));
         }
     }
 }

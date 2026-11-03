@@ -38,8 +38,8 @@ public class CallScreen extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
-        U.init(this);
-        Store.init(this);
+        Ui.init(this);
+        Prefs.init(this);
         setShowWhenLocked(true);
         setTurnScreenOn(true);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -48,13 +48,13 @@ public class CallScreen extends Activity {
         immersive();
         CallState.listen(update);
         render();
-        U.ui.post(tick);
+        Ui.ui.post(tick);
     }
 
     @Override
     protected void onDestroy() {
         CallState.unlisten(update);
-        U.ui.removeCallbacks(tick);
+        Ui.ui.removeCallbacks(tick);
         super.onDestroy();
     }
 
@@ -73,7 +73,7 @@ public class CallScreen extends Activity {
         @Override
         public void run() {
             if (timer != null && CallState.activeSince > 0) timer.setText(elapsed() + " · " + CallState.via);
-            U.ui.postDelayed(this, 1000);
+            Ui.ui.postDelayed(this, 1000);
         }
     };
 
@@ -92,70 +92,70 @@ public class CallScreen extends Activity {
         timer = null;
         boolean ringing = CallState.state == CallState.RINGING;
         root.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{ringing ? 0xFF16324F : 0xFF123D2A, U.BG, U.BG}));
+                new int[]{ringing ? 0xFF16324F : 0xFF123D2A, Ui.BG, Ui.BG}));
         Widgets.Person p = new Widgets.Person();
         p.name = CallState.name == null ? "?" : CallState.name;
         p.number = CallState.number;
 
         if (ringing) {
-            LinearLayout top = U.col(c);
+            LinearLayout top = Ui.col(c);
             top.setGravity(Gravity.CENTER_HORIZONTAL);
-            top.addView(avatar(c, p, 112), U.lpu(112, 112));
-            top.addView(U.line(c, p.name, 34, U.TEXT, true), Widgets.top(16));
+            top.addView(avatar(c, p, 112), Ui.lpu(112, 112));
+            top.addView(Ui.line(c, p.name, 34, Ui.TEXT, true), Widgets.top(16));
             if (CallState.number != null && !CallState.number.isEmpty() && !CallState.number.equals(p.name))
-                top.addView(U.line(c, CallState.number, 16, U.TEXT2, false), Widgets.top(4));
-            top.addView(U.line(c, "Incoming call · " + CallState.via, 13, U.SUB, false), Widgets.top(8));
-            FrameLayout.LayoutParams tl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-            tl.topMargin = U.u(44);
+                top.addView(Ui.line(c, CallState.number, 16, Ui.TEXT2, false), Widgets.top(4));
+            top.addView(Ui.line(c, "Incoming call · " + CallState.via, 13, Ui.SUB, false), Widgets.top(8));
+            FrameLayout.LayoutParams tl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+            tl.topMargin = Ui.u(44);
             root.addView(top, tl);
-            LinearLayout btns = U.row(c);
-            btns.addView(big(c, U.RED, "Decline", 135, CallState::decline));
-            btns.addView(U.gap(c, 200, 1));
-            btns.addView(big(c, U.GREEN, "Answer", 0, CallState::answer));
-            FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-            bl.bottomMargin = U.u(36);
+            LinearLayout btns = Ui.row(c);
+            btns.addView(big(c, Ui.RED, "Decline", 135, CallState::decline));
+            btns.addView(Ui.gap(c, 200, 1));
+            btns.addView(big(c, Ui.GREEN, "Answer", 0, CallState::answer));
+            FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            bl.bottomMargin = Ui.u(36);
             root.addView(btns, bl);
             return;
         }
 
         // in call
-        LinearLayout head = U.row(c);
-        head.addView(avatar(c, p, 84), U.lpu(84, 84));
-        LinearLayout t = U.col(c);
-        t.addView(U.line(c, p.name, 30, U.TEXT, true));
-        timer = U.line(c, CallState.state == CallState.DIALING ? "Calling… · " + CallState.via
-                : CallState.state == CallState.HOLDING ? "On hold" : (CallState.activeSince > 0 ? elapsed() : "") + " · " + CallState.via, 16, U.MINT, false);
+        LinearLayout head = Ui.row(c);
+        head.addView(avatar(c, p, 84), Ui.lpu(84, 84));
+        LinearLayout t = Ui.col(c);
+        t.addView(Ui.line(c, p.name, 30, Ui.TEXT, true));
+        timer = Ui.line(c, CallState.state == CallState.DIALING ? "Calling… · " + CallState.via
+                : CallState.state == CallState.HOLDING ? "On hold" : (CallState.activeSince > 0 ? elapsed() : "") + " · " + CallState.via, 16, Ui.MINT, false);
         t.addView(timer, Widgets.top(4));
-        LinearLayout.LayoutParams ttl = U.lp(U.WRAP, U.WRAP);
-        ttl.leftMargin = U.u(20);
+        LinearLayout.LayoutParams ttl = Ui.lp(Ui.WRAP, Ui.WRAP);
+        ttl.leftMargin = Ui.u(20);
         head.addView(t, ttl);
-        FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.TOP | Gravity.START);
-        hl.setMargins(U.u(40), U.u(40), 0, 0);
+        FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.TOP | Gravity.START);
+        hl.setMargins(Ui.u(40), Ui.u(40), 0, 0);
         root.addView(head, hl);
 
         if (keypad && CallState.full()) {
-            LinearLayout pad = U.col(c);
+            LinearLayout pad = Ui.col(c);
             String keys = "123456789*0#";
             for (int r = 0; r < 4; r++) {
-                LinearLayout kr = U.row(c);
+                LinearLayout kr = Ui.row(c);
                 for (int k = 0; k < 3; k++) {
                     char ch = keys.charAt(r * 3 + k);
-                    TextView b = U.text(c, String.valueOf(ch), 24, U.TEXT, false);
+                    TextView b = Ui.text(c, String.valueOf(ch), 24, Ui.TEXT, false);
                     b.setGravity(Gravity.CENTER);
-                    b.setBackground(U.round(U.CARD3, 12));
+                    b.setBackground(Ui.round(Ui.CARD3, 12));
                     b.setOnClickListener(v -> CallState.dtmf(ch));
-                    LinearLayout.LayoutParams kl = U.lpu(84, 52);
-                    kl.setMargins(U.u(4), U.u(4), U.u(4), U.u(4));
+                    LinearLayout.LayoutParams kl = Ui.lpu(84, 52);
+                    kl.setMargins(Ui.u(4), Ui.u(4), Ui.u(4), Ui.u(4));
                     kr.addView(b, kl);
                 }
                 pad.addView(kr);
             }
-            FrameLayout.LayoutParams pl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.END | Gravity.TOP);
-            pl.setMargins(0, U.u(24), U.u(30), 0);
+            FrameLayout.LayoutParams pl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.END | Gravity.TOP);
+            pl.setMargins(0, Ui.u(24), Ui.u(30), 0);
             root.addView(pad, pl);
         }
 
-        LinearLayout ctl = U.row(c);
+        LinearLayout ctl = Ui.row(c);
         if (CallState.full()) {
             ctl.addView(small(c, "Mute", R.drawable.ic_mute, CallState.muted, () -> CallState.setMuted(!CallState.muted)));
             ctl.addView(small(c, "Keypad", R.drawable.ic_apps, keypad, () -> {
@@ -167,19 +167,19 @@ public class CallScreen extends Activity {
                     () -> CallState.setHold(CallState.state != CallState.HOLDING)));
         }
         ctl.addView(small(c, "Home", R.drawable.ic_home, false, this::goHome));
-        FrameLayout.LayoutParams cl = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, Gravity.CENTER_HORIZONTAL | Gravity.TOP);
-        cl.topMargin = U.u(keypad ? 300 : 190);
+        FrameLayout.LayoutParams cl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.CENTER_HORIZONTAL | Gravity.TOP);
+        cl.topMargin = Ui.u(keypad ? 300 : 190);
         if (keypad) {
             cl.gravity = Gravity.START | Gravity.TOP;
-            cl.leftMargin = U.u(30);
-            cl.topMargin = U.u(160);
+            cl.leftMargin = Ui.u(30);
+            cl.topMargin = Ui.u(160);
         }
         root.addView(ctl, cl);
 
-        View end = big(c, U.RED, "End call", 135, CallState::hangup);
-        FrameLayout.LayoutParams el = new FrameLayout.LayoutParams(U.WRAP, U.WRAP, keypad ? Gravity.BOTTOM | Gravity.START : Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        el.bottomMargin = U.u(28);
-        if (keypad) el.leftMargin = U.u(180);
+        View end = big(c, Ui.RED, "End call", 135, CallState::hangup);
+        FrameLayout.LayoutParams el = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, keypad ? Gravity.BOTTOM | Gravity.START : Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        el.bottomMargin = Ui.u(28);
+        if (keypad) el.leftMargin = Ui.u(180);
         root.addView(end, el);
     }
 
@@ -200,7 +200,7 @@ public class CallScreen extends Activity {
             ImageView iv = new ImageView(c);
             iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
             iv.setImageBitmap(CallState.photo);
-            f.addView(iv, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            f.addView(iv, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             f.setOutlineProvider(new android.view.ViewOutlineProvider() {
                 @Override
                 public void getOutline(View view, android.graphics.Outline o) {
@@ -214,31 +214,31 @@ public class CallScreen extends Activity {
     }
 
     private static View big(Context c, int color, String label, float rotate, Runnable r) {
-        LinearLayout l = U.col(c);
+        LinearLayout l = Ui.col(c);
         l.setGravity(Gravity.CENTER_HORIZONTAL);
         FrameLayout b = new FrameLayout(c);
-        b.setBackground(U.oval(color));
-        b.setElevation(U.uf(6));
-        ImageView iv = U.icon(c, R.drawable.ic_call, U.TEXT);
+        b.setBackground(Ui.oval(color));
+        b.setElevation(Ui.uf(6));
+        ImageView iv = Ui.icon(c, R.drawable.ic_call, Ui.TEXT);
         iv.setRotation(rotate);
-        b.addView(iv, U.flpu(40, 40, Gravity.CENTER));
+        b.addView(iv, Ui.flpu(40, 40, Gravity.CENTER));
         b.setOnClickListener(v -> r.run());
-        U.press(b);
-        l.addView(b, U.lpu(92, 92));
-        l.addView(U.text(c, label, 15, U.TEXT, false), Widgets.top(8));
+        Ui.press(b);
+        l.addView(b, Ui.lpu(92, 92));
+        l.addView(Ui.text(c, label, 15, Ui.TEXT, false), Widgets.top(8));
         return l;
     }
 
     private static View small(Context c, String label, int icon, boolean on, Runnable r) {
-        LinearLayout l = U.col(c);
+        LinearLayout l = Ui.col(c);
         l.setGravity(Gravity.CENTER_HORIZONTAL);
         FrameLayout b = new FrameLayout(c);
-        b.setBackground(U.oval(on ? U.TEXT : U.CARD3));
-        b.addView(U.icon(c, icon, on ? 0xFF000000 : U.TEXT), U.flpu(26, 26, Gravity.CENTER));
+        b.setBackground(Ui.oval(on ? Ui.TEXT : Ui.CARD3));
+        b.addView(Ui.icon(c, icon, on ? 0xFF000000 : Ui.TEXT), Ui.flpu(26, 26, Gravity.CENTER));
         b.setOnClickListener(v -> r.run());
-        l.addView(b, U.lpu(66, 66));
-        l.addView(U.line(c, label, 13, U.TEXT2, false), Widgets.top(6));
-        LinearLayout.LayoutParams lp = U.lpu(110, U.WRAP);
+        l.addView(b, Ui.lpu(66, 66));
+        l.addView(Ui.line(c, label, 13, Ui.TEXT2, false), Widgets.top(6));
+        LinearLayout.LayoutParams lp = Ui.lpu(110, Ui.WRAP);
         l.setLayoutParams(lp);
         return l;
     }

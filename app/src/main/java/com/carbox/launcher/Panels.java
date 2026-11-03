@@ -15,7 +15,7 @@ import java.util.List;
  * Panels and popups drawn over the home screen (instead of Android dialogs), so they match
  * the launcher's look. Pages stack: the back arrow returns to the previous page.
  */
-final class Sheets {
+final class Panels {
     interface Page {
         View build();
     }
@@ -28,7 +28,7 @@ final class Sheets {
     private static final List<Runnable> onClose = new ArrayList<>();
     private static int scrimColor = 0x99000000;
 
-    private Sheets() {
+    private Panels() {
     }
 
     /** Panels open inside the 2×4 tile area (tiles); a few full-screen ones use the whole screen (full). */
@@ -105,15 +105,15 @@ final class Sheets {
     }
 
     static void close() {
-        Keyboard.hide();
+        InAppKeyboard.hide();
         stack.clear();
         modes.clear();
         final View sv = slideView;
         slideView = null;
-        if (sv != null && tileLayer != null && sv.getParent() == tileLayer && U.ms(1) > 0 && sv.getHeight() > 0) {
+        if (sv != null && tileLayer != null && sv.getParent() == tileLayer && Ui.ms(1) > 0 && sv.getHeight() > 0) {
             final FrameLayout tl = tileLayer; // slides back up into the ticker, then goes
             for (int i = tl.getChildCount() - 1; i >= 0; i--) if (tl.getChildAt(i) != sv) tl.removeViewAt(i);
-            sv.animate().translationY(-sv.getHeight()).setDuration(U.ms(260)).setInterpolator(new android.view.animation.AccelerateInterpolator(1.4f))
+            sv.animate().translationY(-sv.getHeight()).setDuration(Ui.ms(260)).setInterpolator(new android.view.animation.AccelerateInterpolator(1.4f))
                     .withEndAction(() -> {
                         if (sv.getParent() == tl) tl.removeView(sv);
                     }).start();
@@ -179,7 +179,7 @@ final class Sheets {
         scrim.setOnClickListener(v -> {
             if (!full || (cardPage != null && top() == cardPage)) close();
         });
-        layer.addView(scrim, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        layer.addView(scrim, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         if (MainActivity.I != null) MainActivity.I.tickerTitle(null); // the page sets its title there again if it has one
         View page = stack.get(stack.size() - 1).build();
         Trace.event("Opened a page (" + (full ? "full screen" : "tile area") + ", " + stack.size() + " deep)");
@@ -188,7 +188,7 @@ final class Sheets {
             touched();
             return false;
         });
-        if (!full) page.setLayoutParams(new FrameLayout.LayoutParams(U.MATCH, U.MATCH)); // fill the tile area exactly
+        if (!full) page.setLayoutParams(new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH)); // fill the tile area exactly
         else if (page.getLayoutParams() == null) page.setLayoutParams(centered(640, 440));
         layer.addView(page);
         slideView = null;
@@ -198,7 +198,7 @@ final class Sheets {
             page.post(() -> {
                 page.setTranslationY(-page.getHeight());
                 page.setAlpha(1f);
-                page.animate().translationY(0).setDuration(U.ms(320)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+                page.animate().translationY(0).setDuration(Ui.ms(320)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
             });
         } else if (grow && !full && MainActivity.I != null) MainActivity.I.growIn(page, null);
         if (!full && MainActivity.I != null) MainActivity.I.mapAside(true); // the big map steps aside for the panel
@@ -243,9 +243,9 @@ final class Sheets {
         // pop out of the Rail Bar icon that was tapped
         if (layer != null && layer.getChildCount() > 1 && MainActivity.I != null) MainActivity.I.popFromRail(layer.getChildAt(layer.getChildCount() - 1));
         // close by themselves after the set time (Settings → Rail Bar); a touch restarts it
-        U.ui.removeCallbacks(autoClose);
-        int secs = Store.num("card_secs", 15);
-        if (secs > 0) U.ui.postDelayed(autoClose, secs * 1000L);
+        Ui.ui.removeCallbacks(autoClose);
+        int secs = Prefs.num("card_secs", 15);
+        if (secs > 0) Ui.ui.postDelayed(autoClose, secs * 1000L);
         cardPage = p;
     }
 
@@ -263,21 +263,21 @@ final class Sheets {
     /** Restart a pop-up's timer (called on touch). */
     static void touched() {
         if (cardPage == null || stack.isEmpty() || stack.get(stack.size() - 1) != cardPage) return;
-        U.ui.removeCallbacks(autoClose);
-        int secs = Store.num("card_secs", 15);
-        if (secs > 0) U.ui.postDelayed(autoClose, secs * 1000L);
+        Ui.ui.removeCallbacks(autoClose);
+        int secs = Prefs.num("card_secs", 15);
+        if (secs > 0) Ui.ui.postDelayed(autoClose, secs * 1000L);
     }
 
     static FrameLayout.LayoutParams centered(float w, float h) {
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w < 0 ? (int) w : U.u(w), h < 0 ? (int) h : U.u(h), Gravity.CENTER);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w < 0 ? (int) w : Ui.u(w), h < 0 ? (int) h : Ui.u(h), Gravity.CENTER);
         return lp;
     }
 
     /** Anchored to the right rail at a given top. */
     static FrameLayout.LayoutParams anchored(float w, float h, float right, float top) {
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(U.u(w), h < 0 ? (int) h : U.u(h), Gravity.TOP | Gravity.END);
-        lp.rightMargin = U.u(right);
-        lp.topMargin = U.u(top);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Ui.u(w), h < 0 ? (int) h : Ui.u(h), Gravity.TOP | Gravity.END);
+        lp.rightMargin = Ui.u(right);
+        lp.topMargin = Ui.u(top);
         return lp;
     }
 
@@ -293,44 +293,44 @@ final class Sheets {
      * the title bar beside ✕ (`action`, may be null).
      */
     static LinearLayout panel(View titleView, String title, View body, float w, float h, View action) {
-        LinearLayout p = U.col(ctx);
-        p.setBackground(U.round(U.CARD, 16)); // same corners as the tiles it covers
-        U.pad(p, 20, 14, 20, 14);
+        LinearLayout p = Ui.col(ctx);
+        p.setBackground(Ui.round(Ui.CARD, 16)); // same corners as the tiles it covers
+        Ui.pad(p, 20, 14, 20, 14);
         p.setLayoutParams(centered(w, h));
 
         // in the tile area the title bar goes up into the ticker's place, so the page gets the whole tile area
         boolean up = !full && MainActivity.I != null && MainActivity.I.canHoldTitle();
-        LinearLayout head = U.row(ctx);
+        LinearLayout head = Ui.row(ctx);
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
         float ic = up ? 20 : 24;
         if (stack.size() > 1) {
-            View back = U.icon(ctx, R.drawable.ic_back, U.TEXT);
+            View back = Ui.icon(ctx, R.drawable.ic_back, Ui.TEXT);
             back.setOnClickListener(v -> back());
-            head.addView(back, U.lpu(ic, ic));
-            head.addView(U.gap(ctx, up ? 10 : 12, 1));
+            head.addView(back, Ui.lpu(ic, ic));
+            head.addView(Ui.gap(ctx, up ? 10 : 12, 1));
         }
-        View t = titleView != null ? titleView : U.line(ctx, title, up ? 15 : 20, U.TEXT, true);
-        head.addView(t, new LinearLayout.LayoutParams(0, U.WRAP, 1));
+        View t = titleView != null ? titleView : Ui.line(ctx, title, up ? 15 : 20, Ui.TEXT, true);
+        head.addView(t, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
         if (action != null) {
-            head.addView(action, U.lpu(ic + 8, ic + 8));
-            head.addView(U.gap(ctx, 12, 1));
+            head.addView(action, Ui.lpu(ic + 8, ic + 8));
+            head.addView(Ui.gap(ctx, 12, 1));
         }
-        View x = U.icon(ctx, R.drawable.ic_x, U.SUB);
+        View x = Ui.icon(ctx, R.drawable.ic_x, Ui.SUB);
         x.setOnClickListener(v -> close());
-        head.addView(x, U.lpu(ic + 4, ic + 4)); // close: a touch bigger
+        head.addView(x, Ui.lpu(ic + 4, ic + 4)); // close: a touch bigger
         if (up) {
-            head.setBackground(U.round(U.CARD, 12));
-            U.pad(head, 10, 0, 10, 0);
-            U.pad(p, 20, 12, 20, 12);
+            head.setBackground(Ui.round(Ui.CARD, 12));
+            Ui.pad(head, 10, 0, 10, 0);
+            Ui.pad(p, 20, 12, 20, 12);
             MainActivity.I.tickerTitle(head);
-        } else p.addView(head, U.lp(U.MATCH, U.WRAP));
+        } else p.addView(head, Ui.lp(Ui.MATCH, Ui.WRAP));
 
         ScrollView sv = new ScrollView(ctx);
         sv.setVerticalScrollBarEnabled(false);
         sv.setOverScrollMode(View.OVER_SCROLL_NEVER);
         sv.addView(body);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(U.MATCH, 0, 1);
-        lp.topMargin = up ? 0 : U.u(14);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.MATCH, 0, 1);
+        lp.topMargin = up ? 0 : Ui.u(14);
         p.addView(sv, lp);
         return p;
     }
@@ -341,58 +341,58 @@ final class Sheets {
 
     /** A label + content row used throughout settings. */
     static LinearLayout row(String label, View... content) {
-        LinearLayout r = U.row(ctx);
-        TextView l = U.text(ctx, label, 14, U.SUB, false);
-        r.addView(l, U.lpu(120, U.WRAP));
-        LinearLayout c = U.row(ctx);
+        LinearLayout r = Ui.row(ctx);
+        TextView l = Ui.text(ctx, label, 14, Ui.SUB, false);
+        r.addView(l, Ui.lpu(120, Ui.WRAP));
+        LinearLayout c = Ui.row(ctx);
         for (View v : content) {
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(U.WRAP, U.WRAP);
-            lp.rightMargin = U.u(10);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP);
+            lp.rightMargin = Ui.u(10);
             c.addView(v, lp);
         }
-        r.addView(c, new LinearLayout.LayoutParams(0, U.WRAP, 1));
-        U.pad(r, 0, 9, 0, 9);
+        r.addView(c, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+        Ui.pad(r, 0, 9, 0, 9);
         return r;
     }
 
     /** Tappable list row: title, value, chevron. */
     static LinearLayout item(String title, String value, Runnable click) {
-        LinearLayout r = U.row(ctx);
-        r.setMinimumHeight(U.u(52));
-        r.addView(U.line(ctx, title, 15, U.TEXT, false), new LinearLayout.LayoutParams(0, U.WRAP, 1));
-        if (value != null) r.addView(U.line(ctx, value, 13, U.SUB, false));
+        LinearLayout r = Ui.row(ctx);
+        r.setMinimumHeight(Ui.u(52));
+        r.addView(Ui.line(ctx, title, 15, Ui.TEXT, false), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+        if (value != null) r.addView(Ui.line(ctx, value, 13, Ui.SUB, false));
         if (click != null) {
-            r.addView(U.text(ctx, "  ›", 15, U.SUB, false));
+            r.addView(Ui.text(ctx, "  ›", 15, Ui.SUB, false));
             r.setOnClickListener(v -> click.run());
         }
         return r;
     }
 
     /** Title + subtitle + switch. */
-    static LinearLayout switchRow(int icon, int iconTint, String title, String sub, boolean on, U.Cb<Boolean> cb) {
-        LinearLayout r = U.row(ctx);
-        U.pad(r, 0, 12, 0, 12);
-        r.setMinimumHeight(U.u(56));
+    static LinearLayout switchRow(int icon, int iconTint, String title, String sub, boolean on, Ui.Cb<Boolean> cb) {
+        LinearLayout r = Ui.row(ctx);
+        Ui.pad(r, 0, 12, 0, 12);
+        r.setMinimumHeight(Ui.u(56));
         if (icon != 0) {
-            r.addView(U.icon(ctx, icon, iconTint), U.lpu(26, 26));
-            r.addView(U.gap(ctx, 14, 1));
+            r.addView(Ui.icon(ctx, icon, iconTint), Ui.lpu(26, 26));
+            r.addView(Ui.gap(ctx, 14, 1));
         }
-        LinearLayout t = U.col(ctx);
-        t.addView(U.text(ctx, title, 15, U.TEXT, false));
+        LinearLayout t = Ui.col(ctx);
+        t.addView(Ui.text(ctx, title, 15, Ui.TEXT, false));
         if (sub != null) {
-            TextView s = U.text(ctx, sub, 12, U.SUB, false);
-            s.setPadding(0, U.u(3), 0, 0);
+            TextView s = Ui.text(ctx, sub, 12, Ui.SUB, false);
+            s.setPadding(0, Ui.u(3), 0, 0);
             t.addView(s);
         }
-        r.addView(t, new LinearLayout.LayoutParams(0, U.WRAP, 1));
-        r.addView(new U.Toggle(ctx, on, cb));
+        r.addView(t, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+        r.addView(new Ui.Toggle(ctx, on, cb));
         return r;
     }
 
     static View section(String s) {
-        TextView t = U.text(ctx, s.toUpperCase(), 11, U.SUB, false);
+        TextView t = Ui.text(ctx, s.toUpperCase(), 11, Ui.SUB, false);
         t.setLetterSpacing(0.05f);
-        U.pad(t, 0, 14, 0, 4);
+        Ui.pad(t, 0, 14, 0, 4);
         return t;
     }
 

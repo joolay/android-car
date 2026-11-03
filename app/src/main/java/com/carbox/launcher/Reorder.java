@@ -100,7 +100,7 @@ final class Reorder {
                     int dir = 0;
                     Rect hr = new Rect();
                     if (host[0] != null && turn[0] != null && host[0].getGlobalVisibleRect(hr)) {
-                        float band = Math.max(U.u(28), hr.width() * 0.1f);
+                        float band = Math.max(Ui.u(28), hr.width() * 0.1f);
                         if (e.getRawX() < hr.left + band) dir = -1;
                         else if (e.getRawX() > hr.right - band) dir = 1;
                     }
@@ -184,8 +184,8 @@ final class Reorder {
         lp.leftMargin = a[0] - o[0];
         lp.topMargin = a[1] - o[1];
         root.addView(g, lp);
-        g.setElevation(U.uf(12));
-        g.animate().scaleX(1.12f).scaleY(1.12f).setDuration(U.ms(120)).start();
+        g.setElevation(Ui.uf(12));
+        g.animate().scaleX(1.12f).scaleY(1.12f).setDuration(Ui.ms(120)).start();
         v.setAlpha(0.25f);
         return g;
     }

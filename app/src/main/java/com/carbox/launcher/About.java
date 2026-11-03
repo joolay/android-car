@@ -40,19 +40,19 @@ final class About {
             e.printStackTrace(new java.io.PrintWriter(sw));
             String trace = sw.toString();
             if (trace.length() > 3000) trace = trace.substring(0, 3000) + "\n…";
-            List<String> l = new ArrayList<>(Store.list(CRASHES));
+            List<String> l = new ArrayList<>(Prefs.list(CRASHES));
             String report = new java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.US).format(new java.util.Date()) + " · " + version(c) + " · " + where + "\n" + trace;
             l.add(0, report);
             while (l.size() > 5) l.remove(l.size() - 1);
-            Store.putList(CRASHES, l);
+            Prefs.putList(CRASHES, l);
             Trace.event(c, "ERROR in " + where + ": " + trace);
             // queued to go online (sent at once if it can be, else next time Car Launcher opens)
-            List<String> q = new ArrayList<>(Store.list(UNSENT));
+            List<String> q = new ArrayList<>(Prefs.list(UNSENT));
             q.add(report);
             while (q.size() > 10) q.remove(0);
-            Store.putList(UNSENT, q);
-            Store.put("crash_new", true);
-            Store.flush();
+            Prefs.putList(UNSENT, q);
+            Prefs.put("crash_new", true);
+            Prefs.flush();
             sendPending(c); // errors that didn't close the app go online straight away
         } catch (Throwable ignored) {
         }
@@ -66,8 +66,8 @@ final class About {
 
     /** Send any crash reports still waiting (on start, and right after a crash). */
     static void sendPending(Context c) {
-        if (!Store.flag(SEND, true)) return;
-        List<String> q = Store.list(UNSENT);
+        if (!Prefs.flag(SEND, true)) return;
+        List<String> q = Prefs.list(UNSENT);
         if (q.isEmpty()) return;
         String report = q.get(0);
         java.util.Map<String, String> h = new java.util.HashMap<>();
@@ -77,9 +77,9 @@ final class About {
         if (body.length() > 3900) body = body.substring(0, 3900) + "\n…";
         Net.post("https://ntfy.sh/" + TOPIC, h, body, (res, code) -> {
             if (res == null || code < 200 || code >= 300) return; // try again next time
-            List<String> left = new ArrayList<>(Store.list(UNSENT));
+            List<String> left = new ArrayList<>(Prefs.list(UNSENT));
             left.remove(report);
-            Store.putList(UNSENT, left);
+            Prefs.putList(UNSENT, left);
             if (!left.isEmpty()) sendPending(c); // the next one
         });
     }
@@ -95,79 +95,79 @@ final class About {
     /** After a crash: offer the report once, next time Car Launcher opens. */
     static void offerReport() {
         if (MainActivity.I != null) sendPending(MainActivity.I); // anything from last time goes online now
-        if (!Store.flag("crash_new", false) || Sheets.open()) return;
-        Store.put("crash_new", false);
-        Sheets.show(() -> {
-            Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Car Launcher closed unexpectedly last time. The error was saved; a photo of it helps get it fixed.", 14, U.TEXT2, false));
-            LinearLayout r = U.row(c);
-            r.addView(U.button(c, "View report", true, About::crashes));
-            r.addView(U.gap(c, 10, 1));
-            r.addView(U.button(c, "Not now", false, Sheets::close));
+        if (!Prefs.flag("crash_new", false) || Panels.open()) return;
+        Prefs.put("crash_new", false);
+        Panels.show(() -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
+            b.addView(Ui.text(c, "Car Launcher closed unexpectedly last time. The error was saved; a photo of it helps get it fixed.", 14, Ui.TEXT2, false));
+            LinearLayout r = Ui.row(c);
+            r.addView(Ui.button(c, "View report", true, About::crashes));
+            r.addView(Ui.gap(c, 10, 1));
+            r.addView(Ui.button(c, "Not now", false, Panels::close));
             b.addView(r, Widgets.top(14));
-            return Sheets.panel("Something went wrong", b, 480, 260);
+            return Panels.panel("Something went wrong", b, 480, 260);
         });
     }
 
     static void show() {
-        Sheets.Page p = () -> {
-            Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
-            b.addView(U.line(c, "Car Launcher " + version(c), 22, U.TEXT, true));
-            b.addView(U.text(c, "A home screen made for Android car boxes. Built for Dr. Joolay.", 13, U.SUB, false), Widgets.top(2));
-            b.addView(Sheets.section("Features"));
+        Panels.Page p = () -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
+            b.addView(Ui.line(c, "Car Launcher " + version(c), 22, Ui.TEXT, true));
+            b.addView(Ui.text(c, "A home screen made for Android car boxes. Built for Dr. Joolay.", 13, Ui.SUB, false), Widgets.top(2));
+            b.addView(Panels.section("Features"));
             for (String[] f : FEATURES) {
-                LinearLayout row = U.col(c);
-                row.setBackground(U.round(U.CARD2, 12));
-                U.pad(row, 12, 8, 12, 8);
-                row.addView(U.line(c, f[0], 14, U.TEXT, true));
-                row.addView(U.text(c, f[1], 12, U.SUB, false), Widgets.top(2));
+                LinearLayout row = Ui.col(c);
+                row.setBackground(Ui.round(Ui.CARD2, 12));
+                Ui.pad(row, 12, 8, 12, 8);
+                row.addView(Ui.line(c, f[0], 14, Ui.TEXT, true));
+                row.addView(Ui.text(c, f[1], 12, Ui.SUB, false), Widgets.top(2));
                 b.addView(row, Widgets.top(6));
             }
-            b.addView(Sheets.section("Help"));
-            int n = Store.list(CRASHES).size();
-            b.addView(Sheets.item("Crash reports", n == 0 ? "None" : n + " saved", About::crashes));
-            b.addView(Sheets.switchRow(0, 0, "Send crash reports online", "So they can be looked at from anywhere (only the error, version and box model)",
-                    Store.flag(SEND, true), on -> Store.put(SEND, on)));
-            b.addView(Sheets.item("Last BT Phone notifications", null, SettingsPanels::callLog));
-            return Sheets.panel("About", b, 640, 440);
+            b.addView(Panels.section("Help"));
+            int n = Prefs.list(CRASHES).size();
+            b.addView(Panels.item("Crash reports", n == 0 ? "None" : n + " saved", About::crashes));
+            b.addView(Panels.switchRow(0, 0, "Send crash reports online", "So they can be looked at from anywhere (only the error, version and box model)",
+                    Prefs.flag(SEND, true), on -> Prefs.put(SEND, on)));
+            b.addView(Panels.item("Last BT Phone notifications", null, SettingsPanels::callLog));
+            return Panels.panel("About", b, 640, 440);
         };
-        if (Sheets.open()) Sheets.push(p);
-        else Sheets.show(p);
+        if (Panels.open()) Panels.push(p);
+        else Panels.show(p);
     }
 
     static void crashes() {
-        Sheets.Page p = () -> {
-            Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
-            List<String> l = Store.list(CRASHES);
-            if (l.isEmpty()) b.addView(U.text(c, "No crashes recorded. If Car Launcher ever closes by itself, the error is saved here.", 13, U.SUB, false));
+        Panels.Page p = () -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
+            List<String> l = Prefs.list(CRASHES);
+            if (l.isEmpty()) b.addView(Ui.text(c, "No crashes recorded. If Car Launcher ever closes by itself, the error is saved here.", 13, Ui.SUB, false));
             for (String s : l) {
-                TextView t = U.text(c, s, 10, U.TEXT2, false);
+                TextView t = Ui.text(c, s, 10, Ui.TEXT2, false);
                 t.setTypeface(android.graphics.Typeface.MONOSPACE);
-                t.setBackground(U.round(U.CARD2, 10));
-                U.pad(t, 10, 8, 10, 8);
+                t.setBackground(Ui.round(Ui.CARD2, 10));
+                Ui.pad(t, 10, 8, 10, 8);
                 t.setTextIsSelectable(true);
                 b.addView(t, Widgets.top(6));
             }
             if (!l.isEmpty()) {
-                LinearLayout r = U.row(c);
-                r.addView(U.button(c, "Copy", false, () -> {
+                LinearLayout r = Ui.row(c);
+                r.addView(Ui.button(c, "Copy", false, () -> {
                     android.content.ClipboardManager cm = (android.content.ClipboardManager) c.getSystemService(Context.CLIPBOARD_SERVICE);
                     if (cm != null) cm.setPrimaryClip(android.content.ClipData.newPlainText("Car Launcher crash", String.join("\n\n", l)));
                     android.widget.Toast.makeText(c, "Copied", android.widget.Toast.LENGTH_SHORT).show();
                 }));
-                r.addView(U.gap(c, 10, 1));
-                r.addView(U.button(c, "Clear", false, () -> {
-                    Store.putList(CRASHES, new ArrayList<>());
-                    Sheets.refresh();
+                r.addView(Ui.gap(c, 10, 1));
+                r.addView(Ui.button(c, "Clear", false, () -> {
+                    Prefs.putList(CRASHES, new ArrayList<>());
+                    Panels.refresh();
                 }));
                 b.addView(r, Widgets.top(10));
             }
-            return Sheets.panel("Crash reports", b, 700, 440);
+            return Panels.panel("Crash reports", b, 700, 440);
         };
-        if (Sheets.open()) Sheets.push(p);
-        else Sheets.show(p);
+        if (Panels.open()) Panels.push(p);
+        else Panels.show(p);
     }
 }

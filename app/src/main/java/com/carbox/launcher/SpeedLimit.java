@@ -22,22 +22,22 @@ final class SpeedLimit {
     }
 
     static void start() {
-        Loc.listen(SpeedLimit::check);
+        Gps.listen(SpeedLimit::check);
     }
 
     private static void check() {
-        if (busy || !Loc.fresh() || Loc.speed < 2f) return; // only while moving
+        if (busy || !Gps.fresh() || Gps.speed < 2f) return; // only while moving
         long now = SystemClock.elapsedRealtime();
         Location here = new Location("gps");
-        here.setLatitude(Loc.lat);
-        here.setLongitude(Loc.lon);
+        here.setLatitude(Gps.lat);
+        here.setLongitude(Gps.lon);
         if (lastAsked != null && now - lastAt < 15000 && lastAsked.distanceTo(here) < 150) return;
         busy = true;
         lastAsked = here;
         lastAt = now;
         String q = String.format(java.util.Locale.US,
-                "[out:json][timeout:8];way(around:20,%.6f,%.6f)[highway][maxspeed];out tags 3;", Loc.lat, Loc.lon);
-        Net.get("https://overpass-api.de/api/interpreter?data=" + Uri.encode(q), null, (body, code) -> U.ui.post(() -> {
+                "[out:json][timeout:8];way(around:20,%.6f,%.6f)[highway][maxspeed];out tags 3;", Gps.lat, Gps.lon);
+        Net.get("https://overpass-api.de/api/interpreter?data=" + Uri.encode(q), null, (body, code) -> Ui.ui.post(() -> {
             busy = false;
             if (body == null) return; // keep the last known limit on a network hiccup
             try {
@@ -78,10 +78,10 @@ final class SpeedLimit {
 
     /** How far over the limit counts as speeding (km/h); a small margin for GPS error. */
     static int margin() {
-        return Store.num("speed_margin", 5);
+        return Prefs.num("speed_margin", 5);
     }
 
     static boolean over() {
-        return kmh > 0 && Loc.fresh() && Loc.speed * 3.6f > kmh + margin();
+        return kmh > 0 && Gps.fresh() && Gps.speed * 3.6f > kmh + margin();
     }
 }

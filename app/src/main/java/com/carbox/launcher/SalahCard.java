@@ -19,28 +19,28 @@ final class SalahCard {
         hide();
         shown = new FrameLayout(a);
         shown.setClickable(true);
-        shown.setBackground(U.round(0xFF0F3D2E, 16));
-        LinearLayout col = U.col(a);
+        shown.setBackground(Ui.round(0xFF0F3D2E, 16));
+        LinearLayout col = Ui.col(a);
         col.setGravity(Gravity.CENTER);
-        U.pad(col, 20, 16, 20, 16);
+        Ui.pad(col, 20, 16, 20, 16);
         FrameLayout ic = new FrameLayout(a);
-        ic.setBackground(U.oval(0x33FFFFFF));
-        ic.addView(U.icon(a, R.drawable.ic_moon, U.MINT), U.flpu(34, 34, Gravity.CENTER));
-        col.addView(ic, U.lpu(68, 68));
-        col.addView(U.line(a, "TIME FOR SALAAH", 12, U.MINT, true), Widgets.top(14));
-        TextView name = U.line(a, prayer, 44, U.TEXT, true);
+        ic.setBackground(Ui.oval(0x33FFFFFF));
+        ic.addView(Ui.icon(a, R.drawable.ic_moon, Ui.MINT), Ui.flpu(34, 34, Gravity.CENTER));
+        col.addView(ic, Ui.lpu(68, 68));
+        col.addView(Ui.line(a, "TIME FOR SALAAH", 12, Ui.MINT, true), Widgets.top(14));
+        TextView name = Ui.line(a, prayer, 44, Ui.TEXT, true);
         col.addView(name, Widgets.top(2));
         String next = "";
         double[] n = Prayer.next();
         if (n != null) next = "Next: " + Prayer.NAMES[(int) n[0]] + " at " + InfoPanels.clock(n[2]);
-        col.addView(U.line(a, java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(new java.util.Date()) + (next.isEmpty() ? "" : "  ·  " + next), 15, U.TEXT2, false), Widgets.top(8));
-        shown.addView(col, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        View x = U.icon(a, R.drawable.ic_x, U.TEXT2);
-        U.pad(x, 8, 8, 8, 8);
+        col.addView(Ui.line(a, java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(new java.util.Date()) + (next.isEmpty() ? "" : "  ·  " + next), 15, Ui.TEXT2, false), Widgets.top(8));
+        shown.addView(col, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        View x = Ui.icon(a, R.drawable.ic_x, Ui.TEXT2);
+        Ui.pad(x, 8, 8, 8, 8);
         x.setOnClickListener(v -> hide());
-        shown.addView(x, U.flpu(46, 46, Gravity.TOP | Gravity.END));
+        shown.addView(x, Ui.flpu(46, 46, Gravity.TOP | Gravity.END));
         shown.setOnClickListener(v -> hide());
-        a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        a.tileArea.addView(shown, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         a.growIn(shown, a.alertRect("salah")); // grows out of the prayer tile
         a.resetIdle(); // minimises by itself after the usual 15 s
     }

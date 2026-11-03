@@ -37,7 +37,7 @@ final class Optimiser {
 
     static List<Item> scan(Context c) {
         PackageManager pm = c.getPackageManager();
-        Set<String> ignored = new HashSet<>(Store.list(IGNORED));
+        Set<String> ignored = new HashSet<>(Prefs.list(IGNORED));
         Set<String> autostart = new HashSet<>();
         for (int i = 0; i < Actions.autostart().length(); i++) {
             String k = Actions.autostart().optString(i);
@@ -102,54 +102,54 @@ final class Optimiser {
 
     // ------------------------------------------------------------------ page
 
-    static Sheets.Page page;
+    static Panels.Page page;
 
     static void show() {
-        Sheets.Page p = page = () -> {
-            Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
+        Panels.Page p = page = () -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
             List<Item> items = scan(c);
-            b.addView(U.text(c, items.isEmpty()
+            b.addView(Ui.text(c, items.isEmpty()
                     ? "Nothing to tidy up. No other launchers or self-starting apps were found."
                     : "These may clash with Car Launcher or slow the box down when the car starts. Tap Disable to open the app's page, then tap Disable or Force stop there.",
-                    13, U.SUB, false));
+                    13, Ui.SUB, false));
             for (Item it : items) {
-                LinearLayout r = U.row(c);
-                r.setMinimumHeight(U.u(54));
+                LinearLayout r = Ui.row(c);
+                r.setMinimumHeight(Ui.u(54));
                 ImageView iv = new ImageView(c);
                 iv.setImageDrawable(it.icon);
-                r.addView(iv, U.lpu(34, 34));
-                LinearLayout t = U.col(c);
-                t.addView(U.line(c, it.label, 15, U.TEXT, false));
-                t.addView(U.line(c, it.why, 12, it.rank == 0 ? U.AMBER : U.SUB, false), Widgets.top(2));
-                LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, U.WRAP, 1);
-                tl.setMargins(U.u(12), 0, U.u(10), 0);
+                r.addView(iv, Ui.lpu(34, 34));
+                LinearLayout t = Ui.col(c);
+                t.addView(Ui.line(c, it.label, 15, Ui.TEXT, false));
+                t.addView(Ui.line(c, it.why, 12, it.rank == 0 ? Ui.AMBER : Ui.SUB, false), Widgets.top(2));
+                LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, Ui.WRAP, 1);
+                tl.setMargins(Ui.u(12), 0, Ui.u(10), 0);
                 r.addView(t, tl);
-                r.addView(U.button(c, "Keep", false, () -> {
-                    List<String> l = new ArrayList<>(Store.list(IGNORED));
+                r.addView(Ui.button(c, "Keep", false, () -> {
+                    List<String> l = new ArrayList<>(Prefs.list(IGNORED));
                     l.add(it.pkg);
-                    Store.putList(IGNORED, l);
-                    Sheets.refresh();
+                    Prefs.putList(IGNORED, l);
+                    Panels.refresh();
                 }));
-                r.addView(U.gap(c, 8, 1));
-                r.addView(U.button(c, "Disable", true, () -> Apps.appInfo(c, it.pkg)));
-                b.addView(U.hr(c), Widgets.top(6));
+                r.addView(Ui.gap(c, 8, 1));
+                r.addView(Ui.button(c, "Disable", true, () -> Apps.appInfo(c, it.pkg)));
+                b.addView(Ui.hr(c), Widgets.top(6));
                 b.addView(r);
             }
-            if (!Store.list(IGNORED).isEmpty()) {
-                TextView reset = U.text(c, "Show kept apps again", 12, U.ACCENT_SOFT, false);
+            if (!Prefs.list(IGNORED).isEmpty()) {
+                TextView reset = Ui.text(c, "Show kept apps again", 12, Ui.ACCENT_SOFT, false);
                 reset.setGravity(Gravity.CENTER);
                 reset.setOnClickListener(v -> {
-                    Store.putList(IGNORED, new ArrayList<>());
-                    Sheets.refresh();
+                    Prefs.putList(IGNORED, new ArrayList<>());
+                    Panels.refresh();
                 });
                 b.addView(reset, Widgets.top(12));
             }
-            Store.put("opt_seen", true);
-            return Sheets.panel("Startup optimiser", b, 680, 440);
+            Prefs.put("opt_seen", true);
+            return Panels.panel("Startup optimiser", b, 680, 440);
         };
-        if (Sheets.open()) Sheets.push(p);
-        else Sheets.show(p);
+        if (Panels.open()) Panels.push(p);
+        else Panels.show(p);
     }
 
     static int count(Context c) {

@@ -42,36 +42,36 @@ final class Rest {
     static void init(Context c) {
         if (ctx != null) return;
         ctx = c.getApplicationContext();
-        driveMs = Store.lng(DRIVE, 0);
-        meters = Store.lng(METERS, 0);
-        lastMovingAt = Store.lng(LAST_MOVE, 0);
-        Loc.listen(Rest::onFix);
+        driveMs = Prefs.lng(DRIVE, 0);
+        meters = Prefs.lng(METERS, 0);
+        lastMovingAt = Prefs.lng(LAST_MOVE, 0);
+        Gps.listen(Rest::onFix);
     }
 
     // ------------------------------------------------------------------ settings
 
     static boolean on() {
-        return Store.flag(ON, true);
+        return Prefs.flag(ON, true);
     }
 
     /** Remind after this much driving (minutes): 90, 120, 150 or 180. */
     static int limitMin() {
-        return Store.num(HOURS, 120);
+        return Prefs.num(HOURS, 120);
     }
 
     /** Remind after this distance in km, 0 = off. */
     static int limitKm() {
-        return Store.num(KM, 200);
+        return Prefs.num(KM, 200);
     }
 
     /** "beep", "voice" or "both". */
     static String alert() {
-        return Store.str(ALERT, "both");
+        return Prefs.str(ALERT, "both");
     }
 
     /** Minutes stopped that count as a break. */
     static int breakMin() {
-        return Store.num(BREAK, 15);
+        return Prefs.num(BREAK, 15);
     }
 
     static boolean due() {
@@ -86,7 +86,7 @@ final class Rest {
     }
 
     static boolean moving() {
-        return Loc.fresh() && Loc.speed > MOVING;
+        return Gps.fresh() && Gps.speed > MOVING;
     }
 
     /** Stopped for this long right now (ms), 0 while driving. */
@@ -100,7 +100,7 @@ final class Rest {
     private static void onFix() {
         long now = System.currentTimeMillis();
         boolean mv = moving();
-        double trip = Loc.tripMeters;
+        double trip = Gps.tripMeters;
         double dd = lastTrip < 0 ? 0 : trip - lastTrip;
         lastTrip = trip;
         if (mv) {
@@ -123,9 +123,9 @@ final class Rest {
 
     private static void save() {
         lastSaved = System.currentTimeMillis();
-        Store.put(DRIVE, driveMs);
-        Store.put(METERS, (long) meters);
-        Store.put(LAST_MOVE, lastMovingAt);
+        Prefs.put(DRIVE, driveMs);
+        Prefs.put(METERS, (long) meters);
+        Prefs.put(LAST_MOVE, lastMovingAt);
     }
 
     /** Start counting from zero ("I've had a break"). */
@@ -160,9 +160,9 @@ final class Rest {
         String a = alert();
         boolean beep = !"voice".equals(a), voice = !"beep".equals(a);
         String text = test ? "This is how your break reminder will sound. " + message() : message();
-        if (Alerts.expand("rest")) U.ui.post(() -> Alerts.showNotice("TIME FOR A BREAK", "Stop and rest", message(), 0xFF4A3410));
+        if (Alerts.expand("rest")) Ui.ui.post(() -> Alerts.showNotice("TIME FOR A BREAK", "Stop and rest", message(), 0xFF4A3410));
         else {
-            U.ui.post(() -> android.widget.Toast.makeText(ctx, "Time for a break", android.widget.Toast.LENGTH_LONG).show());
+            Ui.ui.post(() -> android.widget.Toast.makeText(ctx, "Time for a break", android.widget.Toast.LENGTH_LONG).show());
             Alerts.front("rest");
         }
         duck(true);
@@ -171,15 +171,15 @@ final class Rest {
             beeps();
             delay = 1400;
         }
-        if (voice) U.ui.postDelayed(() -> speak(text), delay);
-        else U.ui.postDelayed(() -> duck(false), delay + 300);
+        if (voice) Ui.ui.postDelayed(() -> speak(text), delay);
+        else Ui.ui.postDelayed(() -> duck(false), delay + 300);
     }
 
     private static void beeps() {
         try {
             ToneGenerator tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
-            for (int i = 0; i < 3; i++) U.ui.postDelayed(() -> tg.startTone(ToneGenerator.TONE_PROP_BEEP, 220), i * 400L);
-            U.ui.postDelayed(tg::release, 1400);
+            for (int i = 0; i < 3; i++) Ui.ui.postDelayed(() -> tg.startTone(ToneGenerator.TONE_PROP_BEEP, 220), i * 400L);
+            Ui.ui.postDelayed(tg::release, 1400);
         } catch (Exception ignored) {
         }
     }
@@ -223,18 +223,18 @@ final class Rest {
 
                         @Override
                         public void onDone(String id) {
-                            U.ui.post(() -> duck(false));
+                            Ui.ui.post(() -> duck(false));
                         }
 
                         @Override
                         public void onError(String id) {
-                            U.ui.post(() -> duck(false));
+                            Ui.ui.post(() -> duck(false));
                         }
                     });
                     go(text, loc, fallback);
                 } else {
                     beeps(); // no voice engine: fall back to beeps
-                    U.ui.postDelayed(() -> duck(false), 1600);
+                    Ui.ui.postDelayed(() -> duck(false), 1600);
                 }
             });
             return;
@@ -319,53 +319,53 @@ final class Rest {
 
     // ------------------------------------------------------------------ settings page
 
-    static Sheets.Page page;
+    static Panels.Page page;
 
     static void setup() {
-        Sheets.Page p = page = () -> {
-            Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Beeps or speaks over your music when it's time to stop and rest, then every 15 minutes until you do. A stop of "
-                    + breakMin() + " minutes or more counts as a break.", 13, U.SUB, false));
-            b.addView(Sheets.switchRow(0, 0, "Break reminders", null, on(), v -> {
-                Store.put(ON, v);
-                Sheets.refresh();
+        Panels.Page p = page = () -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
+            b.addView(Ui.text(c, "Beeps or speaks over your music when it's time to stop and rest, then every 15 minutes until you do. A stop of "
+                    + breakMin() + " minutes or more counts as a break.", 13, Ui.SUB, false));
+            b.addView(Panels.switchRow(0, 0, "Break reminders", null, on(), v -> {
+                Prefs.put(ON, v);
+                Panels.refresh();
             }), Widgets.top(8));
             int h = limitMin();
-            b.addView(Sheets.row("Remind after", seg(c, HOURS, 90, "1½ h", h), seg(c, HOURS, 120, "2 h", h), seg(c, HOURS, 150, "2½ h", h), seg(c, HOURS, 180, "3 h", h)), Widgets.top(6));
+            b.addView(Panels.row("Remind after", seg(c, HOURS, 90, "1½ h", h), seg(c, HOURS, 120, "2 h", h), seg(c, HOURS, 150, "2½ h", h), seg(c, HOURS, 180, "3 h", h)), Widgets.top(6));
             int km = limitKm();
             boolean m = Widgets.mph();
-            b.addView(Sheets.row("Or after", seg(c, KM, 0, "Off", km), seg(c, KM, 150, m ? "95 mi" : "150 km", km),
+            b.addView(Panels.row("Or after", seg(c, KM, 0, "Off", km), seg(c, KM, 150, m ? "95 mi" : "150 km", km),
                     seg(c, KM, 200, m ? "125 mi" : "200 km", km), seg(c, KM, 300, m ? "185 mi" : "300 km", km)), Widgets.top(6));
             String a = alert();
-            b.addView(Sheets.row("Alert", U.seg(c, "Beep", "beep".equals(a), () -> set(ALERT, "beep")), U.seg(c, "Voice", "voice".equals(a), () -> set(ALERT, "voice")),
-                    U.seg(c, "Both", "both".equals(a), () -> set(ALERT, "both"))), Widgets.top(6));
-            b.addView(Sheets.switchRow(0, 0, "Expand the alert into the tile area", "Off: it shows inside the Driving timer tile", Store.flag("expand_rest", true), v -> Store.put("expand_rest", v)), Widgets.top(4));
+            b.addView(Panels.row("Alert", Ui.seg(c, "Beep", "beep".equals(a), () -> set(ALERT, "beep")), Ui.seg(c, "Voice", "voice".equals(a), () -> set(ALERT, "voice")),
+                    Ui.seg(c, "Both", "both".equals(a), () -> set(ALERT, "both"))), Widgets.top(6));
+            b.addView(Panels.switchRow(0, 0, "Expand the alert into the tile area", "Off: it shows inside the Driving timer tile", Prefs.flag("expand_rest", true), v -> Prefs.put("expand_rest", v)), Widgets.top(4));
             int br = breakMin();
-            b.addView(Sheets.row("Break counts after", seg(c, BREAK, 10, "10 min", br), seg(c, BREAK, 15, "15 min", br), seg(c, BREAK, 20, "20 min", br)), Widgets.top(6));
-            LinearLayout btns = U.row(c);
-            btns.addView(U.button(c, "Test alert", false, () -> remind(true)));
-            btns.addView(U.gap(c, 10, 1));
-            btns.addView(U.button(c, "I've had a break", true, () -> {
+            b.addView(Panels.row("Break counts after", seg(c, BREAK, 10, "10 min", br), seg(c, BREAK, 15, "15 min", br), seg(c, BREAK, 20, "20 min", br)), Widgets.top(6));
+            LinearLayout btns = Ui.row(c);
+            btns.addView(Ui.button(c, "Test alert", false, () -> remind(true)));
+            btns.addView(Ui.gap(c, 10, 1));
+            btns.addView(Ui.button(c, "I've had a break", true, () -> {
                 reset();
-                Sheets.refresh();
+                Panels.refresh();
             }));
             b.addView(btns, Widgets.top(14));
-            return Sheets.panel("Driving timer", b, 640, 440);
+            return Panels.panel("Driving timer", b, 640, 440);
         };
-        if (Sheets.open()) Sheets.push(p);
-        else Sheets.show(p);
+        if (Panels.open()) Panels.push(p);
+        else Panels.show(p);
     }
 
     private static android.view.View seg(Context c, String key, int v, String label, int cur) {
-        return U.seg(c, label, v == cur, () -> {
-            Store.put(key, v);
-            Sheets.refresh();
+        return Ui.seg(c, label, v == cur, () -> {
+            Prefs.put(key, v);
+            Panels.refresh();
         });
     }
 
     private static void set(String key, String v) {
-        Store.put(key, v);
-        Sheets.refresh();
+        Prefs.put(key, v);
+        Panels.refresh();
     }
 }

@@ -39,7 +39,7 @@ final class Trace {
     }
 
     static boolean on() {
-        return Store.flag(KEEP, true);
+        return Prefs.flag(KEEP, true);
     }
 
     /** Called first thing when Car Launcher starts: tidies out logs older than 3 days, then logs this start. */
@@ -49,9 +49,9 @@ final class Trace {
         prune(c);
         // first thing, before the music: the logs since the last send (the previous drive), retried
         // every 15 s for 3 minutes while the box has no internet yet
-        if (Store.flag(AUTO, true)) sendPrevious(c.getApplicationContext(), 0);
-        long n = Store.lng("trace_starts", 0) + 1;
-        Store.put("trace_starts", n);
+        if (Prefs.flag(AUTO, true)) sendPrevious(c.getApplicationContext(), 0);
+        long n = Prefs.lng("trace_starts", 0) + 1;
+        Prefs.put("trace_starts", n);
         event(c, "=== Car Launcher started (" + About.version(c) + ", " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
                 + ", Android " + android.os.Build.VERSION.RELEASE + ", box on for " + SystemClock.elapsedRealtime() / 1000 + " s)");
         try { // Car Launcher's own Android log for this start, kept to about 2 MB
@@ -63,15 +63,15 @@ final class Trace {
             event(c, "Android log not available: " + e);
         }
         // 3 minutes in (so the start-up is in it): send what's new since the last time, by itself
-        if (Store.flag(AUTO, true)) {
+        if (Prefs.flag(AUTO, true)) {
             final Context app = c.getApplicationContext();
-            U.ui.postDelayed(() -> send(app, Store.lng("logs_auto_at", 0), true), 180000);
+            Ui.ui.postDelayed(() -> send(app, Prefs.lng("logs_auto_at", 0), true), 180000);
         }
     }
 
     private static void sendPrevious(Context app, int tries) {
-        send(app, Store.lng("logs_auto_at", 0), true, () -> {
-            if (tries < 12) U.ui.postDelayed(() -> sendPrevious(app, tries + 1), 15000);
+        send(app, Prefs.lng("logs_auto_at", 0), true, () -> {
+            if (tries < 12) Ui.ui.postDelayed(() -> sendPrevious(app, tries + 1), 15000);
             else event(app, "Previous logs couldn't be sent at start (no internet?)");
         });
     }
@@ -127,7 +127,7 @@ final class Trace {
         final Context app = c.getApplicationContext();
         final long started = System.currentTimeMillis();
         event(app, auto ? "=== Logs sent by themselves (after start)" : "=== Logs sent from Settings");
-        Store.put(PENDING, true);
+        Prefs.put(PENDING, true);
         Net.bg(() -> {
             String result;
             try {
@@ -141,8 +141,8 @@ final class Trace {
                 File zip = new File(app.getCacheDir(), "logs.zip");
                 File[] fs = dir(app).listFiles(f -> f.lastModified() > since);
                 if (fs == null || fs.length == 0) {
-                    Store.put(PENDING, false);
-                    if (!auto) U.ui.post(() -> toast(app, "There are no logs yet"));
+                    Prefs.put(PENDING, false);
+                    if (!auto) Ui.ui.post(() -> toast(app, "There are no logs yet"));
                     return;
                 }
                 // at most 10 MB (ntfy refuses over 15 MB, and smaller sends faster): the event logs first,
@@ -185,8 +185,8 @@ final class Trace {
                 //noinspection ResultOfMethodCallIgnored
                 zip.delete();
                 if (code >= 200 && code < 300) {
-                    Store.put(PENDING, false);
-                    if (auto) Store.put("logs_auto_at", started);
+                    Prefs.put(PENDING, false);
+                    if (auto) Prefs.put("logs_auto_at", started);
                     result = auto ? null : "Logs sent";
                 } else result = "Couldn't send the logs (" + code + "). Try again in Settings → Logs";
             } catch (Exception e) {
@@ -194,10 +194,10 @@ final class Trace {
             }
             final String r = result;
             final boolean bad = r != null && !"Logs sent".equals(r);
-            U.ui.post(() -> {
+            Ui.ui.post(() -> {
                 if (bad && failed != null) failed.run();
                 if (r != null && !auto) toast(app, r);
-                Sheets.refresh();
+                Panels.refresh();
             });
         });
     }
@@ -209,32 +209,32 @@ final class Trace {
     /** Settings page. */
     static void settings() {
         SettingsPanels.open(() -> {
-            Context c = Sheets.ctx();
-            android.widget.LinearLayout b = U.col(c);
-            b.addView(U.text(c, "Car Launcher keeps a log of the last 3 days (what it did, and its own Android messages). "
-                    + "When something goes wrong, tap Send so it can be looked at online.", 13, U.SUB, false));
-            b.addView(Sheets.switchRow(0, 0, "Keep logs", on() ? "On · the last 3 days are kept" : "Off · nothing is logged", on(), v -> {
-                Store.put(KEEP, v);
+            Context c = Panels.ctx();
+            android.widget.LinearLayout b = Ui.col(c);
+            b.addView(Ui.text(c, "Car Launcher keeps a log of the last 3 days (what it did, and its own Android messages). "
+                    + "When something goes wrong, tap Send so it can be looked at online.", 13, Ui.SUB, false));
+            b.addView(Panels.switchRow(0, 0, "Keep logs", on() ? "On · the last 3 days are kept" : "Off · nothing is logged", on(), v -> {
+                Prefs.put(KEEP, v);
                 if (v) atStart(c);
                 else {
                     running = false;
                     if (logcat != null) logcat.destroy();
                     logcat = null;
                 }
-                Sheets.refresh();
+                Panels.refresh();
             }), Widgets.top(10));
-            b.addView(Sheets.switchRow(0, 0, "Send by themselves after every start", "For now, while Car Launcher is being built: the new logs go online 3 minutes after each start",
-                    Store.flag(AUTO, true), v -> Store.put(AUTO, v)), Widgets.top(6));
+            b.addView(Panels.switchRow(0, 0, "Send by themselves after every start", "For now, while Car Launcher is being built: the new logs go online 3 minutes after each start",
+                    Prefs.flag(AUTO, true), v -> Prefs.put(AUTO, v)), Widgets.top(6));
             long sz = size(c);
-            b.addView(U.text(c, "Kept now: " + Math.max(sz > 0 ? 1 : 0, sz / 1024) + " KB", 12, U.SUB, false), Widgets.top(6));
-            android.widget.LinearLayout btns = U.row(c);
-            btns.addView(U.button(c, Store.flag(PENDING, false) ? "Send again" : "Send the last 3 days", true, () -> send(c)));
-            btns.addView(U.gap(c, 10, 1));
-            btns.addView(U.button(c, "Restart Car Launcher", false, () -> {
+            b.addView(Ui.text(c, "Kept now: " + Math.max(sz > 0 ? 1 : 0, sz / 1024) + " KB", 12, Ui.SUB, false), Widgets.top(6));
+            android.widget.LinearLayout btns = Ui.row(c);
+            btns.addView(Ui.button(c, Prefs.flag(PENDING, false) ? "Send again" : "Send the last 3 days", true, () -> send(c)));
+            btns.addView(Ui.gap(c, 10, 1));
+            btns.addView(Ui.button(c, "Restart Car Launcher", false, () -> {
                 if (MainActivity.I != null) MainActivity.I.restartApp();
             }));
             b.addView(btns, Widgets.top(12));
-            return Sheets.panel("Logs", b, 560, 330);
+            return Panels.panel("Logs", b, 560, 330);
         });
     }
 }

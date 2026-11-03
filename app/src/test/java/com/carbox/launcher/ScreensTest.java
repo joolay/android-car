@@ -76,9 +76,9 @@ public class ScreensTest {
         out.mkdirs();
         Context c = RuntimeEnvironment.getApplication();
         installApps(c);
-        Store.init(c);
-        Store.put(Store.H24, true);
-        Store.put("splash_on", false);
+        Prefs.init(c);
+        Prefs.put(Prefs.H24, true);
+        Prefs.put("splash_on", false);
 
         ctl = Robolectric.buildActivity(MainActivity.class).setup();
         a = ctl.get();
@@ -86,7 +86,7 @@ public class ScreensTest {
         fakeData();
 
         // 1. home: default tiles with the Driving timer in place of Speed
-        Tiles.setSpec(4, Tiles.widget("rest"));
+        TileDrawer.setSpec(4, TileDrawer.widget("rest"));
         Rest.driveMs = 84 * 60000L;
         Rest.meters = 142000;
         shot("1-home");
@@ -99,7 +99,7 @@ public class ScreensTest {
         Rest.meters = 142000;
 
         // 3. twelve tiles: first screen (with the position bar between the rows), then swiped to the end
-        for (int k = 0; k < 4; k++) Tiles.addTile();
+        for (int k = 0; k < 4; k++) TileDrawer.addTile();
         JSONArraySet(8, "trip");
         JSONArraySet(9, "weather");
         JSONArraySet(10, "heading");
@@ -109,26 +109,26 @@ public class ScreensTest {
         a.tiles.view.clampScroll();
         shot("4-tiles-12-swiped-right");
         a.tiles.view.scrollTo(0, 0);
-        for (int k = 0; k < 4; k++) Tiles.removeTile(Tiles.count() - 1);
+        for (int k = 0; k < 4; k++) TileDrawer.removeTile(TileDrawer.count() - 1);
 
         // 5. All apps with Settings first
         AppPanels.allApps(false);
         shot("5-all-apps");
-        Sheets.close();
+        Panels.close();
 
         // 6. Driving timer settings
         Rest.setup();
         shot("6-driving-timer-settings");
-        Sheets.close();
+        Panels.close();
 
         // 8. Settings main page
         SettingsPanels.main();
         shot("8-settings");
-        Sheets.close();
+        Panels.close();
     }
 
     private static void JSONArraySet(int i, String id) {
-        Tiles.setSpec(i, Tiles.widget(id));
+        TileDrawer.setSpec(i, TileDrawer.widget(id));
     }
 
     // ------------------------------------------------------------------ set-up
@@ -176,7 +176,7 @@ public class ScreensTest {
         Apps.setPinned(Apps.byPkg("com.spotify.music").key, true);
         Apps.setPinned(Apps.byPkg("com.google.android.apps.maps").key, true);
         // a re-render now that icons and pins are in place
-        Tiles.save(new org.json.JSONArray());
+        TileDrawer.save(new org.json.JSONArray());
         a.tiles.refresh();
         a.dock.render();
         settle();
@@ -238,7 +238,7 @@ public class ScreensTest {
         root.layout(0, 0, w, h);
         Bitmap b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas cv = new Canvas(b);
-        cv.drawColor(U.BG);
+        cv.drawColor(Ui.BG);
         root.draw(cv);
         try (FileOutputStream fo = new FileOutputStream(new File(out, name + ".png"))) {
             b.compress(Bitmap.CompressFormat.PNG, 100, fo);

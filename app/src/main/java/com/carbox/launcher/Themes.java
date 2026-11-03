@@ -19,16 +19,16 @@ import android.view.ViewGroup;
  * the left widgets and the tiles: each card shows a blurred copy of the wallpaper behind it, a light
  * tint and a hairline edge. Off: the usual solid card. Also draws the "Road" wallpaper.
  */
-final class Glass {
+final class Themes {
     static final String KEY = "glass_ui";
     private static Bitmap blur; // the whole wallpaper, blurred, at screen size
     private static int blurW, blurH;
 
-    private Glass() {
+    private Themes() {
     }
 
     static boolean on() {
-        return Store.flag(KEY, false);
+        return Prefs.flag(KEY, false);
     }
 
     /** A card background: glass when the look is on, else the solid colour as before. */
@@ -49,9 +49,9 @@ final class Glass {
 
         Inner(int color, float radius) {
             this.color = color;
-            this.r = U.uf(radius);
+            this.r = Ui.uf(radius);
             edge.setStyle(Paint.Style.STROKE);
-            edge.setStrokeWidth(Math.max(1f, U.uf(1)));
+            edge.setStrokeWidth(Math.max(1f, Ui.uf(1)));
             edge.setColor(0x2EFFFFFF);
         }
 
@@ -139,10 +139,10 @@ final class Glass {
 
         Card(int color, float radius) {
             this.color = color;
-            this.r = U.uf(radius);
+            this.r = Ui.uf(radius);
             fill.setColor(color);
             edge.setStyle(Paint.Style.STROKE);
-            edge.setStrokeWidth(Math.max(1f, U.uf(1)));
+            edge.setStrokeWidth(Math.max(1f, Ui.uf(1)));
             edge.setColor(0x40FFFFFF);
         }
 

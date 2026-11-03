@@ -24,7 +24,7 @@ final class Alerts {
 
     /** Expand this kind of alert into the tile area? */
     static boolean expand(String kind) {
-        return Store.flag(GLOBAL, false) && Store.flag("expand_" + kind, true);
+        return Prefs.flag(GLOBAL, false) && Prefs.flag("expand_" + kind, true);
     }
 
     /** Which alert a widget has, or null. */
@@ -41,9 +41,9 @@ final class Alerts {
      * newest alert is always first (the tile that was first moves to second, and so on).
      */
     static void front(String kind) {
-        if (!Store.flag("alert_front", true)) return;
-        U.ui.post(() -> {
-            org.json.JSONArray s = Tiles.specs();
+        if (!Prefs.flag("alert_front", true)) return;
+        Ui.ui.post(() -> {
+            org.json.JSONArray s = TileDrawer.specs();
             int at = -1;
             for (int i = 0; i < s.length(); i++) {
                 org.json.JSONObject o = s.optJSONObject(i);
@@ -57,7 +57,7 @@ final class Alerts {
                 org.json.JSONArray out = new org.json.JSONArray();
                 out.put(s.opt(at));
                 for (int i = 0; i < s.length(); i++) if (i != at) out.put(s.opt(i));
-                Tiles.save(out);
+                TileDrawer.save(out);
             }
             MainActivity a = MainActivity.I;
             if (a == null) return;
@@ -86,22 +86,22 @@ final class Alerts {
         hideNotice();
         notice = new FrameLayout(a);
         notice.setClickable(true);
-        notice.setBackground(U.round(bg, 16));
-        LinearLayout col = U.col(a);
+        notice.setBackground(Ui.round(bg, 16));
+        LinearLayout col = Ui.col(a);
         col.setGravity(Gravity.CENTER);
-        U.pad(col, 20, 16, 20, 16);
-        col.addView(U.line(a, label, 13, U.AMBER, true));
-        col.addView(U.line(a, big, 40, U.TEXT, true), Widgets.top(4));
-        TextView s = U.text(a, sub, 15, U.TEXT2, false);
+        Ui.pad(col, 20, 16, 20, 16);
+        col.addView(Ui.line(a, label, 13, Ui.AMBER, true));
+        col.addView(Ui.line(a, big, 40, Ui.TEXT, true), Widgets.top(4));
+        TextView s = Ui.text(a, sub, 15, Ui.TEXT2, false);
         s.setGravity(Gravity.CENTER);
         col.addView(s, Widgets.top(8));
-        notice.addView(col, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        View x = U.icon(a, R.drawable.ic_x, U.TEXT2);
-        U.pad(x, 8, 8, 8, 8);
+        notice.addView(col, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        View x = Ui.icon(a, R.drawable.ic_x, Ui.TEXT2);
+        Ui.pad(x, 8, 8, 8, 8);
         x.setOnClickListener(v -> hideNotice());
-        notice.addView(x, U.flpu(46, 46, Gravity.TOP | Gravity.END));
+        notice.addView(x, Ui.flpu(46, 46, Gravity.TOP | Gravity.END));
         notice.setOnClickListener(v -> hideNotice());
-        a.tileArea.addView(notice, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        a.tileArea.addView(notice, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         a.growIn(notice, a.alertRect("rest")); // grows out of the driving timer tile
         a.resetIdle();
     }
@@ -115,25 +115,25 @@ final class Alerts {
     // ---- settings
 
     static void settings() {
-        Sheets.Page p = () -> {
-            Context c = Sheets.ctx();
-            LinearLayout b = U.col(c);
-            b.addView(U.text(c, "When a tile has something to tell you, it can fill the 2×4 tile area for a moment, or just light up inside itself.", 13, U.SUB, false));
-            b.addView(Sheets.switchRow(0, 0, "Expand alerts into the tile area", "Off: alerts only show inside their tiles", Store.flag(GLOBAL, false), v -> {
-                Store.put(GLOBAL, v);
-                Sheets.refresh();
+        Panels.Page p = () -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
+            b.addView(Ui.text(c, "When a tile has something to tell you, it can fill the 2×4 tile area for a moment, or just light up inside itself.", 13, Ui.SUB, false));
+            b.addView(Panels.switchRow(0, 0, "Expand alerts into the tile area", "Off: alerts only show inside their tiles", Prefs.flag(GLOBAL, false), v -> {
+                Prefs.put(GLOBAL, v);
+                Panels.refresh();
             }), Widgets.top(8));
-            if (Store.flag(GLOBAL, false)) {
-                b.addView(Sheets.section("Per tile"));
+            if (Prefs.flag(GLOBAL, false)) {
+                b.addView(Panels.section("Per tile"));
                 for (String[] k : KINDS)
-                    b.addView(Sheets.switchRow(0, 0, k[1], k[2], Store.flag("expand_" + k[0], true), v -> Store.put("expand_" + k[0], v)));
+                    b.addView(Panels.switchRow(0, 0, k[1], k[2], Prefs.flag("expand_" + k[0], true), v -> Prefs.put("expand_" + k[0], v)));
             }
-            b.addView(Sheets.section("Alerts that stay in their tile"));
-            b.addView(Sheets.switchRow(0, 0, "Move the tile to the first spot", "Slides there; the newest alert is always first and the others move along",
-                    Store.flag("alert_front", true), v -> Store.put("alert_front", v)));
-            return Sheets.panel("Alerts", b, 600, 420);
+            b.addView(Panels.section("Alerts that stay in their tile"));
+            b.addView(Panels.switchRow(0, 0, "Move the tile to the first spot", "Slides there; the newest alert is always first and the others move along",
+                    Prefs.flag("alert_front", true), v -> Prefs.put("alert_front", v)));
+            return Panels.panel("Alerts", b, 600, 420);
         };
-        if (Sheets.open()) Sheets.push(p);
-        else Sheets.show(p);
+        if (Panels.open()) Panels.push(p);
+        else Panels.show(p);
     }
 }

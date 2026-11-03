@@ -67,7 +67,7 @@ final class Net {
             }
             final String fo = out;
             final int fc = code;
-            if (r != null) U.ui.post(() -> r.on(fo, fc));
+            if (r != null) Ui.ui.post(() -> r.on(fo, fc));
         });
     }
 

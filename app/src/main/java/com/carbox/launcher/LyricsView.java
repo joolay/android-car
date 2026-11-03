@@ -16,7 +16,7 @@ import java.util.List;
  * dimmer, scrolling by itself with the song. Stays up until closed or the song ends (no idle
  * timeout), and you can scroll back with a finger.
  */
-final class LyricsCard {
+final class LyricsView {
     private static FrameLayout shown;
     private static ScrollView sv;
     private static LinearLayout lines;
@@ -26,7 +26,7 @@ final class LyricsCard {
     private static long touchedAt;
     private static final List<TextView> views = new ArrayList<>();
 
-    private LyricsCard() {
+    private LyricsView() {
     }
 
     private static long changedAt; // when the song changed and its lyrics weren't there yet
@@ -46,32 +46,32 @@ final class LyricsCard {
         if (a == null || np == null || np.lyricCount() == 0) return;
         shown = new FrameLayout(a);
         shown.setClickable(true);
-        shown.setBackground(U.round(U.CARD, 16));
+        shown.setBackground(Ui.round(Ui.CARD, 16));
         a.mapAside(true); // the big map steps aside for the lyrics
-        head = U.line(a, "", 11, U.SUB, true);
+        head = Ui.line(a, "", 11, Ui.SUB, true);
         head.setLetterSpacing(0.06f);
-        FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(U.MATCH, U.WRAP, Gravity.TOP);
-        hl.setMargins(U.u(18), U.u(12), U.u(48), 0);
+        FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP, Gravity.TOP);
+        hl.setMargins(Ui.u(18), Ui.u(12), Ui.u(48), 0);
         shown.addView(head, hl);
         sv = new ScrollView(a);
         sv.setVerticalScrollBarEnabled(false);
         sv.setVerticalFadingEdgeEnabled(true);
-        sv.setFadingEdgeLength(U.u(40));
+        sv.setFadingEdgeLength(Ui.u(40));
         sv.setOnTouchListener((v, e) -> {
             if (e.getActionMasked() != MotionEvent.ACTION_UP) touchedAt = System.currentTimeMillis(); // let a finger take over for a few seconds
             return false;
         });
-        lines = U.col(a);
+        lines = Ui.col(a);
         lines.setGravity(Gravity.CENTER_HORIZONTAL);
         sv.addView(lines);
-        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(U.MATCH, U.MATCH);
-        sl.setMargins(U.u(16), U.u(32), U.u(16), U.u(8));
+        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH);
+        sl.setMargins(Ui.u(16), Ui.u(32), Ui.u(16), Ui.u(8));
         shown.addView(sv, sl);
-        View x = U.icon(a, R.drawable.ic_x, U.SUB);
-        U.pad(x, 8, 8, 8, 8);
+        View x = Ui.icon(a, R.drawable.ic_x, Ui.SUB);
+        Ui.pad(x, 8, 8, 8, 8);
         x.setOnClickListener(v -> hide());
-        shown.addView(x, U.flpu(46, 46, Gravity.TOP | Gravity.END));
-        a.tileArea.addView(shown, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+        shown.addView(x, Ui.flpu(46, 46, Gravity.TOP | Gravity.END));
+        a.tileArea.addView(shown, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         // grows out of the Now playing tile
         final FrameLayout s0 = shown;
         s0.setAlpha(0f);
@@ -88,17 +88,17 @@ final class LyricsCard {
             s0.setScaleX(t[2]);
             s0.setScaleY(t[3]);
             s0.setAlpha(0.6f);
-            s0.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).alpha(1f).setDuration(U.ms(340))
+            s0.animate().translationX(0).translationY(0).scaleX(1).scaleY(1).alpha(1f).setDuration(Ui.ms(340))
                     .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
         });
         forKey = null;
         changedAt = 0;
-        U.ui.post(tick);
+        Ui.ui.post(tick);
         np.update(); // Now playing shows the album art while the lyrics are open
     }
 
     static void hide() {
-        U.ui.removeCallbacks(tick);
+        Ui.ui.removeCallbacks(tick);
         final FrameLayout s0 = shown;
         shown = null;
         views.clear();
@@ -116,7 +116,7 @@ final class LyricsCard {
         // shrinks back into the Now playing tile
         s0.setPivotX(0);
         s0.setPivotY(0);
-        s0.animate().translationX(t[0]).translationY(t[1]).scaleX(t[2]).scaleY(t[3]).alpha(0.2f).setDuration(U.ms(280))
+        s0.animate().translationX(t[0]).translationY(t[1]).scaleX(t[2]).scaleY(t[3]).alpha(0.2f).setDuration(Ui.ms(280))
                 .setInterpolator(new android.view.animation.AccelerateInterpolator(1.4f)).withEndAction(gone).start();
     }
 
@@ -145,7 +145,7 @@ final class LyricsCard {
                         hide();
                         return;
                     }
-                    U.ui.postDelayed(this, 250);
+                    Ui.ui.postDelayed(this, 250);
                     return;
                 }
             }
@@ -153,7 +153,7 @@ final class LyricsCard {
                 if (forKey == null || !forKey.equals("none")) {
                     lines.removeAllViews();
                     views.clear();
-                    TextView t = U.text(shown.getContext(), "No lyrics for this song", 16, U.SUB, false);
+                    TextView t = Ui.text(shown.getContext(), "No lyrics for this song", 16, Ui.SUB, false);
                     lines.addView(t, Widgets.top(80));
                     forKey = "none";
                 }
@@ -161,7 +161,7 @@ final class LyricsCard {
                 if (!np.lyricKey().equals(forKey)) build(np);
                 follow(np);
             }
-            U.ui.postDelayed(this, 250);
+            Ui.ui.postDelayed(this, 250);
         }
     };
 
@@ -170,17 +170,17 @@ final class LyricsCard {
         head.setText(("LYRICS · " + np.songTitle() + " · " + np.songArtist()).toUpperCase(java.util.Locale.ROOT));
         lines.removeAllViews();
         views.clear();
-        lines.addView(new View(shown.getContext()), U.lpu(1, 90)); // room so the first line can sit in the middle
+        lines.addView(new View(shown.getContext()), Ui.lpu(1, 90)); // room so the first line can sit in the middle
         for (int i = 0; i < np.lyricCount(); i++) {
             String s = np.lyricLine(i);
-            TextView t = U.text(shown.getContext(), s.isEmpty() ? "♪" : s, 15, U.MUTED, false);
+            TextView t = Ui.text(shown.getContext(), s.isEmpty() ? "♪" : s, 15, Ui.MUTED, false);
             t.setGravity(Gravity.CENTER);
-            LinearLayout.LayoutParams lp = U.lp(U.MATCH, U.WRAP);
-            lp.topMargin = U.u(8);
+            LinearLayout.LayoutParams lp = Ui.lp(Ui.MATCH, Ui.WRAP);
+            lp.topMargin = Ui.u(8);
             lines.addView(t, lp);
             views.add(t);
         }
-        lines.addView(new View(shown.getContext()), U.lpu(1, 120));
+        lines.addView(new View(shown.getContext()), Ui.lpu(1, 120));
         cur = -2;
     }
 
@@ -191,8 +191,8 @@ final class LyricsCard {
         for (int i = 0; i < views.size(); i++) {
             TextView t = views.get(i);
             int d = Math.abs(i - idx);
-            t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, U.uf(d == 0 ? 22 : d == 1 ? 16 : 14));
-            t.setTextColor(d == 0 ? U.TEXT : d == 1 ? U.SUB : U.MUTED);
+            t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.uf(d == 0 ? 22 : d == 1 ? 16 : 14));
+            t.setTextColor(d == 0 ? Ui.TEXT : d == 1 ? Ui.SUB : Ui.MUTED);
             t.setTypeface(null, d == 0 ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
         }
         if (idx < 0 || idx >= views.size() || System.currentTimeMillis() - touchedAt < 4000) return;

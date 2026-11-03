@@ -27,18 +27,18 @@ final class Dock {
     }
     /** Icons in the dock before All apps: 5 to 8 (the dialler counts as one when shown). */
     static int icons() {
-        return Math.max(5, Math.min(8, Store.num("dock_icons", 7)));
+        return Math.max(5, Math.min(8, Prefs.num("dock_icons", 7)));
     }
 
     static boolean dialler() {
-        return Store.flag("dock_dialer", true);
+        return Prefs.flag("dock_dialer", true);
     }
 
     Dock(Activity a) {
         this.a = a;
-        view = U.row(a);
-        view.setBackground(Glass.card(U.CARD, 16));
-        U.pad(view, 10, 0, 10, 0);
+        view = Ui.row(a);
+        view.setBackground(Themes.card(Ui.CARD, 16));
+        Ui.pad(view, 10, 0, 10, 0);
         Apps.listen(this::render);
         // re-fit whenever the dock's width changes (the lock comes and goes beside it)
         view.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
@@ -61,7 +61,7 @@ final class Dock {
         // dock, it all shrinks together so All apps is never cut off
         int apps = pinned.size() + recent.size();
         float need = 20 + (dialler() ? 42 : 0) + apps * 48 + 14 + 48 + 6;
-        need = U.uf(need * scale());
+        need = Ui.uf(need * scale());
         int avail = view.getWidth();
         fit = avail > 0 ? Math.min(1f, avail / need) : 1f;
         // even spacing: exactly one equal gap between neighbours (none at the ends, just the padding);
@@ -84,15 +84,15 @@ final class Dock {
 
     private void addDialler() {
         FrameLayout dial = new FrameLayout(a);
-        dial.setBackground(U.oval(U.GREEN));
-        dial.addView(U.icon(a, R.drawable.ic_call, U.TEXT), U.flpu(s(22), s(22), Gravity.CENTER));
+        dial.setBackground(Ui.oval(Ui.GREEN));
+        dial.addView(Ui.icon(a, R.drawable.ic_call, Ui.TEXT), Ui.flpu(s(22), s(22), Gravity.CENTER));
         dial.setOnClickListener(v -> { // press again to close
             if (PhoneScreen.isShown()) PhoneScreen.hide();
             else PhoneScreen.show(null);
         });
         dial.setContentDescription("Phone");
-        U.press(dial);
-        view.addView(dial, U.lpu(s(42), s(42)));
+        Ui.press(dial);
+        view.addView(dial, Ui.lpu(s(42), s(42)));
         dial.setOnLongClickListener(v -> { // hold: dock settings (e.g. to remove the dialler)
             SettingsPanels.dock();
             return true;
@@ -108,7 +108,7 @@ final class Dock {
         } catch (Exception e) {
             icon.setImageResource(R.mipmap.ic_launcher);
         }
-        all.addView(icon, U.flpu(s(40), s(40), Gravity.CENTER));
+        all.addView(icon, Ui.flpu(s(40), s(40), Gravity.CENTER));
         all.setContentDescription("All apps");
         all.setOnClickListener(v -> { // tap: the tiles slide in (map home view), else the widget chooser
             if (MainActivity.I != null && MainActivity.mapHome()) MainActivity.I.toggleDrawer();
@@ -118,8 +118,8 @@ final class Dock {
             AppPanels.allApps(false);
             return true;
         });
-        U.press(all);
-        LinearLayout.LayoutParams lp = U.lpu(s(48), s(48));
+        Ui.press(all);
+        LinearLayout.LayoutParams lp = Ui.lpu(s(48), s(48));
         view.addView(all, lp);
     }
 
@@ -127,25 +127,25 @@ final class Dock {
         FrameLayout f = new FrameLayout(a);
         ImageView iv = new ImageView(a);
         iv.setImageDrawable(ap.icon);
-        f.addView(iv, U.flpu(s(40), s(40), Gravity.CENTER));
+        f.addView(iv, Ui.flpu(s(40), s(40), Gravity.CENTER));
         if (pin) {
             FrameLayout badge = new FrameLayout(a);
-            badge.setBackground(U.oval(U.BG));
-            badge.addView(U.icon(a, R.drawable.ic_pin, U.ACCENT), U.flpu(s(11), s(11), Gravity.CENTER));
-            FrameLayout.LayoutParams bl = U.flpu(s(16), s(16), Gravity.TOP | Gravity.END);
+            badge.setBackground(Ui.oval(Ui.BG));
+            badge.addView(Ui.icon(a, R.drawable.ic_pin, Ui.ACCENT), Ui.flpu(s(11), s(11), Gravity.CENTER));
+            FrameLayout.LayoutParams bl = Ui.flpu(s(16), s(16), Gravity.TOP | Gravity.END);
             f.addView(badge, bl);
         }
         f.setOnClickListener(v -> {
             Apps.launch(a, ap);
-            U.ui.postDelayed(this::render, 800);
+            Ui.ui.postDelayed(this::render, 800);
         });
         f.setOnLongClickListener(v -> {
             AppPanels.appMenu(ap, this::render);
             return true;
         });
         f.setContentDescription(ap.label);
-        U.press(f);
-        view.addView(f, U.lpu(s(48), s(48)));
+        Ui.press(f);
+        view.addView(f, Ui.lpu(s(48), s(48)));
     }
 
     private void spacer() {

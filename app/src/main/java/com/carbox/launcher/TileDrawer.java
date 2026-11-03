@@ -23,7 +23,7 @@ import java.util.List;
  * Each tile is a folder of apps or a widget. Long-press a tile to enter edit mode, then drag to
  * reorder (drag to the edge to scroll); tap a tile's ⋯ for Replace with widget etc.
  */
-final class Tiles {
+final class TileDrawer {
     /** Space between tiles: 8, or 12 when the ticker is hidden (the same gap between tiles and above the dock). */
     static float gapDu = 8;
     static final int COLS = 4, ROWS = 2, COUNT = COLS * ROWS; // on screen at once
@@ -64,7 +64,7 @@ final class Tiles {
     private final List<Widgets.W> widgets = new ArrayList<>();
     private boolean editing, running;
 
-    Tiles(MainActivity a) {
+    TileDrawer(MainActivity a) {
         this.a = a;
         view = new Grid(a);
         Apps.listen(this::refresh);
@@ -99,25 +99,25 @@ final class Tiles {
         JSONArray s = specs(), out = new JSONArray();
         for (int k = 0; k < s.length(); k++) if (k != i) out.put(s.opt(k));
         save(out);
-        Store.put("tiles_empty", out.length() == 0);
+        Prefs.put("tiles_empty", out.length() == 0);
         if (MainActivity.I != null) MainActivity.I.tiles.refresh();
     }
 
     private static String cleanRaw, cleanOut; // last stored tiles and their tidied form
 
     static JSONArray specs() {
-        String raw = Store.str(Store.TILES, "[]");
+        String raw = Prefs.str(Prefs.TILES, "[]");
         if (raw.equals(cleanRaw) && cleanOut != null) { // unchanged since last time: skip the tidy-up
             try {
                 return new JSONArray(cleanOut);
             } catch (Exception ignored) {
             }
         }
-        JSONArray s = Store.arr(Store.TILES);
-        if (s.length() == 0 && !Store.flag("tiles_empty", false)) s = defaults();
-        if (!Store.flag("tiles_cm", false) && s.length() > 0) s = toColumns(s);
+        JSONArray s = Prefs.arr(Prefs.TILES);
+        if (s.length() == 0 && !Prefs.flag("tiles_empty", false)) s = defaults();
+        if (!Prefs.flag("tiles_cm", false) && s.length() > 0) s = toColumns(s);
         s = clean(s);
-        cleanRaw = Store.str(Store.TILES, "[]");
+        cleanRaw = Prefs.str(Prefs.TILES, "[]");
         cleanOut = s.toString();
         return s;
     }
@@ -127,7 +127,7 @@ final class Tiles {
      * column so they stay where they were on screen, and drop extra tiles the old "Home tiles" count hid.
      */
     private static JSONArray toColumns(JSONArray s) {
-        int keep = Math.min(s.length(), Math.max(COUNT, Store.num("tiles_n", COUNT)));
+        int keep = Math.min(s.length(), Math.max(COUNT, Prefs.num("tiles_n", COUNT)));
         JSONArray out = new JSONArray();
         for (int c = 0; c < COLS; c++)
             for (int r = 0; r < ROWS; r++) {
@@ -135,7 +135,7 @@ final class Tiles {
                 if (old < Math.min(keep, COUNT)) out.put(s.opt(old));
             }
         for (int i = COUNT; i < keep; i++) out.put(s.opt(i)); // the extra columns were already column by column
-        Store.put("tiles_cm", true);
+        Prefs.put("tiles_cm", true);
         save(out);
         return out;
     }
@@ -186,7 +186,7 @@ final class Tiles {
     }
 
     static void save(JSONArray s) {
-        Store.put(Store.TILES, s);
+        Prefs.put(Prefs.TILES, s);
     }
 
     static JSONObject widget(String id) {
@@ -243,7 +243,7 @@ final class Tiles {
             if (o != null) have.add(o.optString("id"));
         }
         for (String[] w : Widgets.CATALOG) if (Faith.widgetAllowed(w[0]) && have.add(w[0])) s.put(widget(w[0]));
-        Store.put("tiles_cm", true);
+        Prefs.put("tiles_cm", true);
         if (!Apps.all.isEmpty()) save(s); // wait until the app list has loaded before remembering defaults
         return s;
     }
@@ -287,32 +287,32 @@ final class Tiles {
             widgets.add(w);
             content = w.v;
         } else content = folderView(index, spec);
-        f.addView(content, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
-        MapPanel.clip(f, 16);
+        f.addView(content, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        Maps.clip(f, 16);
 
         if (editing) {
             View ring = new View(a);
-            ring.setBackground(U.outline(0, U.ACCENT, 2, 16));
-            f.addView(ring, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            ring.setBackground(Ui.outline(0, Ui.ACCENT, 2, 16));
+            f.addView(ring, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             View block = new View(a); // swallow taps on the content while editing
             block.setOnClickListener(v -> editTile(index, spec));
-            f.addView(block, new FrameLayout.LayoutParams(U.MATCH, U.MATCH));
+            f.addView(block, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             // red − : take the tile off the home screen
-            TextView minus = U.text(a, "−", 18, U.TEXT, true);
+            TextView minus = Ui.text(a, "−", 18, Ui.TEXT, true);
             minus.setGravity(Gravity.CENTER);
-            minus.setBackground(U.oval(U.RED));
-            minus.setOnClickListener(v -> Tiles.removeTile(index));
-            FrameLayout.LayoutParams ml = U.flpu(28, 28, Gravity.TOP | Gravity.END);
-            ml.setMargins(0, U.u(6), U.u(6), 0);
+            minus.setBackground(Ui.oval(Ui.RED));
+            minus.setOnClickListener(v -> TileDrawer.removeTile(index));
+            FrameLayout.LayoutParams ml = Ui.flpu(28, 28, Gravity.TOP | Gravity.END);
+            ml.setMargins(0, Ui.u(6), Ui.u(6), 0);
             f.addView(minus, ml);
             // Edit: choose a different widget (or change the folder)
             FrameLayout edit = new FrameLayout(a); // pencil: change this tile
-            edit.setBackground(U.oval(U.ACCENT));
-            edit.addView(U.icon(a, R.drawable.ic_edit, U.TEXT), U.flpu(18, 18, Gravity.CENTER));
+            edit.setBackground(Ui.oval(Ui.ACCENT));
+            edit.addView(Ui.icon(a, R.drawable.ic_edit, Ui.TEXT), Ui.flpu(18, 18, Gravity.CENTER));
             edit.setOnClickListener(v -> editTile(index, spec));
             edit.setContentDescription("Edit");
-            FrameLayout.LayoutParams el = U.flpu(38, 38, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-            el.bottomMargin = U.u(10);
+            FrameLayout.LayoutParams el = Ui.flpu(38, 38, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            el.bottomMargin = Ui.u(10);
             f.addView(edit, el);
         } else {
             f.setOnLongClickListener(v -> {
@@ -330,25 +330,25 @@ final class Tiles {
     }
 
     private View addTileView() {
-        LinearLayout l = U.col(a);
+        LinearLayout l = Ui.col(a);
         l.setGravity(Gravity.CENTER);
-        l.setBackground(U.outline(0, U.ACCENT, 2, 16));
-        TextView plus = U.text(a, "+", 30, U.ACCENT_SOFT, true);
+        l.setBackground(Ui.outline(0, Ui.ACCENT, 2, 16));
+        TextView plus = Ui.text(a, "+", 30, Ui.ACCENT_SOFT, true);
         plus.setGravity(Gravity.CENTER);
         l.addView(plus);
-        TextView t = U.text(a, "Add tiles", 13, U.ACCENT_SOFT, false);
+        TextView t = Ui.text(a, "Add tiles", 13, Ui.ACCENT_SOFT, false);
         t.setGravity(Gravity.CENTER);
         l.addView(t);
         l.setOnClickListener(v -> AppPanels.gallery(-1)); // pick widgets to add
-        U.press(l);
+        Ui.press(l);
         return l;
     }
 
     private View folderView(int index, JSONObject spec) {
-        LinearLayout l = U.col(a);
-        l.setBackground(Glass.card(U.CARD, 16));
-        U.pad(l, 14, 14, 14, 14);
-        TextView name = U.line(a, spec.optString("name", "Folder"), 15, U.TEXT, true);
+        LinearLayout l = Ui.col(a);
+        l.setBackground(Themes.card(Ui.CARD, 16));
+        Ui.pad(l, 14, 14, 14, 14);
+        TextView name = Ui.line(a, spec.optString("name", "Folder"), 15, Ui.TEXT, true);
         l.addView(name);
         JSONArray apps = spec.optJSONArray("apps");
         List<Apps.App> list = new ArrayList<>();
@@ -356,14 +356,14 @@ final class Tiles {
             Apps.App ap = Apps.get(apps.optString(i));
             if (ap != null) list.add(ap);
         }
-        TextView count = U.text(a, list.size() + (list.size() == 1 ? " app" : " apps"), 11, U.SUB, false);
-        LinearLayout.LayoutParams cl = U.lp(U.WRAP, U.WRAP);
-        cl.topMargin = U.u(3);
+        TextView count = Ui.text(a, list.size() + (list.size() == 1 ? " app" : " apps"), 11, Ui.SUB, false);
+        LinearLayout.LayoutParams cl = Ui.lp(Ui.WRAP, Ui.WRAP);
+        cl.topMargin = Ui.u(3);
         l.addView(count, cl);
-        l.addView(new View(a), U.weight(1, false));
+        l.addView(new View(a), Ui.weight(1, false));
         // 2×2 icons
         for (int r = 0; r < 2; r++) {
-            LinearLayout row = U.row(a);
+            LinearLayout row = Ui.row(a);
             for (int k = 0; k < 2; k++) {
                 int i = r * 2 + k;
                 FrameLayout cell = new FrameLayout(a);
@@ -371,7 +371,7 @@ final class Tiles {
                     final Apps.App ap = list.get(i);
                     ImageView iv = new ImageView(a);
                     iv.setImageDrawable(ap.icon);
-                    cell.addView(iv, U.flpu(38, 38, Gravity.CENTER));
+                    cell.addView(iv, Ui.flpu(38, 38, Gravity.CENTER));
                     cell.setOnClickListener(v -> Apps.launch(a, ap));
                     cell.setOnLongClickListener(v -> {
                         setEditing(true); // tiles wiggle-free edit mode: drag, − to remove, Edit to change
@@ -380,23 +380,23 @@ final class Tiles {
                 }
                 if (i == 3 && list.size() > 4) {
                     cell.removeAllViews();
-                    TextView more = U.text(a, "+" + (list.size() - 3), 13, U.TEXT, true);
+                    TextView more = Ui.text(a, "+" + (list.size() - 3), 13, Ui.TEXT, true);
                     more.setGravity(Gravity.CENTER);
-                    more.setBackground(Glass.inner(U.CARD2, 10));
-                    cell.addView(more, U.flpu(38, 38, Gravity.CENTER));
+                    more.setBackground(Themes.inner(Ui.CARD2, 10));
+                    cell.addView(more, Ui.flpu(38, 38, Gravity.CENTER));
                     cell.setOnClickListener(v -> AppPanels.folder(index));
                 }
-                row.addView(cell, new LinearLayout.LayoutParams(0, U.u(44), 1));
+                row.addView(cell, new LinearLayout.LayoutParams(0, Ui.u(44), 1));
             }
-            LinearLayout.LayoutParams rl = U.lp(U.MATCH, U.WRAP);
-            if (r == 1) rl.topMargin = U.u(4);
+            LinearLayout.LayoutParams rl = Ui.lp(Ui.MATCH, Ui.WRAP);
+            if (r == 1) rl.topMargin = Ui.u(4);
             l.addView(row, rl);
         }
         l.setOnClickListener(v -> AppPanels.folder(index));
         if (list.isEmpty()) {
             l.removeViewAt(l.getChildCount() - 1);
             l.removeViewAt(l.getChildCount() - 1);
-            TextView add = U.text(a, "Tap to add apps", 12, U.SUB, false);
+            TextView add = Ui.text(a, "Tap to add apps", 12, Ui.SUB, false);
             l.addView(add);
         }
         return l;
@@ -417,12 +417,12 @@ final class Tiles {
 
     void start() {
         running = true;
-        U.ui.post(tick);
+        Ui.ui.post(tick);
     }
 
     void stop() {
         running = false;
-        U.ui.removeCallbacks(tick);
+        Ui.ui.removeCallbacks(tick);
     }
 
     private final Runnable tick = new Runnable() {
@@ -436,7 +436,7 @@ final class Tiles {
                 } catch (Exception ignored) {
                 }
             }
-            if (running) U.ui.postDelayed(this, 1000);
+            if (running) Ui.ui.postDelayed(this, 1000);
         }
     };
 
@@ -471,7 +471,7 @@ final class Tiles {
         }
 
         private float gap() {
-            return U.u(gapDu);
+            return Ui.u(gapDu);
         }
 
         private float cellW() {
@@ -654,7 +654,7 @@ final class Tiles {
             super.onDrawForeground(cv);
             int cols = columns();
             if (cols <= COLS) return;
-            float w = U.u(64), h = U.u(3), x0 = getScrollX() + (getWidth() - w) / 2f, y = cellH() + (gap() - h) / 2f;
+            float w = Ui.u(64), h = Ui.u(3), x0 = getScrollX() + (getWidth() - w) / 2f, y = cellH() + (gap() - h) / 2f;
             r.set(x0, y, x0 + w, y + h);
             bar.setColor(0x33FFFFFF);
             cv.drawRoundRect(r, h / 2, h / 2, bar);
@@ -703,7 +703,7 @@ final class Tiles {
             int end = snap(scroller.getFinalX());
             scroller.forceFinished(true);
             int dist = Math.abs(end - pos());
-            scroller.startScroll(pos(), 0, end - pos(), 0, Math.max(220, Math.min(700, (int) (dist / U.uf(1.2f)))));
+            scroller.startScroll(pos(), 0, end - pos(), 0, Math.max(220, Math.min(700, (int) (dist / Ui.uf(1.2f)))));
             postInvalidateOnAnimation();
         }
 
@@ -765,9 +765,9 @@ final class Tiles {
             View v = getChildAt(dragIndex);
             if (v != null) {
                 // raise it above the others without changing child order (layout is by index)
-                v.setTranslationZ(U.uf(12));
+                v.setTranslationZ(Ui.uf(12));
                 v.setAlpha(1f);
-                v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(U.ms(100)).start();
+                v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(Ui.ms(100)).start();
                 v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
             }
             getParent().requestDisallowInterceptTouchEvent(true);
@@ -781,7 +781,7 @@ final class Tiles {
                     return;
                 }
                 glideTo(snap(pos() + edgeDir * colStep()));
-                U.ui.postDelayed(this, 650);
+                Ui.ui.postDelayed(this, 650);
             }
         };
         private int edgeDir;
@@ -835,18 +835,18 @@ final class Tiles {
                         v.setTranslationY(e.getY() - downY);
                     }
                     // hold a tile near the left or right edge to bring in more columns
-                    float edge = U.uf(36);
+                    float edge = Ui.uf(36);
                     edgeDir = maxScroll() == 0 ? 0 : e.getX() > getWidth() - edge ? 1 : e.getX() < edge ? -1 : 0;
                     if (edgeDir != 0 && !edgePending) {
                         edgePending = true;
-                        U.ui.postDelayed(edgeScroll, 450);
+                        Ui.ui.postDelayed(edgeScroll, 450);
                     }
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     edgeDir = 0;
                     edgePending = false;
-                    U.ui.removeCallbacks(edgeScroll);
+                    Ui.ui.removeCallbacks(edgeScroll);
                     int to = Math.min(count() - 1, indexAt(e.getX(), e.getY()));
                     dragging = false;
                     if (e.getActionMasked() == MotionEvent.ACTION_UP && to != dragIndex) move(dragIndex, to);
