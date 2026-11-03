@@ -342,8 +342,35 @@ final class SettingsPanels {
         if (Addons.unlocked("theme_glass")) { themes.addView(Ui.gap(c, 8, 1)); themes.addView(Ui.seg(c, "Glass", glass, () -> theme(true))); }
         b.addView(Panels.row("Theme", themes));
         b.addView(Ui.text(c, "Glass: the dock, Rail Bar, Now playing, left widgets and tiles see-through, like iOS (best with a wallpaper)", 12, Ui.SUB, false), top(4));
+        if (glass) { // how frosted the glass is: live as you slide
+            TextView fl = Ui.text(c, "Frosting · " + Themes.frost() + "%", 13, Ui.SUB, false);
+            b.addView(fl, top(14));
+            SeekBar fs = new SeekBar(c);
+            fs.setMax(100);
+            fs.setProgress(Themes.frost());
+            fs.getProgressDrawable().setColorFilter(Ui.ACCENT, PorterDuff.Mode.SRC_IN);
+            fs.getThumb().setColorFilter(Ui.TEXT, PorterDuff.Mode.SRC_IN);
+            fs.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar sb, int v, boolean user) {
+                    if (!user) return;
+                    fl.setText("Frosting · " + v + "%");
+                    Themes.setFrost(v);
+                }
 
-            return Panels.panel("Wallpaper", b, 600, 330);
+                @Override
+                public void onStartTrackingTouch(SeekBar sb) {
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar sb) {
+                }
+            });
+            b.addView(fs, top(4));
+            b.addView(Ui.text(c, "Low: clear glass, the wallpaper shows through. High: frosted, text easier to read.", 12, Ui.SUB, false), top(4));
+        }
+
+            return Panels.panel("Wallpaper", b, 600, 420);
         });
     }
 

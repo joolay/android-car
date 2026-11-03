@@ -630,9 +630,9 @@ final class Maps {
     private FrameLayout controls(Context a) {
         FrameLayout o = new FrameLayout(a);
         // street you're on
-        street = Ui.line(a, "", 13, Ui.TEXT, true);
-        street.setBackground(btn(12));
-        Ui.pad(street, 12, 6, 12, 6);
+        street = Ui.line(a, "", 18, Ui.TEXT, true); // area / street name: easy to read at a glance
+        street.setBackground(btn(14));
+        Ui.pad(street, 14, 7, 14, 7);
         street.setElevation(Ui.uf(4));
         FrameLayout.LayoutParams rl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.TOP | Gravity.START);
         rl.setMargins(Ui.u(10), Ui.u(10), Ui.u(60), 0);
@@ -701,15 +701,15 @@ final class Maps {
         // bottom left: limit sign, speed, scale
         LinearLayout bl = Ui.row(a);
         bl.setGravity(Gravity.CENTER_VERTICAL);
-        limit = Ui.text(a, "", 13, 0xFF111111, true);
+        limit = Ui.text(a, "", 17, 0xFF111111, true);
         limit.setGravity(Gravity.CENTER);
         android.graphics.drawable.GradientDrawable sign = Ui.oval(0xFFFFFFFF);
         sign.setStroke(Ui.u(3), 0xFFD33A3A);
         limit.setBackground(sign);
-        bl.addView(limit, Ui.lpu(40, 40));
-        spd = Ui.line(a, "", 13, Ui.TEXT, true);
-        spd.setBackground(btn(12));
-        Ui.pad(spd, 12, 6, 12, 6);
+        bl.addView(limit, Ui.lpu(50, 50));
+        spd = Ui.line(a, "", 20, Ui.TEXT, true); // your speed: big
+        spd.setBackground(btn(14));
+        Ui.pad(spd, 14, 6, 14, 6);
         spd.setElevation(Ui.uf(4));
         LinearLayout.LayoutParams pl = Ui.lp(Ui.WRAP, Ui.WRAP);
         pl.leftMargin = Ui.u(8);

@@ -28,6 +28,16 @@ final class Themes {
     }
 
     /** The Glass theme is on (the default; Modern is the other). Locked: Modern. */
+    /** How frosted the glass is, 0 (clear) to 100 (almost solid). 30 to start. */
+    static int frost() {
+        return Math.max(0, Math.min(100, Prefs.num("glass_frost", 30)));
+    }
+
+    static void setFrost(int v) {
+        Prefs.put("glass_frost", Math.max(0, Math.min(100, v)));
+        refresh(); // new blur and frost on every card
+    }
+
     static boolean on() {
         if (!Prefs.flag("glass_default_v1", false)) { // Glass became the default: switched on once for everyone
             Prefs.put("glass_default_v1", true);
@@ -125,7 +135,8 @@ final class Themes {
         Drawable bg = root.getBackground();
         if (bg == null) return null;
         try {
-            int sw = Math.max(1, w / 18), sh = Math.max(1, h / 18);
+            int div = 8 + frost() / 5; // more frost: softer blur (8 … 28)
+            int sw = Math.max(1, w / div), sh = Math.max(1, h / div);
             Bitmap small = Bitmap.createBitmap(sw, sh, Bitmap.Config.ARGB_8888);
             Canvas cv = new Canvas(small);
             cv.scale(sw / (float) w, sh / (float) h);
@@ -200,7 +211,9 @@ final class Themes {
             follow(host);
             c.drawBitmap(b, ro[0] - at[0], ro[1] - at[1], pic); // the blurred wallpaper right behind this card
             // dark frost so text stays readable over a bright wallpaper; a coloured card (an alert) keeps its colour as tinted glass
-            fill.setColor(color == Ui.CARD || color == Ui.CARD2 ? 0x4D141A24 : (color & 0x00FFFFFF) | 0xA6000000);
+            int fr = frost(); // 0 clear … 100 heavily frosted (Settings → Wallpaper)
+            int dark = Math.round(0x10 + fr * (0xD0 - 0x10) / 100f), tint = Math.round(0x60 + fr * (0xE6 - 0x60) / 100f);
+            fill.setColor(color == Ui.CARD || color == Ui.CARD2 ? (dark << 24) | 0x141A24 : (color & 0x00FFFFFF) | (tint << 24));
             c.drawRect(box, fill);
             shine.setShader(new LinearGradient(0, box.top, 0, box.top + box.height() * 0.6f, 0x24FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
             c.drawRect(box, shine);
