@@ -296,14 +296,64 @@ final class InfoPanels {
             tabs.addView(Ui.gap(c, 8, 1));
         }
         b.addView(tabs);
+        // places: where you are, then your saved places; + adds one, hold a place to remove it
+        java.util.List<String[]> places = Weather.places();
+        if (weatherPlace > places.size()) weatherPlace = 0;
+        LinearLayout pr = Ui.row(c);
+        pr.addView(Ui.seg(c, "Here", weatherPlace == 0, () -> { weatherPlace = 0; Panels.refresh(); }));
+        for (int i = 0; i < places.size(); i++) {
+            final int k = i + 1;
+            pr.addView(Ui.gap(c, 6, 1));
+            TextView ch = Ui.seg(c, places.get(i)[0].split(",")[0], weatherPlace == k, () -> { weatherPlace = k; Panels.refresh(); });
+            ch.setOnLongClickListener(v -> { Weather.removePlace(k - 1); weatherPlace = 0; Panels.refresh(); return true; });
+            pr.addView(ch);
+        }
+        pr.addView(Ui.gap(c, 6, 1));
+        pr.addView(Ui.iconButton(c, R.drawable.ic_plus, "Add a place", () -> addPlace()));
+        android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(c);
+        hs.setHorizontalScrollBarEnabled(false);
+        hs.addView(pr);
+        b.addView(hs, top(8));
+        String title = Gps.town != null ? "Weather · " + Gps.town : "Weather";
+        if (weatherPlace > 0) { // another place: its own forecast
+            String[] p = places.get(weatherPlace - 1);
+            title = "Weather · " + p[0].split(",")[0];
+            Weather.fetchPlace(p, Panels::refresh);
+            final LinearLayout fb = b;
+            if (!Weather.withPlace(p, () -> {
+                if (weatherTab == 0) today(c, fb);
+                else if (weatherTab == 1) threeDays(c, fb);
+                else sevenDays(c, fb);
+            })) b.addView(Ui.text(c, "Loading the forecast for " + p[0] + "…", 14, Ui.SUB, false), top(24));
+            return Panels.panel(title, b, 660, 440);
+        }
         if (!Weather.ok) {
             b.addView(Ui.text(c, Gps.has() ? "Loading the forecast…" : "Waiting for a location to get the forecast.", 14, Ui.SUB, false), top(24));
-            return Panels.panel(Gps.town != null ? "Weather · " + Gps.town : "Weather", b, 660, 440);
+            return Panels.panel(title, b, 660, 440);
         }
         if (weatherTab == 0) today(c, b);
         else if (weatherTab == 1) threeDays(c, b);
         else sevenDays(c, b);
-        return Panels.panel(Gps.town != null ? "Weather · " + Gps.town : "Weather", b, 660, 440);
+        return Panels.panel(title, b, 660, 440);
+    }
+
+    private static int weatherPlace; // 0 here, then the saved places
+
+    private static void addPlace() {
+        Panels.push(() -> {
+            Context c = Panels.ctx();
+            LinearLayout b = Ui.col(c);
+            final String[] name = {""};
+            b.addView(Widgets.field("Town or city, e.g. Pietermaritzburg", "", false, t -> name[0] = t), Ui.lp(Ui.MATCH, Ui.WRAP));
+            b.addView(Ui.button(c, "Done", true, () -> {
+                if (name[0].trim().isEmpty()) return;
+                Weather.addPlace(name[0], () -> {
+                    weatherPlace = Weather.places().size();
+                    Panels.back();
+                });
+            }), top(12));
+            return Panels.panel("Add a place", b, 480, 220);
+        });
     }
 
     private static void today(Context c, LinearLayout b) {

@@ -237,8 +237,8 @@ final class Panels {
         modes.add(true);
         scrimColor = 0x59000000;
         full = true; // rail pop-ups sit next to the rail, over the whole screen, as before
+        cardOverTiles = overTiles; // before it's built, so it's laid out for the tile area from the start
         render();
-        cardOverTiles = overTiles;
         fitTiles();
         // pop out of the Rail Bar icon that was tapped
         if (layer != null && layer.getChildCount() > 1 && MainActivity.I != null) MainActivity.I.popFromRail(layer.getChildAt(layer.getChildCount() - 1));
@@ -299,7 +299,9 @@ final class Panels {
         p.setLayoutParams(centered(w, h));
 
         // in the tile area the title bar goes up into the ticker's place, so the page gets the whole tile area
-        boolean up = (!full || cardOverTiles) && MainActivity.I != null && MainActivity.I.canHoldTitle();
+        // a card over the tiles keeps its own title, sized to fit the tile area (weather, calendar)
+        boolean up = !full && MainActivity.I != null && MainActivity.I.canHoldTitle();
+        if (cardOverTiles && full) Ui.pad(p, 16, 10, 16, 10);
         LinearLayout head = Ui.row(ctx);
         head.setGravity(android.view.Gravity.CENTER_VERTICAL);
         float ic = up ? 20 : 24;

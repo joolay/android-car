@@ -107,6 +107,88 @@ final class Weather {
         });
     }
 
+    // ---- other places (Weather panel: chips beside "Here"); each kept as its last forecast
+    static final String PLACES = "weather_places"; // "name|lat|lon" each
+
+    static List<String[]> places() {
+        List<String[]> l = new ArrayList<>();
+        for (String s : Prefs.list(PLACES)) {
+            String[] p = s.split("\\|");
+            if (p.length == 3) l.add(p);
+        }
+        return l;
+    }
+
+    /** Find a place by name (Open-Meteo's free place search) and add it. */
+    static void addPlace(String name, Runnable done) {
+        Net.get("https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&name=" + android.net.Uri.encode(name.trim()), null, (body, code) -> {
+            String err = "Couldn't find " + name;
+            try {
+                JSONObject r = new JSONObject(body).getJSONArray("results").getJSONObject(0);
+                String n = r.getString("name") + (r.has("admin1") ? ", " + r.getString("admin1") : "");
+                List<String> l = new ArrayList<>(Prefs.list(PLACES));
+                l.add(n.replace("|", " ") + "|" + r.getDouble("latitude") + "|" + r.getDouble("longitude"));
+                Prefs.putList(PLACES, l);
+                err = null;
+            } catch (Exception ignored) {
+            }
+            final String e = err;
+            Ui.ui.post(() -> {
+                if (e != null) android.widget.Toast.makeText(Panels.ctx(), e, android.widget.Toast.LENGTH_SHORT).show();
+                done.run();
+            });
+        });
+    }
+
+    static void removePlace(int i) {
+        List<String> l = new ArrayList<>(Prefs.list(PLACES));
+        if (i >= 0 && i < l.size()) l.remove(i);
+        Prefs.putList(PLACES, l);
+    }
+
+    /** A place's forecast (fetched again after 30 minutes); done runs when there's something new to show. */
+    static void fetchPlace(String[] p, Runnable done) {
+        String key = "weather_place_" + p[1] + "," + p[2];
+        if (System.currentTimeMillis() - Prefs.lng(key + "_at", 0) < 30 * 60000L) return;
+        String url = String.format(Locale.US,
+                "https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s"
+                        + "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m"
+                        + "&hourly=temperature_2m,weather_code,precipitation_probability,is_day"
+                        + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,"
+                        + "wind_speed_10m_max,wind_direction_10m_dominant,uv_index_max,sunrise,sunset"
+                        + "&timezone=auto&forecast_days=7&forecast_hours=12", p[1], p[2]);
+        Net.get(url, null, (body, code) -> {
+            if (body == null || code != 200) return;
+            Prefs.put(key, body);
+            Prefs.put(key + "_at", System.currentTimeMillis());
+            Ui.ui.post(done);
+        });
+    }
+
+    /**
+     * Show another place: its forecast is put in for a moment while the page is drawn (draw), then the forecast
+     * for where the car is goes back (the Rail, tiles and wallpaper always show where you are).
+     */
+    static boolean withPlace(String[] p, Runnable draw) {
+        String body = Prefs.str("weather_place_" + p[1] + "," + p[2], null);
+        String here = Prefs.str("weather_last", null);
+        if (body == null) return false;
+        boolean wasOk = ok;
+        try {
+            parse(new JSONObject(body));
+            ok = true;
+            draw.run();
+        } catch (Exception ignored) {
+        } finally {
+            try {
+                if (here != null) parse(new JSONObject(here));
+            } catch (Exception ignored) {
+            }
+            ok = wasOk;
+        }
+        return true;
+    }
+
     private static void parse(JSONObject j) throws Exception {
         JSONObject c = j.getJSONObject("current");
         temp = c.getDouble("temperature_2m");
