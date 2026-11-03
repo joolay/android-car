@@ -903,7 +903,7 @@ public class MainActivity extends Activity {
             tilesChip.animate().alpha(1f).translationX(0).setDuration(Ui.ms(300)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
             // ticker hidden: the lock sits in the dock for 5 s, then goes so the dock has its room back
             Ui.ui.removeCallbacks(lockAway);
-            if (!Prefs.flag("ticker_on", true)) Ui.ui.postDelayed(lockAway, 5000);
+            Ui.ui.postDelayed(lockAway, 4000); // the lock (and "Tiles") goes after a few seconds
         } else tilesChip.animate().alpha(0f).translationX(Ui.u(40)).setDuration(Ui.ms(220)).withEndAction(() -> tilesChip.setVisibility(View.GONE)).start();
     }
 
