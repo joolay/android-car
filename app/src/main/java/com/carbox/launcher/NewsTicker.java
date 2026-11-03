@@ -172,10 +172,15 @@ final class NewsTicker {
         }
     }
 
-    /** In the normal list: unread headlines are today's; read ones stay (greyed) for 24 hours after reading. */
+    /** Unread headlines stay 48 hours from when they were published (or first fetched, if undated). */
+    static boolean fresh(Item it) {
+        return it.date > 0 && System.currentTimeMillis() - it.date < 2 * DAY_MS;
+    }
+
+    /** In the normal list: unread headlines for 48 hours; read ones stay (greyed) for 24 hours after reading. */
     static boolean inList(Item it) {
         if (deleted(it) || archived(it)) return false;
-        if (!read(it)) return today(it);
+        if (!read(it)) return fresh(it);
         long at = readAt(it);
         return at > 0 ? System.currentTimeMillis() - at < DAY_MS : today(it);
     }
@@ -434,7 +439,7 @@ final class NewsTicker {
             return;
         }
         List<String> l = new ArrayList<>();
-        for (Item it : showingNews ? newsItems : trafficItems) if (today(it) && !read(it) && !deleted(it) && !archived(it)) l.add(it.title);
+        for (Item it : showingNews ? newsItems : trafficItems) if (fresh(it) && !read(it) && !deleted(it) && !archived(it)) l.add(it.title);
         List<String> last = showingNews ? lastNews : lastTraffic;
         Ui.ui.removeCallbacks(loadingOver);
         if (!l.isEmpty()) {
@@ -681,7 +686,7 @@ final class NewsTicker {
     private void buildSlides() {
         slide = new ArrayList<>();
         for (Item it : slideNews ? newsItems : trafficItems) // only the ones you haven't read yet
-            if (today(it) && !read(it) && !deleted(it) && !archived(it)) slide.add(it);
+            if (fresh(it) && !read(it) && !deleted(it) && !archived(it)) slide.add(it);
     }
 
     void slideshow() {
