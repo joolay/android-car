@@ -65,8 +65,8 @@ final class NowPlaying {
 
     private View videoBtn(int icon, String desc, Runnable r) {
         FrameLayout f = new FrameLayout(c);
-        f.setBackground(Ui.outline(0xBF0B0E13, Ui.ACCENT_SOFT, 1.5f, 15));
-        f.addView(Ui.icon(c, icon, Ui.ACCENT_SOFT), Ui.flpu(16, 16, Gravity.CENTER));
+        f.setBackground(Ui.outline(0xBF0B0E13, Ui.ACCENT_SOFT, 1.5f, 17));
+        f.addView(Ui.icon(c, icon, Ui.ACCENT_SOFT), Ui.flpu(20, 20, Gravity.CENTER)); // same size as the app icon on the art
         f.setContentDescription(desc);
         f.setOnClickListener(v -> r.run());
         Ui.press(f);
@@ -182,7 +182,7 @@ final class NowPlaying {
         videoBtns = Ui.row(c);
         // watch in the tiles: the video app comes up and a real Home press sends it into its
         // picture-in-picture window, which keeps clear of the map, dock and Rail Bar (so over the tiles)
-        View pipBtn = videoBtn(R.drawable.ic_apps, "Watch video over the tiles", () -> {
+        View pipBtn = videoBtn(R.drawable.ic_pip, "Picture-in-picture", () -> {
             MediaController m = MediaListener.controller;
             if (m == null) return;
             String pkg = m.getPackageName();
@@ -194,16 +194,16 @@ final class NowPlaying {
             if (m != null) Apps.appInfo(c, m.getPackageName());
             return true;
         });
-        videoBtns.addView(pipBtn, Ui.lpu(30, 30));
-        LinearLayout.LayoutParams vg = Ui.lpu(30, 30);
-        vg.leftMargin = Ui.u(6);
+        videoBtns.addView(pipBtn, Ui.lpu(34, 34));
+        LinearLayout.LayoutParams vg = Ui.lpu(34, 34);
+        vg.leftMargin = Ui.u(8);
         videoBtns.addView(videoBtn(R.drawable.ic_maximize, "Video full screen", () -> {
             MediaController m = MediaListener.controller;
             if (m != null) Apps.launchPkg(c, m.getPackageName());
         }), vg);
         videoBtns.setVisibility(View.GONE);
         FrameLayout.LayoutParams vl = new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.TOP | Gravity.END);
-        vl.setMargins(0, Ui.u(15), Ui.u(58), 0); // left of the Lyrics button, clear of the app icon
+        vl.setMargins(0, Ui.u(10), Ui.u(10), 0); // full screen in the top-right corner, picture-in-picture beside it
         view.addView(videoBtns, vl);
         // live equaliser where the album art would be, when the art is hidden (app icon view)
         eq = new EqView(c, 18, 0x993D8BFD);
@@ -510,7 +510,8 @@ final class NowPlaying {
     private int shownIdx = -2;
 
     private void showLyric() {
-        if (lyricsBtn != null) lyricsBtn.setVisibility(lyricTimes.isEmpty() ? View.GONE : View.VISIBLE);
+        boolean video = MediaListener.controller != null && isVideo(MediaListener.controller.getPackageName());
+        if (lyricsBtn != null) lyricsBtn.setVisibility(lyricTimes.isEmpty() || video ? View.GONE : View.VISIBLE); // a video's buttons have the corner
         // no lyrics over the album art any more: the Lyrics button opens them in the tile area
         if (true) {
             if (lyricBox.getVisibility() == View.VISIBLE) lyricBox.setVisibility(View.GONE);
