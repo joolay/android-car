@@ -411,6 +411,10 @@ final class Maps {
             LyricsView.hide();
             return;
         }
+        if (on && Panels.inTiles()) { // an expanded card is on the Centre Stage: send it back where it came from
+            Panels.close();
+            return;
+        }
         MainActivity m = MainActivity.I;
         if (on && m != null && m.drawerOpen) { // tiles are up: tapping the small map brings the big map back
             m.drawer(false);

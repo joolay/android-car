@@ -278,7 +278,8 @@ final class InfoPanels {
 
     static void weather(int tab) {
         weatherTab = tab;
-        Panels.showCard(InfoPanels::weatherPage, true); // a quick card over the grid
+        // a centred card (not squeezed into the short tile area, where the forecast was getting cut off)
+        Panels.showCard(InfoPanels::weatherPage, false);
         Weather.maybeFetch();
     }
 
