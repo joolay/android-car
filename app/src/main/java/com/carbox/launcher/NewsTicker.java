@@ -165,6 +165,11 @@ final class NewsTicker {
         LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(0, Ui.MATCH, 1);
         mlp.leftMargin = Ui.u(10);
         view.addView(marquee, mlp);
+        // tools on the right: play the headlines as slides, and make the feed text smaller / bigger
+        View play = toolIcon(c, R.drawable.ic_play, "Play the headlines", this::slideshow);
+        view.addView(play, toolLp());
+        view.addView(toolIcon(c, R.drawable.ic_minus, "Smaller text", () -> zoomFont(-1)), toolLp());
+        view.addView(toolIcon(c, R.drawable.ic_plus, "Bigger text", () -> zoomFont(1)), toolLp());
         ring = new Ui.Ring(c);
         ring.setVisibility(View.GONE);
         LinearLayout.LayoutParams rlp = Ui.lpu(18, 18);
@@ -604,6 +609,119 @@ final class NewsTicker {
     private boolean feedNews = true; // which feed the open window shows (the NEWS / TRAFFIC label switches it)
     private int feedView; // 0 today's headlines, 1 archive, 2 bin
 
+    private static LinearLayout.LayoutParams toolLp() {
+        LinearLayout.LayoutParams lp = Ui.lpu(26, 26);
+        lp.leftMargin = Ui.u(4);
+        return lp;
+    }
+
+    private static View toolIcon(Context c, int icon, String name, Runnable r) {
+        android.widget.ImageView v = Ui.icon(c, icon, Ui.TEXT2);
+        Ui.pad(v, 4, 4, 4, 4);
+        v.setContentDescription(name);
+        v.setOnClickListener(x -> r.run());
+        Ui.press(v);
+        return v;
+    }
+
+    /** Make the scrolling headline text smaller or bigger (11\u201324). */
+    private void zoomFont(int d) {
+        int f = Math.max(11, Math.min(24, Prefs.num("ticker_font", 15) + d * 2));
+        Prefs.put("ticker_font", f);
+        marquee.applyFont();
+    }
+
+    // ---- Playback: each headline shown big on the Centre Stage for 5 s, with tick / archive / delete
+    private List<Item> slide;
+    private int slideIdx;
+    private final Runnable slideTick = new Runnable() {
+        @Override
+        public void run() {
+            if (slide == null || slide.isEmpty()) return;
+            slideIdx = (slideIdx + 1) % slide.size();
+            Panels.refresh();
+            Ui.ui.postDelayed(this, 5000);
+        }
+    };
+
+    private void buildSlides() {
+        slide = new ArrayList<>();
+        for (Item it : showingNews ? newsItems : trafficItems)
+            if (today(it) && !deleted(it) && !archived(it)) slide.add(it);
+    }
+
+    void slideshow() {
+        buildSlides();
+        if (slide.isEmpty()) {
+            android.widget.Toast.makeText(c, "No headlines to play", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        slideIdx = 0;
+        Ui.ui.post(() -> Panels.sticky = true); // stays until you close it
+        Panels.show(this::slidePage);
+        Ui.ui.post(() -> Panels.whenClosed(() -> {
+            Ui.ui.removeCallbacks(slideTick);
+            slide = null;
+        }));
+        Ui.ui.removeCallbacks(slideTick);
+        Ui.ui.postDelayed(slideTick, 5000);
+    }
+
+    private void slideAct(Runnable act, boolean remove) {
+        if (slide == null || slide.isEmpty()) return;
+        Item it = slide.get(slideIdx);
+        act.run();
+        if (remove) {
+            slide.remove(slideIdx);
+            updateText();
+            if (slide.isEmpty()) {
+                Panels.close();
+                return;
+            }
+            if (slideIdx >= slide.size()) slideIdx = 0;
+        } else slideIdx = (slideIdx + 1) % slide.size();
+        Panels.refresh();
+        Ui.ui.removeCallbacks(slideTick);
+        Ui.ui.postDelayed(slideTick, 5000);
+    }
+
+    private View slidePage() {
+        Context c = Panels.ctx();
+        LinearLayout b = Ui.col(c);
+        if (slide == null || slide.isEmpty()) {
+            b.addView(Ui.text(c, "Nothing to play.", 15, Ui.SUB, false));
+            return Panels.panel("Playback", b, 660, 440);
+        }
+        if (slideIdx >= slide.size()) slideIdx = 0;
+        Item it = slide.get(slideIdx);
+        TextView h = Ui.text(c, it.title, 24, Ui.TEXT, true);
+        h.setLineSpacing(Ui.uf(3), 1);
+        b.addView(h);
+        String m = (it.source != null ? it.source : "") + (it.date > 0 ? (it.source != null ? " \u00b7 " : "") + ago(it.date) : "");
+        if (!m.isEmpty()) b.addView(Ui.line(c, m, 13, Ui.MUTED, false), Widgets.top(6));
+        String d = clean(it.desc);
+        if (!d.isEmpty() && !d.equalsIgnoreCase(it.title)) {
+            TextView dt = Ui.text(c, d, 17, Ui.TEXT2, false);
+            dt.setLineSpacing(Ui.uf(5), 1);
+            dt.setMaxLines(5);
+            b.addView(dt, Widgets.top(14));
+        }
+        b.addView(new View(c), new LinearLayout.LayoutParams(Ui.MATCH, 0, 1)); // push the buttons down
+        // which slide, and the per-slide buttons: tick (read), archive, delete
+        LinearLayout foot = Ui.row(c);
+        foot.setGravity(Gravity.CENTER_VERTICAL);
+        foot.addView(Ui.line(c, (slideIdx + 1) + " / " + slide.size(), 13, Ui.SUB, true));
+        foot.addView(new View(c), new LinearLayout.LayoutParams(0, 1, 1));
+        foot.addView(Ui.iconButton(c, R.drawable.ic_check, "Mark read", () -> slideAct(() -> markRead(it), false)));
+        foot.addView(Ui.gap(c, 10, 1));
+        foot.addView(Ui.iconButton(c, R.drawable.ic_archive, "Archive", () -> slideAct(() -> archive(it), true)));
+        foot.addView(Ui.gap(c, 10, 1));
+        foot.addView(Ui.iconButton(c, R.drawable.ic_trash, "Delete", () -> slideAct(() -> delete(it), true)));
+        b.addView(foot, Widgets.top(14));
+        markRead(it); // reading it on screen counts as read
+        return Panels.panel("Playback \u00b7 auto every 5 s", b, 660, 440);
+    }
+
     private void openFeed() {
         feedNews = showingNews;
         feedView = 0;
@@ -982,9 +1100,16 @@ final class NewsTicker {
         Marquee(Context c) {
             super(c);
             p.setColor(Ui.TEXT);
-            p.setTextSize(Ui.uf(15));
+            p.setTextSize(Ui.uf(Prefs.num("ticker_font", 15)));
             p.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
             dot.setColor(Ui.TEXT2);
+        }
+
+        /** The feed text size changed (the ticker's A- / A+): re-measure and redraw. */
+        void applyFont() {
+            p.setTextSize(Ui.uf(Prefs.num("ticker_font", 15)));
+            width = p.measureText(joined);
+            invalidate();
         }
 
         void setItems(List<String> l) {
