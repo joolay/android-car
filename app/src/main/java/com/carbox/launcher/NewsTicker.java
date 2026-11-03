@@ -559,6 +559,7 @@ final class NewsTicker {
     }
 
     private static String clean(String html) {
+        if (html == null) return ""; // some feeds have no description/content: don't hand null to Html.fromHtml
         String t = android.text.Html.fromHtml(html, android.text.Html.FROM_HTML_MODE_COMPACT).toString().replace('\uFFFC', ' ').trim();
         t = t.replaceAll("\\s+", " ");
         return t.length() > 220 ? t.substring(0, 217) + "…" : t;
