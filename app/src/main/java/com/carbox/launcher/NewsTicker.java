@@ -789,20 +789,47 @@ final class NewsTicker {
             b.addView(t);
             String m = (it.source != null ? it.source : "") + (it.date > 0 ? (it.source != null ? " · " : "") + ago(it.date) : "");
             if (!m.isEmpty()) b.addView(Ui.line(c, m, 13, Ui.MUTED, false), Widgets.top(6));
-            if (it.desc != null && !it.desc.isEmpty()) {
-                TextView d = Ui.text(c, it.desc, 16, Ui.TEXT2, false);
-                d.setLineSpacing(Ui.uf(5), 1);
-                b.addView(d, Widgets.top(14));
-            }
-            TextView body = Ui.text(c, it.link != null ? "Fetching the full story…" : "", 16, Ui.TEXT2, false);
+            // a readable summary (the story's opening paragraphs), then the rest of the story below
+            TextView sumHead = Ui.line(c, "SUMMARY", 11, Ui.SUB, true);
+            sumHead.setLetterSpacing(0.08f);
+            b.addView(sumHead, Widgets.top(14));
+            TextView summary = Ui.text(c, it.link != null ? "Getting the story…" : clean(it.desc), 18, Ui.TEXT, false);
+            summary.setLineSpacing(Ui.uf(6), 1);
+            b.addView(summary, Widgets.top(6));
+            TextView restHead = Ui.line(c, "FULL STORY", 11, Ui.SUB, true);
+            restHead.setLetterSpacing(0.08f);
+            restHead.setVisibility(View.GONE);
+            b.addView(restHead, Widgets.top(18));
+            TextView body = Ui.text(c, "", 16, Ui.TEXT2, false);
             body.setLineSpacing(Ui.uf(6), 1);
-            b.addView(body, Widgets.top(14));
-            if (it.link != null) Net.get(it.link, null, (html, code) -> {
+            b.addView(body, Widgets.top(6));
+            if (it.link != null) realLink(it.link, url -> Net.get(url, pageHeaders(), (html, code) -> Ui.ui.post(() -> {
                 String text = html == null ? null : article(html);
-                String bn = browser() != null ? Apps.label(browser()) : "the browser";
-                body.setText(text != null ? text : "The full story opens in " + bn + ": tap its icon at the top.");
-                body.setTextColor(text != null ? Ui.TEXT2 : Ui.SUB);
-            });
+                if (text == null) { // the site wouldn't give its text: the feed's own summary
+                    String d = clean(it.desc);
+                    String bn = browser() != null ? Apps.label(browser()) : "the browser";
+                    summary.setText(d.isEmpty() || d.equalsIgnoreCase(it.title) ? "This site doesn't share its text. The full story opens in " + bn + ": tap its icon at the top." : d);
+                    return;
+                }
+                String[] paras = text.split("\n\n");
+                StringBuilder sum = new StringBuilder(), rest = new StringBuilder();
+                int words = 0;
+                for (String para : paras) { // the opening paragraphs, about 120 words, are the summary
+                    if (words < 120) {
+                        if (sum.length() > 0) sum.append("\n\n");
+                        sum.append(para);
+                        words += para.split("\\s+").length;
+                    } else {
+                        if (rest.length() > 0) rest.append("\n\n");
+                        rest.append(para);
+                    }
+                }
+                summary.setText(sum.toString());
+                if (rest.length() > 0) {
+                    restHead.setVisibility(View.VISIBLE);
+                    body.setText(rest.toString());
+                }
+            })));
             View open = null; // open in the chosen browser (Chrome by default): its icon in the title bar
             if (it.link != null) {
                 String bp = browser();
@@ -826,6 +853,63 @@ final class NewsTicker {
     }
 
     /** The readable text of an article page: its paragraphs, or null when there's too little. */
+    /** The feed's description as plain text. */
+    private static String clean(String d) {
+        if (d == null) return "";
+        return android.text.Html.fromHtml(d, android.text.Html.FROM_HTML_MODE_COMPACT).toString().replaceAll("\\s+", " ").trim();
+    }
+
+    private static java.util.Map<String, String> pageHeaders() {
+        java.util.Map<String, String> h = new java.util.HashMap<>();
+        h.put("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36");
+        h.put("Accept-Language", "en-ZA,en;q=0.9");
+        return h;
+    }
+
+    interface Url {
+        void on(String url);
+    }
+
+    /**
+     * Google News links don't go to the story; they're decoded here to the newspaper's own address (the way
+     * Google's own page does it), so the story's text can be read. Anything else is used as it is.
+     */
+    static void realLink(String link, Url out) {
+        Uri u = Uri.parse(link);
+        String id = u.getLastPathSegment();
+        if (!"news.google.com".equals(u.getHost()) || id == null || !link.contains("/articles/")) {
+            out.on(link);
+            return;
+        }
+        Net.get("https://news.google.com/articles/" + id, pageHeaders(), (html, code) -> {
+            try {
+                java.util.regex.Matcher sg = java.util.regex.Pattern.compile("data-n-a-sg=\"([^\"]+)\"").matcher(html);
+                java.util.regex.Matcher ts = java.util.regex.Pattern.compile("data-n-a-ts=\"([^\"]+)\"").matcher(html);
+                if (!sg.find() || !ts.find()) {
+                    out.on(link);
+                    return;
+                }
+                String inner = "[\"garturlreq\",[[\"X\",\"X\",[\"X\",\"X\"],null,null,1,1,\"US:en\",null,1,null,null,null,null,null,0,1],"
+                        + "\"X\",\"X\",1,[1,1,1],1,1,null,0,0,null,0],\"" + id + "\"," + ts.group(1) + ",\"" + sg.group(1) + "\"]";
+                org.json.JSONArray req = new org.json.JSONArray().put(new org.json.JSONArray().put(new org.json.JSONArray().put("Fbv4je").put(inner)));
+                java.util.Map<String, String> h = pageHeaders();
+                h.put("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
+                Net.post("https://news.google.com/_/DotsSplashUi/data/batchexecute", h, "f.req=" + Uri.encode(req.toString()), (body, c2) -> {
+                    String real = link;
+                    try {
+                        String j = body.substring(body.indexOf("\n\n") + 2);
+                        org.json.JSONArray a = new org.json.JSONArray(j);
+                        real = new org.json.JSONArray(a.getJSONArray(0).getString(2)).getString(1);
+                    } catch (Exception ignored) {
+                    }
+                    out.on(real);
+                });
+            } catch (Exception e) {
+                out.on(link);
+            }
+        });
+    }
+
     private static String article(String html) {
         java.util.regex.Matcher mt = java.util.regex.Pattern.compile("(?is)<p[^>]*>(.*?)</p>").matcher(html);
         StringBuilder out = new StringBuilder();

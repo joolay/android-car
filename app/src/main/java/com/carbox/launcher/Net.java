@@ -44,7 +44,7 @@ final class Net {
                 if (headers != null) for (Map.Entry<String, String> e : headers.entrySet()) c.setRequestProperty(e.getKey(), e.getValue());
                 if (body != null) {
                     c.setDoOutput(true);
-                    c.setRequestProperty("Content-Type", "application/json");
+                    if (headers == null || !headers.containsKey("Content-Type")) c.setRequestProperty("Content-Type", "application/json");
                     try (OutputStream os = c.getOutputStream()) {
                         os.write(body.getBytes(StandardCharsets.UTF_8));
                     }
