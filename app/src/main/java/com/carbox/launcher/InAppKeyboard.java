@@ -27,7 +27,7 @@ final class InAppKeyboard {
     private static FrameLayout shown;
     private static EditText target;
     private static StringBuilder text;
-    private static boolean symbols, shift, secret, reveal;
+    private static boolean symbols, shift, secret, reveal, numeric, phone;
     private static String label;
     private static TextView preview;
 
@@ -54,6 +54,9 @@ final class InAppKeyboard {
         secret = (it & InputType.TYPE_TEXT_VARIATION_PASSWORD) == InputType.TYPE_TEXT_VARIATION_PASSWORD;
         reveal = false;
         symbols = false;
+        int ic = e.getInputType() & InputType.TYPE_MASK_CLASS;
+        numeric = ic == InputType.TYPE_CLASS_NUMBER || ic == InputType.TYPE_CLASS_PHONE;
+        phone = ic == InputType.TYPE_CLASS_PHONE;
         shift = false;
         ViewGroup root = MainActivity.I.findViewById(android.R.id.content);
         shown = new FrameLayout(MainActivity.I);
@@ -144,6 +147,15 @@ final class InAppKeyboard {
         if (!secret) kb.addView(suggestRow, Ui.lpu(Ui.MATCH, 44)); // no guessing passwords
         suggest();
 
+        if (numeric) { // a number or phone field: the number pad
+            numpad(c, kb, phone, InAppKeyboard::type, InAppKeyboard::backspace, InAppKeyboard::hide, "Done", () -> {
+                numeric = false;
+                render();
+            });
+            shown.addView(kb, new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP, Gravity.BOTTOM));
+            updatePreview();
+            return;
+        }
         String[][] rows = symbols
                 ? new String[][]{"1234567890".split(""), {"@", "#", "&", "_", "-", "/", ":", ";", "(", ")"}, {"=", ",", "+", "%", "'", "\"", "!", "?"}}
                 : new String[][]{"qwertyuiop".split(""), "asdfghjkl".split(""), "zxcvbnm".split("")};
@@ -235,6 +247,40 @@ final class InAppKeyboard {
             }
             return true;
         });
+    }
+
+    interface Typer {
+        void type(String s);
+    }
+
+    /**
+     * The number pad, for number and phone fields: big phone-style keys, 3 across with backspace, minus and
+     * the like on the right, and ABC to get the letters. Rows are added to kb.
+     */
+    static void numpad(Context c, LinearLayout kb, boolean phone, Typer t, Runnable backspace, Runnable enter, String enterLabel, Runnable abc) {
+        String[][] rows = {{"1", "2", "3"}, {"4", "5", "6"}, {"7", "8", "9"}, {phone ? "*" : ",", "0", phone ? "#" : "."}};
+        String[] side = {null, phone ? "+" : "-", phone ? " " : "/", null};
+        for (int r = 0; r < 4; r++) {
+            LinearLayout row = Ui.row(c);
+            if (r == 3) row.addView(special(c, "ABC", 0, abc, false), weightLp(1.2f));
+            for (String k : rows[r]) {
+                View key = key(c, k, () -> t.type(k));
+                row.addView(key, weightLp(r == 3 ? 1.2f : 1.6f));
+            }
+            if (r == 0) {
+                View bs = special(c, null, R.drawable.ic_backspace, backspace, false);
+                repeat(bs, backspace);
+                row.addView(bs, weightLp(1.6f));
+            } else if (r == 3) {
+                View en = special(c, enterLabel, "↵".equals(enterLabel) ? R.drawable.ic_enter : 0, enter, false);
+                en.findViewWithTag("face").setBackground(Ui.round(Ui.ACCENT, 11));
+                row.addView(en, weightLp(1.6f));
+            } else {
+                String sk = side[r];
+                row.addView(key(c, " ".equals(sk) ? "space" : sk, () -> t.type(sk)), weightLp(1.6f));
+            }
+            kb.addView(row, Ui.lpu(Ui.MATCH, KEY_H));
+        }
     }
 
     /** Key colour for the theme: solid in Modern, see-through glass in Glass. */

@@ -28,7 +28,7 @@ import java.util.Locale;
 /** "Car keyboard": the launcher's big-key keyboard, available to every app as an Android keyboard. */
 public class CarIME extends InputMethodService {
     private FrameLayout root;
-    private boolean symbols, shift, listening;
+    private boolean symbols, shift, listening, numeric, phone;
     private String enterLabel = "↵";
     private int enterAction = EditorInfo.IME_ACTION_NONE;
     private SpeechRecognizer recognizer;
@@ -61,7 +61,9 @@ public class CarIME extends InputMethodService {
     public void onStartInputView(EditorInfo info, boolean restarting) {
         super.onStartInputView(info, restarting);
         int cls = info.inputType & InputType.TYPE_MASK_CLASS;
-        symbols = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME;
+        symbols = false;
+        numeric = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME; // the number pad
+        phone = cls == InputType.TYPE_CLASS_PHONE;
         shift = false;
         boolean multiLine = (info.inputType & InputType.TYPE_TEXT_FLAG_MULTI_LINE) != 0;
         int action = info.imeOptions & EditorInfo.IME_MASK_ACTION;
@@ -130,6 +132,14 @@ public class CarIME extends InputMethodService {
         strip.addView(hide, hl);
         kb.addView(strip, Ui.lpu(Ui.MATCH, 42));
 
+        if (numeric) {
+            InAppKeyboard.numpad(c, kb, phone, this::type, this::backspace, this::enter, enterLabel, () -> {
+                numeric = false;
+                render();
+            });
+            root.addView(kb, new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP, Gravity.BOTTOM));
+            return;
+        }
         String[][] rows = symbols
                 ? new String[][]{"1234567890".split(""), {"@", "#", "&", "_", "-", "/", ":", ";", "(", ")"}, {"=", ",", "+", "%", "'", "\"", "!", "?"}}
                 : new String[][]{"qwertyuiop".split(""), "asdfghjkl".split(""), "zxcvbnm".split("")};
