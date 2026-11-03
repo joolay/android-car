@@ -65,8 +65,8 @@ final class NowPlaying {
 
     private View videoBtn(int icon, String desc, Runnable r) {
         FrameLayout f = new FrameLayout(c);
-        f.setBackground(Ui.outline(0xBF0B0E13, Ui.ACCENT_SOFT, 1.5f, 17));
-        f.addView(Ui.icon(c, icon, Ui.ACCENT_SOFT), Ui.flpu(20, 20, Gravity.CENTER)); // same size as the app icon on the art
+        f.setBackground(Ui.outline(0xBF0B0E13, Ui.ACCENT_SOFT, 1.5f, 15)); // same as the Lyrics button
+        f.addView(Ui.icon(c, icon, Ui.ACCENT_SOFT), Ui.flpu(22, 22, Gravity.CENTER));
         f.setContentDescription(desc);
         f.setOnClickListener(v -> r.run());
         Ui.press(f);
@@ -164,7 +164,9 @@ final class NowPlaying {
         appBadge.setScaleType(ImageView.ScaleType.FIT_CENTER);
         appBadge.setElevation(Ui.uf(3));
         appBadge.setVisibility(View.GONE);
-        FrameLayout.LayoutParams abl = Ui.flpu(34, 34, Gravity.TOP | Gravity.START);
+        appBadge.setBackground(Ui.outline(0xBF0B0E13, Ui.ACCENT_SOFT, 1.5f, 15)); // same size and frame as the Lyrics button
+        Ui.pad(appBadge, 6, 6, 6, 6);
+        FrameLayout.LayoutParams abl = Ui.flpu(40, 40, Gravity.TOP | Gravity.START);
         abl.setMargins(Ui.u(10), Ui.u(10), 0, 0);
         view.addView(appBadge, abl);
         // ♪ Lyrics button: only when this song has lyrics; opens them in the tile area
@@ -194,8 +196,8 @@ final class NowPlaying {
             if (m != null) Apps.appInfo(c, m.getPackageName());
             return true;
         });
-        videoBtns.addView(pipBtn, Ui.lpu(34, 34));
-        LinearLayout.LayoutParams vg = Ui.lpu(34, 34);
+        videoBtns.addView(pipBtn, Ui.lpu(40, 40));
+        LinearLayout.LayoutParams vg = Ui.lpu(40, 40);
         vg.leftMargin = Ui.u(8);
         videoBtns.addView(videoBtn(R.drawable.ic_maximize, "Video full screen", () -> {
             MediaController m = MediaListener.controller;
