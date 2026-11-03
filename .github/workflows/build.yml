@@ -98,6 +98,7 @@ jobs:
 
       # Publish as its own pre-release, e.g. v0.3-alpha
       - uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main' # other branches: build check only, no release
         with:
           tag_name: v${{ env.VER }}-alpha
           name: Car Launcher ${{ env.VER }} alpha
