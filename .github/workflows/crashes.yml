@@ -27,8 +27,9 @@ jobs:
       - name: Fetch new reports
         run: |
           cd work
-          curl -fsS "https://ntfy.sh/carlauncher-crash-4d6dd33614e4914e/json?poll=1&since=all" -o new.jsonl || true
+          code=$(curl -sS -w "%{http_code}" "https://ntfy.sh/carlauncher-crash-4d6dd33614e4914e/json?poll=1&since=all" -o new.jsonl || echo fail)
           touch new.jsonl
+          echo "::warning::ntfy answered $code with $(grep -c '"event":"message"' new.jsonl) messages; first bytes: $(head -c 200 new.jsonl | tr -d '\n')"
           # keep only messages, skip ones already saved (by id)
           jq -c 'select(.event=="message") | {id, time, title, message, file: (.attachment.name // null), url: (.attachment.url // null)}' new.jsonl > msgs.jsonl || true
           mkdir -p logs
