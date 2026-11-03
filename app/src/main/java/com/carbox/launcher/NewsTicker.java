@@ -172,7 +172,10 @@ final class NewsTicker {
         view.addView(ring, rlp);
         // the NEWS / TRAFFIC label switches feeds; the headlines open the feed for more detail
         tag.setOnClickListener(v -> tapped());
-        view.setOnClickListener(v -> openFeed());
+        view.setOnClickListener(v -> { // the headlines open the feed; in lyrics mode, the lyrics
+            if (lyrics) LyricsView.show();
+            else openFeed();
+        });
         String mode = Prefs.str(Prefs.TICKER_MODE, "alt");
         showingNews = !"traffic".equals(mode);
         applyTag();
@@ -250,8 +253,23 @@ final class NewsTicker {
         marquee.run(false);
     }
 
+    // the label goes round: NEWS → TRAFFIC → LYRICS (the song's words, line by line) → NEWS
+    private boolean lyrics;
+    private int lyricShown = -2;
+    private String lyricKey = "";
+
     private void tapped() {
-        showingNews = !showingNews;
+        if (lyrics) {
+            lyrics = false;
+            showingNews = true;
+        } else if (!showingNews) {
+            lyrics = true; // stays on lyrics until tapped again
+            lyricShown = -2;
+            applyTag();
+            updateText();
+            ring.setVisibility(View.GONE);
+            return;
+        } else showingNews = false;
         int back = Prefs.num(Prefs.TICKER_BACK, 60);
         String mode = Prefs.str(Prefs.TICKER_MODE, "alt");
         manualStart = SystemClock.elapsedRealtime();
@@ -266,6 +284,11 @@ final class NewsTicker {
         public void run() {
             long now = SystemClock.elapsedRealtime();
             if (fetchedAt == 0 || now - fetchedAt > 15 * 60 * 1000L) fetch();
+            if (lyrics) { // follow the song: the line being sung now
+                showLyric();
+                if (running) Ui.ui.postDelayed(this, 250);
+                return;
+            }
             String mode = Prefs.str(Prefs.TICKER_MODE, "alt");
             boolean manual = manualUntil > now;
             if (manualUntil != 0 && !manual) {
@@ -294,12 +317,43 @@ final class NewsTicker {
     };
 
     private void applyTag() {
+        if (lyrics) {
+            tag.setText("LYRICS");
+            tag.setTextColor(Ui.TEXT);
+            tag.setBackground(Ui.round(0xFF7A4FD0, 6));
+            return;
+        }
         tag.setText(showingNews ? "NEWS" : "TRAFFIC");
         tag.setTextColor(showingNews ? Ui.TEXT : 0xFF3A2600);
         tag.setBackground(Ui.round(showingNews ? Ui.ACCENT : Ui.AMBER, 6));
     }
 
+    /** Lyrics mode: the line being sung, scrolling across; the song's name when there are no lyrics. */
+    private void showLyric() {
+        NowPlaying np = NowPlaying.I;
+        String key = np == null ? "" : np.lyricKey();
+        int idx = np == null || np.lyricCount() == 0 ? -1 : np.currentLyric();
+        if (idx == lyricShown && key.equals(lyricKey)) return;
+        lyricShown = idx;
+        lyricKey = key;
+        String line;
+        if (np == null || MediaListener.controller == null) line = "Nothing playing";
+        else if (np.lyricCount() == 0) line = "♪  " + np.songTitle() + " · " + np.songArtist() + "  ·  no lyrics for this song";
+        else if (idx < 0) line = "♪  " + np.songTitle() + " · " + np.songArtist();
+        else {
+            String l = np.lyricLine(idx);
+            line = l.isEmpty() ? "♪" : l;
+            if (idx + 1 < np.lyricCount() && !np.lyricLine(idx + 1).isEmpty()) line += "     ·     " + np.lyricLine(idx + 1); // and the next one
+        }
+        marquee.setItems(java.util.Collections.singletonList(line));
+    }
+
     private void updateText() {
+        if (lyrics) {
+            lyricShown = -2;
+            showLyric();
+            return;
+        }
         List<String> l = new ArrayList<>();
         for (Item it : showingNews ? newsItems : trafficItems) if (today(it) && !read(it) && !deleted(it) && !archived(it)) l.add(it.title);
         List<String> last = showingNews ? lastNews : lastTraffic;
