@@ -241,7 +241,7 @@ final class HA {
         void tick() {
             if (lit != HomeApproach.near) { // arriving home: the tile lights up (in-tile alert)
                 lit = HomeApproach.near;
-                v.setBackground(lit ? Ui.outline(0xFF13284A, Ui.ACCENT, 3, 16) : Themes.card(Ui.CARD, 16));
+                v.setBackground(lit ? Themes.edged(0xFF13284A, Ui.ACCENT, 16) : Themes.card(Ui.CARD, 16));
             }
             if (configured()) maybeRefresh();
             if (seen != version) {

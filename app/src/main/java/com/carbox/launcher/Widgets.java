@@ -336,7 +336,7 @@ final class Widgets {
         CarConnect(Context c, int i, JSONObject s) {
             super(c, i, s);
             LinearLayout l = Ui.col(c);
-            l.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF1F4E9A, 0xFF13284A}));
+            l.setBackground(Themes.on() ? Themes.card(0xFF1F4E9A, 16) : new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF1F4E9A, 0xFF13284A}));
             ((GradientDrawable) l.getBackground()).setCornerRadius(Ui.uf(16));
             Ui.pad(l, 14, 16, 14, 16);
             FrameLayout ic = new FrameLayout(c);
@@ -445,7 +445,7 @@ final class Widgets {
             if (over) dial.max = Math.max(dial.max, dial.value);
             if (over != lit) {
                 lit = over;
-                box.setBackground(over ? Ui.outline(0xFF5A1010, 0xFFE24B4A, 3, 16) : Themes.card(Ui.CARD, 16));
+                box.setBackground(over ? Themes.edged(0xFF5A1010, 0xFFE24B4A, 16) : Themes.card(Ui.CARD, 16));
                 box.animate().cancel();
                 box.setAlpha(1f);
                 if (over) pulse();
@@ -600,7 +600,7 @@ final class Widgets {
                 sub.setText(town.isEmpty() ? "Parked here" : town);
                 sub2.setText("Parked " + NewsTicker.ago(at));
                 sub2.setVisibility(View.VISIBLE);
-                box.setBackground(Ui.outline(Ui.CARD, Ui.ACCENT, 2, 16));
+                box.setBackground(Themes.edged(Ui.CARD, Ui.ACCENT, 16)); // parked: blue edge (glass inside in Glass)
             }
         }
     }
@@ -700,7 +700,7 @@ final class Widgets {
             }
             sub2.setText(l2);
             sub2.setVisibility(l2.isEmpty() ? View.GONE : View.VISIBLE);
-            box.setBackground(Ui.round(bg, 16));
+            box.setBackground(Themes.card(bg, 16)); // amber/red when a break is due: tinted glass in Glass
             bar.invalidate();
         }
     }
@@ -1277,7 +1277,7 @@ final class Widgets {
         PhoneW(Context c, int i, JSONObject s) {
             super(c, i, s);
             LinearLayout l = Ui.col(c);
-            l.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF1F7A46, 0xFF0F3D26}));
+            l.setBackground(Themes.on() ? Themes.card(0xFF1F7A46, 16) : new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF1F7A46, 0xFF0F3D26}));
             ((GradientDrawable) l.getBackground()).setCornerRadius(Ui.uf(16));
             Ui.pad(l, 14, 16, 14, 16);
             FrameLayout ic = new FrameLayout(c);
@@ -1503,7 +1503,7 @@ final class Widgets {
         @Override
         void tick() {
             if (Alerts.salahNow()) { // the salaah alert, inside the tile
-                v.setBackground(Ui.outline(0xFF0F3D2E, Ui.TEAL, 3, 16));
+                v.setBackground(Themes.edged(0xFF0F3D2E, Ui.TEAL, 16));
                 name.setText("Time for Salaah");
                 time.setText(Alerts.salahName == null ? "" : Alerts.salahName);
                 pill.setText("Now");

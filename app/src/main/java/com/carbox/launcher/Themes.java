@@ -42,6 +42,15 @@ final class Themes {
         return new Card(color, radius);
     }
 
+    /** A highlighted card (parked, speeding, next prayer): glass with a coloured edge in Glass, else solid with the edge. */
+    static Drawable edged(int fill, int edge, float radius) {
+        if (!on()) return Ui.outline(fill, edge, 3, radius);
+        Card c = new Card(fill, radius);
+        c.edge.setColor(edge);
+        c.edge.setStrokeWidth(Ui.uf(2.5f));
+        return c;
+    }
+
     /** A button or row inside a card: a light see-through pane in the Glass theme, else the solid colour. */
     static Drawable inner(int color, float radius) {
         return new Inner(color, radius);
@@ -137,11 +146,28 @@ final class Themes {
     private static final class Card extends Drawable {
         private final int color;
         private final float r;
-        private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), edge = new Paint(Paint.ANTI_ALIAS_FLAG),
+        final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), edge = new Paint(Paint.ANTI_ALIAS_FLAG),
                 shine = new Paint(Paint.ANTI_ALIAS_FLAG), pic = new Paint(Paint.FILTER_BITMAP_FLAG);
         private final RectF box = new RectF();
         private final Path clip = new Path();
-        private final int[] at = new int[2], ro = new int[2];
+        private final int[] at = new int[2], ro = new int[2], now = new int[2];
+        private int drawnX = Integer.MIN_VALUE, drawnY;
+        private View followed;
+
+        /**
+         * A card that moves without redrawing (its parent slides or scrolls) would show the wallpaper from where it
+         * was: before each frame, check where it is and redraw it if it has moved.
+         */
+        private void follow(View host) {
+            if (followed == host) return;
+            followed = host;
+            host.getViewTreeObserver().addOnPreDrawListener(() -> {
+                if (!host.isShown() || !on()) return true;
+                host.getLocationInWindow(now);
+                if (now[0] != drawnX || now[1] != drawnY) invalidateSelf();
+                return true;
+            });
+        }
 
         Card(int color, float radius) {
             this.color = color;
@@ -169,6 +195,9 @@ final class Themes {
             c.clipPath(clip);
             host.getLocationInWindow(at);
             root.getLocationInWindow(ro);
+            drawnX = at[0];
+            drawnY = at[1];
+            follow(host);
             c.drawBitmap(b, ro[0] - at[0], ro[1] - at[1], pic); // the blurred wallpaper right behind this card
             // dark frost so text stays readable over a bright wallpaper; a coloured card (an alert) keeps its colour as tinted glass
             fill.setColor(color == Ui.CARD || color == Ui.CARD2 ? 0x4D141A24 : (color & 0x00FFFFFF) | 0xA6000000);
