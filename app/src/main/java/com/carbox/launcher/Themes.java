@@ -251,12 +251,13 @@ final class Themes {
         Canvas c = new Canvas(bm);
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         float hz = h * 0.46f, cx = w * 0.5f; // horizon and the vanishing point
-        // sky: night blue to a warm glow at the horizon
-        p.setShader(new LinearGradient(0, 0, 0, hz, new int[]{0xFF0A1226, 0xFF1C2A52, 0xFF6A4A6E, 0xFFE58A4E},
-                new float[]{0f, 0.45f, 0.8f, 1f}, Shader.TileMode.CLAMP));
+        // sky: its colours follow the time of day (sunrise and sunset where the car is) and the weather
+        Sky k = Sky.now();
+        p.setShader(new LinearGradient(0, 0, 0, hz, k.sky, new float[]{0f, 0.45f, 0.8f, 1f}, Shader.TileMode.CLAMP));
         c.drawRect(0, 0, w, hz, p);
-        // sun glow on the horizon
-        p.setShader(new android.graphics.RadialGradient(cx, hz, w * 0.35f, 0x88FFC27A, 0x00FFC27A, Shader.TileMode.CLAMP));
+        // sun (or moon) glow, low at dawn and dusk, high at midday
+        float sy = hz - (hz * 0.85f) * k.sunHeight;
+        p.setShader(new android.graphics.RadialGradient(w * k.sunX, sy, w * 0.35f, k.glow, k.glow & 0x00FFFFFF, Shader.TileMode.CLAMP));
         c.drawRect(0, 0, w, hz, p);
         // far hills
         Path hills = new Path();
@@ -267,10 +268,10 @@ final class Themes {
         hills.lineTo(w, hz);
         hills.close();
         p.setShader(null);
-        p.setColor(0xFF20223A);
+        p.setColor(k.hills);
         c.drawPath(hills, p);
         // ground either side: dark veld
-        p.setShader(new LinearGradient(0, hz, 0, h, 0xFF1E2A22, 0xFF0C120E, Shader.TileMode.CLAMP));
+        p.setShader(new LinearGradient(0, hz, 0, h, k.ground, 0xFF0C120E, Shader.TileMode.CLAMP));
         c.drawRect(0, hz, w, h, p);
         // the road: wide at the bottom, a point on the horizon
         float bw = w * 0.62f;
@@ -317,5 +318,67 @@ final class Themes {
         p.setShader(new LinearGradient(0, h * 0.6f, 0, h, 0x00000000, 0x66000000, Shader.TileMode.CLAMP));
         c.drawRect(0, h * 0.6f, w, h, p);
         return bm;
+    }
+
+    /** The sky for now: time of day (from sunrise and sunset) and the weather. */
+    static final class Sky {
+        int[] sky;
+        int glow, ground, hills;
+        float sunHeight, sunX; // 0 horizon … 1 high; left … right across the day
+        int weather; // 0 clear, 1 cloudy, 2 fog, 3 rain, 4 storm
+        boolean night;
+
+        static Sky now() {
+            Sky k = new Sky();
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            double h = cal.get(java.util.Calendar.HOUR_OF_DAY) + cal.get(java.util.Calendar.MINUTE) / 60.0;
+            double[] t = Prayer.times(0);
+            double rise = t != null ? t[1] : 6, set = t != null ? t[4] : 18.5;
+            // 0 deep night, 1 dawn/dusk, 2 day: how far into the day we are
+            double dayFrac = (h - rise) / Math.max(1, set - rise);
+            k.night = h < rise - 0.6 || h > set + 0.6;
+            k.sunHeight = (float) Math.max(0, Math.sin(Math.PI * Math.max(0, Math.min(1, dayFrac))));
+            k.sunX = (float) (0.2 + 0.6 * Math.max(0, Math.min(1, dayFrac)));
+            boolean low = !k.night && k.sunHeight < 0.25f; // golden hour
+            int wc = Weather.ok ? Weather.code : 0; // WMO weather codes
+            k.weather = wc >= 95 ? 4 : (wc >= 51 && wc <= 82) ? 3 : (wc == 45 || wc == 48) ? 2 : wc >= 2 ? 1 : 0;
+            if (k.night) {
+                k.sky = new int[]{0xFF050912, 0xFF0B1430, 0xFF18224A, 0xFF2A2F5A};
+                k.glow = 0x553A4A8A;
+                k.ground = 0xFF0E1612;
+                k.hills = 0xFF121528;
+            } else if (low) { // dawn or dusk
+                k.sky = new int[]{0xFF0A1226, 0xFF1C2A52, 0xFF6A4A6E, 0xFFE58A4E};
+                k.glow = 0x88FFC27A;
+                k.ground = 0xFF1E2A22;
+                k.hills = 0xFF20223A;
+            } else { // day
+                k.sky = new int[]{0xFF2F6FC2, 0xFF5A93D8, 0xFF9CC3EA, 0xFFD8E8F2};
+                k.glow = 0x66FFF4D6;
+                k.ground = 0xFF3A5A34;
+                k.hills = 0xFF4A6A7A;
+            }
+            // weather greys the sky out (more for rain and storms) and dims the ground
+            float g = k.weather == 0 ? 0 : k.weather == 1 ? 0.45f : k.weather == 2 ? 0.65f : k.weather == 3 ? 0.7f : 0.85f;
+            int grey = k.night ? 0xFF1A1E26 : 0xFF7A828C;
+            if (k.weather == 4) grey = k.night ? 0xFF111319 : 0xFF3E434C;
+            for (int i = 0; i < k.sky.length; i++) k.sky[i] = mix(k.sky[i], grey, g);
+            k.glow = mix(k.glow, k.glow & 0x00FFFFFF, g);
+            k.ground = mix(k.ground, 0xFF1A1E1C, g * 0.6f);
+            k.hills = mix(k.hills, grey, g * 0.5f);
+            return k;
+        }
+
+        static int mix(int a, int b, float f) {
+            float r = 1 - f;
+            return ((int) (((a >>> 24) & 255) * r + ((b >>> 24) & 255) * f) << 24) | ((int) (((a >> 16) & 255) * r + ((b >> 16) & 255) * f) << 16)
+                    | ((int) (((a >> 8) & 255) * r + ((b >> 8) & 255) * f) << 8) | (int) ((a & 255) * r + (b & 255) * f);
+        }
+
+        /** A key that changes when the picture should be redrawn (about every 10 minutes, or the weather changes). */
+        static String key() {
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            return cal.get(java.util.Calendar.HOUR_OF_DAY) + ":" + cal.get(java.util.Calendar.MINUTE) / 10 + ":" + (Weather.ok ? Weather.code : -1);
+        }
     }
 }
