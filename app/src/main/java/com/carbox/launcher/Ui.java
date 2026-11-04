@@ -47,6 +47,17 @@ final class Ui {
     static final Object[][] ACCENTS = {{0xFF3D8BFD, "Blue"}, {0xFF2BB5A0, "Teal"}, {0xFF3FB950, "Green"}, {0xFFF0A020, "Amber"},
             {0xFFF26B3A, "Orange"}, {0xFFE5484D, "Red"}, {0xFFE0559B, "Pink"}, {0xFF8B6CF0, "Purple"}};
 
+    /** A colour with another opacity (0–255), e.g. a see-through tint of the accent. */
+    static int alpha(int color, int a) {
+        return (color & 0x00FFFFFF) | (a << 24);
+    }
+
+    /** A colour darkened towards black: keep is how much of its brightness stays (0–1). */
+    static int shade(int color, float keep) {
+        int r = (int) (((color >> 16) & 0xFF) * keep), g = (int) (((color >> 8) & 0xFF) * keep), b = (int) ((color & 0xFF) * keep);
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
+
     /** Load the chosen accent (called once Prefs is ready). */
     static void applyAccent() {
         int a = Prefs.num(ACCENT_KEY, 0xFF3D8BFD);

@@ -336,7 +336,8 @@ final class Widgets {
         CarConnect(Context c, int i, JSONObject s) {
             super(c, i, s);
             LinearLayout l = Ui.col(c);
-            l.setBackground(Themes.on() ? Themes.card(0xFF1F4E9A, 16) : new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF1F4E9A, 0xFF13284A}));
+            int deep = Ui.shade(Ui.ACCENT, 0.5f), deeper = Ui.shade(Ui.ACCENT, 0.3f); // the accent, darkened so white text reads
+            l.setBackground(Themes.on() ? Themes.card(deep, 16) : new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{deep, deeper}));
             if (l.getBackground() instanceof GradientDrawable) ((GradientDrawable) l.getBackground()).setCornerRadius(Ui.uf(16)); // glass cards are rounded already
             Ui.pad(l, 14, 16, 14, 16);
             FrameLayout ic = new FrameLayout(c);
@@ -967,6 +968,22 @@ final class Widgets {
         }
     }
 
+    /** The cursor, selection and its handles in the accent colour (Android's own would stay blue). */
+    static void accentField(EditText e) {
+        e.setHighlightColor(Ui.alpha(Ui.ACCENT, 0x66));
+        if (android.os.Build.VERSION.SDK_INT < 29) return;
+        try {
+            android.graphics.drawable.Drawable[] ds = {e.getTextCursorDrawable(), e.getTextSelectHandle(),
+                    e.getTextSelectHandleLeft(), e.getTextSelectHandleRight()};
+            for (android.graphics.drawable.Drawable d : ds) if (d != null) d.mutate().setTint(Ui.ACCENT);
+            if (ds[0] != null) e.setTextCursorDrawable(ds[0]);
+            if (ds[1] != null) e.setTextSelectHandle(ds[1]);
+            if (ds[2] != null) e.setTextSelectHandleLeft(ds[2]);
+            if (ds[3] != null) e.setTextSelectHandleRight(ds[3]);
+        } catch (Throwable ignored) {
+        }
+    }
+
     static EditText field(String hint, String value, boolean secret, Ui.Cb<String> changed) {
         Context c = Panels.ctx();
         EditText e = new EditText(c);
@@ -978,6 +995,7 @@ final class Widgets {
         e.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, Ui.uf(14));
         e.setBackground(Themes.inner(Ui.CARD2, 10));
         Ui.pad(e, 12, 9, 12, 9);
+        accentField(e);
         if (secret) e.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
         e.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI | android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
         InAppKeyboard.attach(e, hint);

@@ -35,7 +35,7 @@ final class AppPanels {
         LinearLayout l = Ui.col(c);
         l.setGravity(Gravity.CENTER_HORIZONTAL);
         Ui.pad(l, 2, 8, 2, 6);
-        if (selected) l.setBackground(Ui.round(0x333D8BFD, 12));
+        if (selected) l.setBackground(Ui.round(Ui.alpha(Ui.ACCENT, 0x33), 12)); // the accent, see-through
         FrameLayout f = new FrameLayout(c);
         ImageView iv = new ImageView(c);
         iv.setImageDrawable(a.icon);

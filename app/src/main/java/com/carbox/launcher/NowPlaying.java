@@ -208,7 +208,7 @@ final class NowPlaying {
         vl.setMargins(0, Ui.u(10), Ui.u(10), 0); // full screen in the top-right corner, picture-in-picture beside it
         view.addView(videoBtns, vl);
         // live equaliser where the album art would be, when the art is hidden (app icon view)
-        eq = new EqView(c, 18, 0x993D8BFD);
+        eq = new EqView(c, 18, Ui.alpha(Ui.ACCENT, 0x99)); // the accent colour
         eq.setVisibility(View.GONE);
         FrameLayout.LayoutParams el = new FrameLayout.LayoutParams(Ui.MATCH, Ui.u(70), Gravity.TOP);
         el.setMargins(Ui.u(14), Ui.u(54), Ui.u(14), 0); // centred across the tile

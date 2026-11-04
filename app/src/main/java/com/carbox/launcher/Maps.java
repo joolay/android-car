@@ -61,7 +61,7 @@ final class Maps {
                     pageReady = true;
                     String key = Prefs.str(Prefs.MAP_KEY, "").replace("'", "");
                     shownDark = darkNow();
-                    web.evaluateJavascript(GoogleTraffic.setupJs() + "setZoomPref(" + Prefs.str("map_zoom", "15") + ");setDark(" + shownDark + ");setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setRound(" + (bigHolder != null) + ");setTraffic(" + GoogleTraffic.on() + ")", null);
+                    web.evaluateJavascript(GoogleTraffic.setupJs() + "setAccent('" + String.format("#%06X", Ui.ACCENT & 0xFFFFFF) + "');setZoomPref(" + Prefs.str("map_zoom", "15") + ");setDark(" + shownDark + ");setup('" + provider() + "','" + key + "','" + option() + "');setHeadingUp(" + headingUp() + ");setInteractive(" + (bigHolder != null) + ");setRound(" + (bigHolder != null) + ");setTraffic(" + GoogleTraffic.on() + ")", null);
                     push();
                 }
             });

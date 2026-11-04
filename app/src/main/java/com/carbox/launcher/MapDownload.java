@@ -61,6 +61,7 @@ final class MapDownload {
             TextView st = Ui.text(c, "", 13, Ui.TEXT, false);
             ProgressBar bar = new ProgressBar(c, null, android.R.attr.progressBarStyleHorizontal);
             bar.setMax(100);
+            bar.setProgressTintList(android.content.res.ColorStateList.valueOf(Ui.ACCENT)); // the accent, not Android's blue
             b.addView(st, Widgets.top(12));
             b.addView(bar, Ui.lp(Ui.MATCH, Ui.u(10)));
             LinearLayout r = Ui.row(c);

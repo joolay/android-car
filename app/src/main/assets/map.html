@@ -16,8 +16,8 @@ html,body{margin:0;height:100%;width:100%;background:#171c24;overflow:hidden}
 .me{width:18px;height:18px;margin:-9px 0 0 -9px;position:relative}
 .gl .me{margin:0}
 .gl.dark .maplibregl-canvas{filter:invert(1) hue-rotate(180deg) brightness(.95) contrast(.9)}
-.me .d{position:absolute;inset:3px;border-radius:50%;background:#3d8bfd;border:2px solid #fff;box-shadow:0 0 0 6px rgba(61,139,253,.25)}
-.me .a{position:absolute;left:4px;top:-9px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid #3d8bfd;display:none}
+.me .d{position:absolute;inset:3px;border-radius:50%;background:var(--acc,#3d8bfd);border:2px solid #fff;box-shadow:0 0 0 6px var(--acc25,rgba(61,139,253,.25))}
+.me .a{position:absolute;left:4px;top:-9px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--acc,#3d8bfd);display:none}
 .gm-style-cc,.gmnoprint a,.gm-style a[href^="https://maps.google.com/maps"]{opacity:.55}
 html.round,html.round body,html.round .leaflet-container{background:transparent!important}
 html.round #m{border-radius:50%;overflow:hidden;transition:none;box-shadow:0 0 0 3px rgba(255,255,255,.4)}
@@ -54,6 +54,11 @@ function size(){
 }
 window.addEventListener('resize',size);
 var round=false;
+// your position's dot and arrow in the launcher's accent colour (Settings → Theme)
+var accent='#3d8bfd';
+function setAccent(c){ accent=c; var r=parseInt(c.substr(1,2),16),g=parseInt(c.substr(3,2),16),b=parseInt(c.substr(5,2),16);
+  var st=document.documentElement.style; st.setProperty('--acc',c); st.setProperty('--acc25','rgba('+r+','+g+','+b+',.25)');
+  if(gmap&&pending) setPos(pending[0],pending[1],pending[2]); }
 function setRound(b){ round=!!b; size(); }
 function setHeadingUp(b){ headUp=!!b&&isGl(); if(!headUp) turn(0,true); size(); } // only vector maps turn: their labels stay upright
 // turn to a heading the short way round (no spinning past north)
@@ -224,8 +229,8 @@ function setPos(lat,lon,bearing){
   // picture-tile maps (Standard, Google) stay north up so their labels are never sideways
   if(gmap){
     var p={lat:lat,lng:lon};
-    var ic=bearing>=0?{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:6,rotation:bearing,fillColor:'#3d8bfd',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}
-                     :{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:'#3d8bfd',fillOpacity:1,strokeColor:'#fff',strokeWeight:3};
+    var ic=bearing>=0?{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:6,rotation:bearing,fillColor:accent,fillOpacity:1,strokeColor:'#fff',strokeWeight:2}
+                     :{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:accent,fillOpacity:1,strokeColor:'#fff',strokeWeight:3};
     if(!gme) gme=new google.maps.Marker({map:gmap,position:p,icon:ic,clickable:false}); else { gme.setPosition(p); gme.setIcon(ic); }
     if(follow) gmap.panTo(p);
     return;
