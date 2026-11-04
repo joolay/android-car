@@ -596,8 +596,10 @@ final class NewsTicker {
 
     private static String clean(String html) {
         if (html == null) return ""; // some feeds have no description/content: don't hand null to Html.fromHtml
+        html = html.replaceAll("(?is)<(script|style|noscript)\\b.*?</\\1\\s*>", " "); // a feed's summary can carry page code too
         String t = android.text.Html.fromHtml(html, android.text.Html.FROM_HTML_MODE_COMPACT).toString().replace('\uFFFC', ' ').trim();
         t = t.replaceAll("\\s+", " ");
+        if (looksLikeCode(t)) return ""; // code, not words: no summary rather than gibberish
         return t.length() > 220 ? t.substring(0, 217) + "…" : t;
     }
 
@@ -1196,15 +1198,32 @@ final class NewsTicker {
     }
 
     private static String article(String html) {
-        java.util.regex.Matcher mt = java.util.regex.Pattern.compile("(?is)<p[^>]*>(.*?)</p>").matcher(html);
+        // the page's code and hidden bits first: script text often holds "<p>" strings that aren't the story
+        html = html.replaceAll("(?is)<(script|style|noscript|template|svg|iframe)\\b.*?</\\1\\s*>", " ")
+                .replaceAll("(?s)<!--.*?-->", " ").replaceAll("(?s)<!\\[CDATA\\[.*?]]>", " ");
+        // the story itself when the page marks it (<article>), else the whole page
+        java.util.regex.Matcher art = java.util.regex.Pattern.compile("(?is)<article\\b[^>]*>(.*?)</article>").matcher(html);
+        String best = null;
+        while (art.find()) if (best == null || art.group(1).length() > best.length()) best = art.group(1);
+        if (best != null && best.length() > 500) html = best;
+        java.util.regex.Matcher mt = java.util.regex.Pattern.compile("(?is)<p(?:\\s[^>]*)?>(.*?)</p\\s*>").matcher(html); // real <p> only, not <param>/<path>
         StringBuilder out = new StringBuilder();
         while (mt.find() && out.length() < 6000) {
             String p = android.text.Html.fromHtml(mt.group(1), android.text.Html.FROM_HTML_MODE_COMPACT).toString().replaceAll("\\s+", " ").trim();
             if (p.length() < 60) continue; // menus, captions, cookie notes
+            if (looksLikeCode(p)) continue; // left-over script
             if (out.length() > 0) out.append("\n\n");
             out.append(p);
         }
         return out.length() >= 300 ? out.toString() : null;
+    }
+
+    /** Text that is really program code (document.write(…), function …{ }, var x = …;), not words for reading. */
+    static boolean looksLikeCode(String t) {
+        if (t.matches("(?s).*(document\\.|window\\.|function\\s*\\(|function\\s+\\w+\\s*\\(|=>|__doPostBack|var\\s+\\w+\\s*=|\\bif\\s*\\(!?\\w).*")) return true;
+        int sym = 0;
+        for (int i = 0; i < t.length(); i++) if ("{}();=<>[]".indexOf(t.charAt(i)) >= 0) sym++;
+        return sym > t.length() / 25; // ordinary writing has hardly any of these
     }
 
     /** Browsers on the box (apps that open web links). */
