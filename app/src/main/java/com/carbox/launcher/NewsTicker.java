@@ -155,7 +155,7 @@ final class NewsTicker {
             List<String> old = new ArrayList<>();
             while (k.hasNext()) {
                 String x = k.next();
-                if (now - o.optLong(x, now) > 3 * DAY_MS) old.add(x);
+                if (now - o.optLong(x, now) > 4 * DAY_MS) old.add(x); // longer than the longest choice
             }
             for (String x : old) o.remove(x);
             Prefs.put(READ_AT, o.toString());
@@ -172,17 +172,30 @@ final class NewsTicker {
         }
     }
 
-    /** Unread headlines stay 48 hours from when they were published (or first fetched, if undated). */
-    static boolean fresh(Item it) {
-        return it.date > 0 && System.currentTimeMillis() - it.date < 2 * DAY_MS;
+    // how long headlines stay (Settings → News Ticker → Ticker options)
+    static final String READ_KEEP = "ticker_read_keep_h", UNREAD_KEEP = "ticker_unread_keep_h";
+
+    /** Hours a read headline stays after reading (6 by default). */
+    static int readKeepH() {
+        return Prefs.num(READ_KEEP, 6);
     }
 
-    /** In the normal list: unread headlines for 48 hours; read ones stay (greyed) for 24 hours after reading. */
+    /** Hours an unread headline stays after it was published (24 by default). */
+    static int unreadKeepH() {
+        return Prefs.num(UNREAD_KEEP, 24);
+    }
+
+    /** Unread headlines stay for the chosen hours from when they were published (or first fetched, if undated). */
+    static boolean fresh(Item it) {
+        return it.date > 0 && System.currentTimeMillis() - it.date < unreadKeepH() * 3600000L;
+    }
+
+    /** In the normal list: unread headlines for the chosen hours; read ones stay (greyed) for theirs after reading. */
     static boolean inList(Item it) {
         if (deleted(it) || archived(it)) return false;
         if (!read(it)) return fresh(it);
         long at = readAt(it);
-        return at > 0 ? System.currentTimeMillis() - at < DAY_MS : today(it);
+        return at > 0 ? System.currentTimeMillis() - at < readKeepH() * 3600000L : today(it);
     }
     private boolean showingNews = true;
     private long manualUntil;     // elapsedRealtime; 0 = automatic

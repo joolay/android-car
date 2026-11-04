@@ -1230,6 +1230,14 @@ final class SettingsPanels {
                     segNum(c, Prefs.TICKER_BACK, 300, "5 min", back), segNum(c, Prefs.TICKER_BACK, 0, "Never", back)));
             b.addView(Panels.switchRow(0, 0, "Scrolling headlines", "Off shows one headline at a time", Prefs.flag(Prefs.TICKER_SCROLL, true),
                     on -> Prefs.put(Prefs.TICKER_SCROLL, on)));
+            // how long headlines stay in the list, the ticker and playback
+            b.addView(Panels.section("How long headlines stay"));
+            int rk = NewsTicker.readKeepH(), uk = NewsTicker.unreadKeepH();
+            b.addView(Panels.row("Read, after reading", segNum(c, NewsTicker.READ_KEEP, 3, "3 h", rk), segNum(c, NewsTicker.READ_KEEP, 6, "6 h", rk),
+                    segNum(c, NewsTicker.READ_KEEP, 12, "12 h", rk), segNum(c, NewsTicker.READ_KEEP, 24, "24 h", rk)));
+            b.addView(Panels.row("Unread, after publishing", segNum(c, NewsTicker.UNREAD_KEEP, 12, "12 h", uk), segNum(c, NewsTicker.UNREAD_KEEP, 24, "24 h", uk),
+                    segNum(c, NewsTicker.UNREAD_KEEP, 48, "48 h", uk), segNum(c, NewsTicker.UNREAD_KEEP, 72, "72 h", uk)), top(6));
+            b.addView(Ui.text(c, "Archived headlines stay until you delete them.", 12, Ui.SUB, false), top(4));
             b.addView(Panels.section("News feed (RSS)"));
             b.addView(Widgets.field("Blank = Google News for " + (Gps.town != null ? Gps.town : "your area"), Prefs.str(Prefs.NEWS_URL, ""), false,
                     t -> Prefs.put(Prefs.NEWS_URL, t)), Ui.lp(Ui.MATCH, Ui.WRAP));
@@ -1242,7 +1250,7 @@ final class SettingsPanels {
             b.addView(Ui.button(c, "Reload headlines now", false, () -> {
                 if (MainActivity.I != null) MainActivity.I.ticker.fetch();
             }), top(14));
-            b.addView(Panels.switchRow(0, 0, "Show traffic when the car starts", "Opens the traffic list in the tile area for 15 seconds", Prefs.flag("traffic_start", true), v -> Prefs.put("traffic_start", v)), top(8));
+            b.addView(Panels.switchRow(0, 0, "Show traffic when the car starts", "Plays its unread headlines, then the list (it goes after 15 s without a touch)", Prefs.flag("traffic_start", true), v -> Prefs.put("traffic_start", v)), top(8));
             return Panels.panel("News and traffic", b, 660, 440);
         });
     }
