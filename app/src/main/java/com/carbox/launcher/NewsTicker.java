@@ -920,6 +920,24 @@ final class NewsTicker {
             Ui.press(fs);
             head.addView(fs, Ui.lpu(30, 30));
             head.addView(Ui.gap(c, 12, 1));
+            if (feedView == 0) { // read all: every unread headline in this feed marked read (they grey, and go 24 h later)
+                View ra = Ui.icon(c, R.drawable.ic_done_all, Ui.ACCENT_SOFT);
+                Ui.pad(ra, 4, 4, 4, 4);
+                ra.setContentDescription("Mark all as read");
+                ra.setOnClickListener(v -> {
+                    int k = 0;
+                    for (Item it : items) if (inList(it) && !read(it)) {
+                        markRead(it);
+                        k++;
+                    }
+                    updateText(); // the scrolling ticker drops them too
+                    Panels.refresh();
+                    if (k > 0) android.widget.Toast.makeText(c, k == 1 ? "1 headline marked read" : k + " headlines marked read", android.widget.Toast.LENGTH_SHORT).show();
+                });
+                Ui.press(ra);
+                head.addView(ra, Ui.lpu(30, 30));
+                head.addView(Ui.gap(c, 12, 1));
+            }
             // archive and bin: tap to see them, tap again for today's headlines (lit while open)
             for (int k = 1; k <= 2; k++) {
                 final int mode = k;
