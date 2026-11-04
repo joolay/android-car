@@ -869,9 +869,12 @@ final class NewsTicker {
         feedNews = news;
         feedView = 0;
         Ui.ui.removeCallbacks(slideTick); // stop playback if we came from it
-        Ui.ui.post(() -> Panels.sticky = true); // news and traffic stay until you close them
+        // the list after playback minimises (slides back up) after 15 s without a touch; a story opened
+        // from it stays until closed by hand
+        if (MainActivity.I != null) MainActivity.I.resetIdle(); // the 15 s start now
         Panels.showSlide(() -> { // slides down out of the ticker, back up when closed
             Context c = Panels.ctx();
+            Panels.sticky = false; // the list minimises when idle (also after coming back from a story)
             boolean n = feedNews;
             List<Item> items = n ? newsItems : trafficItems;
             LinearLayout card = Ui.col(c);
@@ -1059,6 +1062,7 @@ final class NewsTicker {
 
     /** One story, easy to read: big headline, where it's from, the summary, then the article's text when it can be fetched. */
     static void reader(Item it) {
+        Panels.sticky = true; // a story you're reading stays until you close it
         Panels.push(() -> {
             Context c = Panels.ctx();
             LinearLayout b = Ui.col(c);
