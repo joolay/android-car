@@ -699,7 +699,7 @@ final class SettingsPanels {
             b.addView(Ui.text(c, "\"Liked Songs\", a playlist name, or a playlist link shared from the app. Also used if nothing is loaded.", 12, Ui.SUB, false), top(3));
             LinearLayout pr = Ui.row(c);
             final String[] pl = {Prefs.str(Prefs.MUSIC_PLAYLIST, "")};
-            pr.addView(Widgets.field("e.g. Liked Songs", pl[0], false, v -> {
+            pr.addView(Widgets.field("For example, Liked Songs", pl[0], false, v -> {
                 pl[0] = v;
                 Prefs.put(Prefs.MUSIC_PLAYLIST, v);
             }), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));

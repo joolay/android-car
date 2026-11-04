@@ -1118,7 +1118,7 @@ final class Widgets {
             LinearLayout b = Ui.col(c);
             b.addView(Ui.text(c, "Addresses open in your navigation app (" + (Actions.navPkg() == null ? "not chosen yet" : Apps.label(Actions.navPkg())) + ").", 13, Ui.SUB, false));
             b.addView(Panels.section("Home"));
-            b.addView(field("e.g. 12 Florida Road, Durban", fc.optString("home"), false, t -> put(fc, "home", t)), Ui.lp(Ui.MATCH, Ui.WRAP));
+            b.addView(field("For example, 12 Florida Road, Durban", fc.optString("home"), false, t -> put(fc, "home", t)), Ui.lp(Ui.MATCH, Ui.WRAP));
             b.addView(Panels.section("Work"));
             b.addView(field("Work address", fc.optString("work"), false, t -> put(fc, "work", t)), Ui.lp(Ui.MATCH, Ui.WRAP));
             LinearLayout btns = Ui.row(c);
