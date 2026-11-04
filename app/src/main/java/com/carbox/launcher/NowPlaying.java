@@ -502,7 +502,9 @@ final class NowPlaying {
     }
 
     /** The next few songs in the music app's queue: their lyrics fetched ahead, so they're ready on time. */
-    private final Runnable prefetchNext = () -> {
+    private final Runnable prefetchNext = this::prefetchNow;
+
+    private void prefetchNow() {
         android.media.session.MediaController m = MediaListener.controller;
         if (m == null) return;
         List<android.media.session.MediaSession.QueueItem> q = null;
@@ -534,8 +536,8 @@ final class NowPlaying {
         }
         if (next.isEmpty()) return;
         Trace.event("Lyrics: fetching ahead for the next " + next.size() + " songs");
-        LyricsFetch.prefetch(this.c, next);
-    };
+        LyricsFetch.prefetch(c, next);
+    }
 
     private int shownIdx = -2;
 
