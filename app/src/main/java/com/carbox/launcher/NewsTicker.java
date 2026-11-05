@@ -756,54 +756,12 @@ final class NewsTicker {
     private View slidePage() {
         Context c = Panels.ctx();
         // swipe left: next headline (this one counts as read); swipe right: archive it
-        LinearLayout b = new LinearLayout(c) {
-            private float x0, y0;
-            private boolean swiping;
-
-            @Override
-            public boolean dispatchTouchEvent(android.view.MotionEvent e) {
-                switch (e.getActionMasked()) {
-                    case android.view.MotionEvent.ACTION_DOWN:
-                        x0 = e.getRawX();
-                        y0 = e.getRawY();
-                        swiping = false;
-                        break;
-                    case android.view.MotionEvent.ACTION_MOVE: {
-                        float dx = e.getRawX() - x0, dy = e.getRawY() - y0;
-                        if (!swiping && Math.abs(dx) > Ui.u(24) && Math.abs(dx) > Math.abs(dy) * 1.5f) {
-                            swiping = true; // a swipe, not a tap: the headline and buttons let go
-                            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
-                            android.view.MotionEvent cancel = android.view.MotionEvent.obtain(e);
-                            cancel.setAction(android.view.MotionEvent.ACTION_CANCEL);
-                            super.dispatchTouchEvent(cancel);
-                            cancel.recycle();
-                        }
-                        if (swiping) {
-                            setTranslationX(dx * 0.6f);
-                            setAlpha(Math.max(0.35f, 1 - Math.abs(dx) / Math.max(1, getWidth())));
-                            return true;
-                        }
-                        break;
-                    }
-                    case android.view.MotionEvent.ACTION_UP:
-                    case android.view.MotionEvent.ACTION_CANCEL:
-                        if (swiping) {
-                            float dx = e.getRawX() - x0;
-                            swiping = false;
-                            animate().translationX(0).alpha(1f).setDuration(Ui.ms(160)).start();
-                            if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP && Math.abs(dx) > Ui.u(70)) {
-                                Item cur = slide != null && slideIdx < slide.size() ? slide.get(slideIdx) : null;
-                                if (cur != null) Ui.ui.post(dx < 0 ? () -> slideAct(() -> markRead(cur), false)
-                                        : () -> slideAct(() -> archive(cur), true));
-                            }
-                            return true;
-                        }
-                        break;
-                }
-                return super.dispatchTouchEvent(e);
-            }
-        };
-        b.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout b = swipeCol(c, left -> {
+            Item cur = slide != null && slideIdx < slide.size() ? slide.get(slideIdx) : null;
+            if (cur == null) return;
+            if (left) slideAct(() -> markRead(cur), false);
+            else slideAct(() -> archive(cur), true);
+        });
         if (slide == null || slide.isEmpty()) {
             b.addView(Ui.text(c, "Nothing to play.", 15, Ui.SUB, false));
             return Panels.panel("Playback", b, 660, 440);
@@ -822,7 +780,7 @@ final class NewsTicker {
             Ui.ui.removeCallbacks(slideTick);
             markRead(it);
             updateText();
-            reader(it);
+            reader(slide, slideIdx, i -> slideIdx = i); // swipes walk the playback headlines
         });
         b.addView(h, Ui.lp(Ui.MATCH, Ui.WRAP));
         String m = (it.source != null ? it.source : "") + (it.date > 0 ? (it.source != null ? " \u00b7 " : "") + ago(it.date) : "");
@@ -1086,9 +1044,12 @@ final class NewsTicker {
                     } else {
                         v.animate().translationX(0).alpha(wasRead ? 0.6f : 1f).setDuration(Ui.ms(160)).start();
                         if (!dragging[0] && e.getActionMasked() == android.view.MotionEvent.ACTION_UP) { // a tap: read it
+                            List<Item> seq = viewSeq(); // the list's order, before this one moves to the read ones
+                            int at = 0;
+                            for (int i = 0; i < seq.size(); i++) if (key(seq.get(i)).equals(key(it))) at = i;
                             markRead(it);
                             updateText();
-                            reader(it);
+                            reader(seq, at, null);
                         }
                     }
                     return true;
@@ -1100,10 +1061,24 @@ final class NewsTicker {
 
     /** One story, easy to read: big headline, where it's from, the summary, then the article's text when it can be fetched. */
     static void reader(Item it) {
+        reader(java.util.Collections.singletonList(it), 0, null);
+    }
+
+    // the stories the reader can swipe through (the playback headlines, or the list in its order)
+    private static List<Item> readSeq = new ArrayList<>();
+    private static int readIdx;
+    private static Ui.Cb<Integer> readMoved;
+
+    /** Story at of seq; swipe left for the next one, right for the one before. moved hears the new place. */
+    static void reader(List<Item> seq, int at, Ui.Cb<Integer> moved) {
+        readSeq = new ArrayList<>(seq);
+        readIdx = Math.max(0, Math.min(at, readSeq.size() - 1));
+        readMoved = moved;
         Panels.sticky = true; // a story you're reading stays until you close it
         Panels.push(() -> {
             Context c = Panels.ctx();
-            LinearLayout b = Ui.col(c);
+            final Item it = readSeq.get(Math.max(0, Math.min(readIdx, readSeq.size() - 1)));
+            LinearLayout b = swipeCol(c, left -> readerStep(c, left ? 1 : -1));
             TextView t = Ui.text(c, it.title, lvlSize(20, 22, 26), Ui.TEXT, true);
             t.setLineSpacing(Ui.uf(3), 1);
             b.addView(t);
@@ -1184,7 +1159,10 @@ final class NewsTicker {
                 acts.addView(Ui.gap(c, 8, 1));
                 acts.addView(open, Ui.lpu(30, 30));
             }
-            return Panels.panel(null, it.source != null ? it.source : "Story", b, 660, 440, acts);
+            LinearLayout pan = Panels.panel(null, it.source != null ? it.source : "Story", b, 660, 440, acts);
+            // the story fills the window, so a swipe anywhere on it works
+            if (b.getParent() instanceof android.widget.ScrollView) ((android.widget.ScrollView) b.getParent()).setFillViewport(true);
+            return pan;
         });
     }
 
@@ -1258,6 +1236,95 @@ final class NewsTicker {
             out.append(p);
         }
         return out.length() >= 300 ? out.toString() : null;
+    }
+
+    /** The next (d = 1) or previous (d = -1) story in the reader. */
+    private static void readerStep(Context c, int d) {
+        int n = readIdx + d;
+        if (n < 0 || n >= readSeq.size()) {
+            android.widget.Toast.makeText(c, d > 0 ? "That's the last story" : "That's the first story", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        readIdx = n;
+        markRead(readSeq.get(n));
+        if (readMoved != null) readMoved.on(n);
+        if (MainActivity.I != null && MainActivity.I.ticker != null) MainActivity.I.ticker.updateText();
+        Panels.refresh(); // this story's page
+    }
+
+    /** The list being shown, in its order: unread then read (or the archive, or the bin). */
+    private List<Item> viewSeq() {
+        List<Item> out = new ArrayList<>();
+        if (feedView == 1) return archivedItems();
+        if (feedView == 2) {
+            for (Item it : newsItems) if (deleted(it) && today(it)) out.add(it);
+            for (Item it : trafficItems) if (deleted(it) && today(it)) out.add(it);
+            return out;
+        }
+        List<Item> seen = new ArrayList<>();
+        for (Item it : feedNews ? newsItems : trafficItems) {
+            if (!inList(it)) continue;
+            (read(it) ? seen : out).add(it);
+        }
+        out.addAll(seen);
+        return out;
+    }
+
+    interface Swipe {
+        void on(boolean left);
+    }
+
+    /**
+     * A column that follows a sideways finger and reports a swipe (left or right); taps and vertical scrolling
+     * work as usual. Used by playback and the reader.
+     */
+    static LinearLayout swipeCol(Context c, Swipe swipe) {
+        LinearLayout b = new LinearLayout(c) {
+            private float x0, y0;
+            private boolean swiping;
+
+            @Override
+            public boolean dispatchTouchEvent(android.view.MotionEvent e) {
+                switch (e.getActionMasked()) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                        x0 = e.getRawX();
+                        y0 = e.getRawY();
+                        swiping = false;
+                        break;
+                    case android.view.MotionEvent.ACTION_MOVE: {
+                        float dx = e.getRawX() - x0, dy = e.getRawY() - y0;
+                        if (!swiping && Math.abs(dx) > Ui.u(24) && Math.abs(dx) > Math.abs(dy) * 1.5f) {
+                            swiping = true; // a swipe, not a tap: what's under the finger lets go
+                            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                            android.view.MotionEvent cancel = android.view.MotionEvent.obtain(e);
+                            cancel.setAction(android.view.MotionEvent.ACTION_CANCEL);
+                            super.dispatchTouchEvent(cancel);
+                            cancel.recycle();
+                        }
+                        if (swiping) {
+                            setTranslationX(dx * 0.6f);
+                            setAlpha(Math.max(0.35f, 1 - Math.abs(dx) / Math.max(1, getWidth())));
+                            return true;
+                        }
+                        break;
+                    }
+                    case android.view.MotionEvent.ACTION_UP:
+                    case android.view.MotionEvent.ACTION_CANCEL:
+                        if (swiping) {
+                            float dx = e.getRawX() - x0;
+                            swiping = false;
+                            animate().translationX(0).alpha(1f).setDuration(Ui.ms(160)).start();
+                            if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP && Math.abs(dx) > Ui.u(70))
+                                Ui.ui.post(() -> swipe.on(dx < 0));
+                            return true;
+                        }
+                        break;
+                }
+                return super.dispatchTouchEvent(e);
+            }
+        };
+        b.setOrientation(LinearLayout.VERTICAL);
+        return b;
     }
 
     /** Text that is really program code (document.write(…), function …{ }, var x = …;), not words for reading. */
