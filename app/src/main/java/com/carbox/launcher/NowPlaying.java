@@ -36,6 +36,7 @@ final class NowPlaying {
     private final List<String> lyricText = new ArrayList<>();
 
     static NowPlaying I;
+    private static boolean listening;
     private View lyricsBtn;
     private EqView eq;
     private MusicFolder folder;
@@ -300,7 +301,7 @@ final class NowPlaying {
         folder = new MusicFolder(c);
         folder.view.setVisibility(View.GONE);
         view.addView(folder.view, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-        Apps.listen(() -> { if (folder.view.getVisibility() == View.VISIBLE) folder.render(); });
+        Apps.listen(() -> { if (I == this && folder.view.getVisibility() == View.VISIBLE) folder.render(); }); // only the current one
 
         view.setOnClickListener(v -> {
             if (!MediaListener.hasAccess(c)) MediaListener.requestAccess(c);
@@ -311,7 +312,14 @@ final class NowPlaying {
             SettingsPanels.music();
             return true;
         });
-        MediaListener.listenMedia(this::update);
+        // music updates reach the current Now Playing only: a home screen rebuilt (theme, accent…) left the
+        // old one listening too, so every song's lyrics were looked up twice
+        if (!listening) {
+            listening = true;
+            MediaListener.listenMedia(() -> {
+                if (I != null) I.update();
+            });
+        }
     }
 
     static boolean showIcon() {

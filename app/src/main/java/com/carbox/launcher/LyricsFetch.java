@@ -71,6 +71,9 @@ final class LyricsFetch {
         if (hit != null) {
             out.on(hit);
             if (hit.timed()) return; // as good as it gets
+        } else if (noneLately(key(track, artist))) { // no source had any this week (e.g. a recitation): don't ask again
+            out.on(null);
+            return;
         }
         race(c, track, artist, durMs, mediaId, hit, out, null);
     }
@@ -94,7 +97,7 @@ final class LyricsFetch {
         }
         String k = key(track, artist);
         L hit = cached(c, track, artist);
-        if (busy.contains(k) || (hit != null && hit.timed())) { // already kept (or on its way)
+        if (busy.contains(k) || (hit != null && hit.timed()) || (hit == null && noneLately(k))) { // kept, on its way, or none to be had
             go.run();
             return;
         }
@@ -112,6 +115,7 @@ final class LyricsFetch {
         final String k = key(track, artist);
         final boolean[] shown = {already != null}, shownTimed = {already != null && already.timed()};
         final int[] left = {0};
+        final boolean[] reached = {false}; // did any source actually answer (vs no signal)
         Out offer = l -> {
             left[0]--;
             if (l != null && !l.words.isEmpty() && (!shown[0] || (l.timed() && !shownTimed[0]))) {
@@ -122,6 +126,7 @@ final class LyricsFetch {
             }
             if (left[0] == 0) { // every source has answered
                 if (!shown[0]) {
+                    if (reached[0]) markNone(k); // only when a source said so, not when the network was down
                     Trace.event("Lyrics: none found for " + track);
                     out.on(null);
                 }
@@ -136,6 +141,7 @@ final class LyricsFetch {
         left[0]++;
         Net.get("https://lrclib.net/api/get?track_name=" + Uri.encode(track) + "&artist_name=" + Uri.encode(artist)
                 + (durMs > 0 ? "&duration=" + Math.round(durMs / 1000.0) : ""), h, (body, code) -> {
+            if (code >= 200 && code < 500) reached[0] = true; // a real answer, not a failed connection
             L l = null;
             try {
                 JSONObject o = new JSONObject(body);
@@ -147,6 +153,7 @@ final class LyricsFetch {
         // 2. LRCLIB search with a cleaned-up title (the right length of song)
         left[0]++;
         Net.get("https://lrclib.net/api/search?track_name=" + Uri.encode(t2) + "&artist_name=" + Uri.encode(a2), h, (body, code) -> {
+            if (code >= 200 && code < 500) reached[0] = true; // a real answer, not a failed connection
             L l = null;
             try {
                 JSONArray arr = new JSONArray(body);
@@ -168,6 +175,7 @@ final class LyricsFetch {
         // 3. lyrics.ovh (words only)
         left[0]++;
         Net.get("https://api.lyrics.ovh/v1/" + Uri.encode(a2) + "/" + Uri.encode(t2), h, (body, code) -> {
+            if (code >= 200 && code < 500) reached[0] = true; // a real answer, not a failed connection
             L l = null;
             try {
                 l = untimed(new JSONObject(body).optString("lyrics", ""), "lyrics.ovh");
@@ -219,6 +227,37 @@ final class LyricsFetch {
     static String cleanTitle(String t) {
         return t.replaceAll("(?i)\\s*[\\(\\[](feat|ft|with|from|remaster|live|radio|edit|version|prod)[^\\)\\]]*[\\)\\]]", "")
                 .replaceAll("(?i)\\s+-\\s+(remaster|live|radio|edit|single|mono|stereo|feat|from).*$", "").trim();
+    }
+
+    // ------------------------------------------------------------------ songs with no lyrics anywhere
+
+    private static final String NONE = "lyrics_none"; // {song key: when every source came up empty}
+    private static final long NONE_MS = 7 * 24 * 3600000L; // asked again after a week (lyrics do get added)
+
+    private static boolean noneLately(String k) {
+        try {
+            long at = new JSONObject(Prefs.str(NONE, "{}")).optLong(k, 0);
+            return at > 0 && System.currentTimeMillis() - at < NONE_MS;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static void markNone(String k) {
+        try {
+            JSONObject o = new JSONObject(Prefs.str(NONE, "{}"));
+            long now = System.currentTimeMillis();
+            o.put(k, now);
+            java.util.Iterator<String> it = o.keys();
+            List<String> old = new ArrayList<>();
+            while (it.hasNext()) {
+                String x = it.next();
+                if (now - o.optLong(x, now) > NONE_MS) old.add(x);
+            }
+            for (String x : old) o.remove(x);
+            Prefs.put(NONE, o.toString());
+        } catch (Exception ignored) {
+        }
     }
 
     // ------------------------------------------------------------------ kept on the box
