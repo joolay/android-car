@@ -816,7 +816,14 @@ final class NewsTicker {
         TextView h = Ui.text(c, it.title, lvlSize(24, 28, 33), Ui.TEXT, true);
         h.setGravity(Gravity.CENTER);
         h.setLineSpacing(Ui.uf(3), 1);
-        h.setOnClickListener(v -> feedList(slideNews)); // tap the headline to skip straight to the list
+        // tap the slide: its story's summary opens (playback pauses; back returns to this slide)
+        b.setOnClickListener(v -> {
+            slidePaused = true;
+            Ui.ui.removeCallbacks(slideTick);
+            markRead(it);
+            updateText();
+            reader(it);
+        });
         b.addView(h, Ui.lp(Ui.MATCH, Ui.WRAP));
         String m = (it.source != null ? it.source : "") + (it.date > 0 ? (it.source != null ? " \u00b7 " : "") + ago(it.date) : "");
         if (!m.isEmpty()) {
