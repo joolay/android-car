@@ -375,6 +375,20 @@ final class LiveWallpaper extends View {
                 new float[]{0f, 0.55f, 1f}, Shader.TileMode.CLAMP));
         c.drawPath(tmp, p);
         p.setShader(null);
+        if (alpha > 0.85f && sz > Ui.uf(11)) { // fine scales, clipped to the body
+            c.save();
+            c.clipPath(tmp);
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(Math.max(1f, sz * 0.04f));
+            p.setColor(0x26000000);
+            for (int row = -2; row <= 2; row++)
+                for (int k = 0; k < 8; k++) {
+                    float cx = -sz * 0.75f + k * sz * 0.22f + ((row & 1) == 0 ? 0 : sz * 0.11f), cy = row * sz * 0.17f;
+                    c.drawArc(cx - sz * 0.1f, cy - sz * 0.09f, cx + sz * 0.1f, cy + sz * 0.09f, -70, 140, false, p);
+                }
+            p.setStyle(Paint.Style.FILL);
+            c.restore();
+        }
         p.setColor(((int) (0x30 * alpha) << 24) | 0xFFFFFF); // a soft highlight along the back
         c.drawOval(-sz * 0.6f, -sz * 0.42f, sz * 0.55f, -sz * 0.22f, p);
         if (alpha > 0.6f) {
@@ -407,6 +421,8 @@ final class LiveWallpaper extends View {
     }
 
     private boolean fishtank(Canvas c, int w, int h, float t, float dt) {
+        t *= 0.55f; // calmer: everything in the tank moves at about half speed
+        dt *= 0.55f;
         p.setShader(new LinearGradient(0, 0, 0, h, new int[]{0xFF2A8FC4, 0xFF0F4A70, 0xFF062538}, new float[]{0, 0.5f, 1}, Shader.TileMode.CLAMP));
         c.drawRect(0, 0, w, h, p);
         p.setShader(null);
@@ -522,6 +538,11 @@ final class LiveWallpaper extends View {
         }
         // fish: far ones first (smaller, mistier), turning round at the glass instead of vanishing
         for (int pass = 0; pass < 2; pass++) {
+            if (pass == 1) { // water between the far and near fish: a blue haze
+                p.setShader(new LinearGradient(0, 0, 0, h, 0x1A2A8FC4, 0x330B3A5B, Shader.TileMode.CLAMP));
+                c.drawRect(0, 0, w, h, p);
+                p.setShader(null);
+            }
             for (float[] f : fish) {
                 if ((f[7] < 0.6f) != (pass == 0)) continue;
                 float speed = Math.abs(f[2]) * (0.75f + 0.25f * (float) Math.sin(t * 0.4f + f[5])) * (0.6f + 0.6f * f[7]);
@@ -532,9 +553,27 @@ final class LiveWallpaper extends View {
                 float y = f[1] * h + (float) Math.sin(t * 0.9f + f[5]) * Ui.uf(10) * f[7];
                 float sz = Ui.uf(17) * f[3] * (0.55f + 0.5f * f[7]);
                 int col = mix(FISH_COLS[(int) f[4]], 0xFF1B5E88, (1 - f[7]) * 0.55f); // far: lost in the blue
+                if (pass == 1) { // its soft shadow on the sand
+                    p.setColor(0x22000000);
+                    c.drawOval(f[0] * w - sz, h - Ui.uf(16), f[0] * w + sz, h - Ui.uf(10), p);
+                }
                 fish(c, f[0] * w, y, sz, f[6], t, f[5], col, 0.6f + 0.4f * f[7]);
             }
         }
+        // the glass of the tank: dark edges, a rim light along the top and a faint reflection streak
+        p.setShader(new RadialGradient(w / 2f, h / 2f, Math.max(w, h) * 0.75f, 0x00000000, 0x66000000, Shader.TileMode.CLAMP));
+        c.drawRect(0, 0, w, h, p);
+        p.setShader(new LinearGradient(0, 0, 0, Ui.uf(26), 0x30FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
+        c.drawRect(0, 0, w, Ui.uf(26), p);
+        p.setShader(null);
+        p.setColor(0x0DFFFFFF);
+        tmp.reset();
+        tmp.moveTo(w * 0.04f, 0);
+        tmp.lineTo(w * 0.1f, 0);
+        tmp.lineTo(w * 0.04f, h);
+        tmp.lineTo(-w * 0.02f, h);
+        tmp.close();
+        c.drawPath(tmp, p);
         return true;
     }
 
