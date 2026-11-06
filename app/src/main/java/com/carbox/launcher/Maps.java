@@ -481,6 +481,7 @@ final class Maps {
             mini = null;
             miniW = null;
             stage = null;
+            mapShow();
         }
     }
 
@@ -503,10 +504,9 @@ final class Maps {
         miniOverMap = true;
         LeftStages.step(0);
         showMini(true);
-        if (mini != null && Ui.ms(1) > 0) {
-            int dir = catcher.dir;
-            mini.setTranslationX(dir * view.getWidth());
-            mini.animate().translationX(0).setDuration(Ui.ms(260)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+        if (mini != null && Ui.ms(1) > 0) { // the small map turns away like a cube, the Drive stage turns in
+            mini.setVisibility(View.GONE);
+            Cube.turn(mapLayer, mini, catcher.dir, null);
         }
     }
 
@@ -515,6 +515,13 @@ final class Maps {
         if (!miniOverMap) return;
         miniOverMap = false;
         if (bigHolder == null) showMini(false);
+    }
+
+    /** The small map as it should be: shown, upright. */
+    private void mapShow() {
+        mapLayer.setVisibility(View.VISIBLE);
+        mapLayer.setRotationY(0);
+        mapLayer.setTranslationX(0);
     }
 
     private void swapMini() {
@@ -526,8 +533,8 @@ final class Maps {
             mini = null;
             stage = null;
             miniOverMap = false;
-            old.animate().translationX(-dir * view.getWidth()).setDuration(Ui.ms(260)).withEndAction(() -> view.removeView(old)).start();
-            if (Ui.ms(260) == 0) view.removeView(old);
+            Ui.ui.removeCallbacks(miniTick);
+            Cube.turn(old, mapLayer, dir, () -> view.removeView(old)); // the cube turns back to the map
             return;
         }
         stage.turn(dir); // the cube turns
@@ -576,6 +583,7 @@ final class Maps {
             ((android.view.ViewGroup) bigHolder.getParent()).removeView(bigHolder);
             bigHolder = null;
             view.addView(mapLayer, 0, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            mapShow();
             if (catcher != null) catcher.setVisibility(View.VISIBLE);
             a.tilesBehind(true);
             js("size()"); // fit the new size at once
@@ -849,7 +857,7 @@ final class Maps {
         bigMap(tapBig || navSwap); // swap: map into the tile area, directions stay here
         if (n == null || NavCard.inTiles()) { // instructions shown in the tile area instead: keep the map
             navCard.setVisibility(View.GONE);
-            mapLayer.setVisibility(View.VISIBLE);
+            if (bigHolder != null || !miniOverMap) mapLayer.setVisibility(View.VISIBLE); // (turned away while the Drive stage is over it)
             if (bigHolder != null) miniOverMap = false;
             showMini(bigHolder != null || miniOverMap); // map is big (or swiped aside): the stage shows its widgets
             return;
