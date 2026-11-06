@@ -153,8 +153,7 @@ final class Maps {
             });
         }
         Ui.press(go);
-        FrameLayout.LayoutParams gl = new FrameLayout.LayoutParams(Ui.MATCH, Ui.u(36), Gravity.BOTTOM);
-        gl.setMargins(Ui.u(10), 0, Ui.u(10), Ui.u(10));
+        FrameLayout.LayoutParams gl = new FrameLayout.LayoutParams(Ui.u(40), Ui.u(40), Gravity.TOP | Gravity.START);
         mapLayer.addView(go, gl);
         pill(false); // with the Google Maps icon
 
@@ -598,10 +597,10 @@ final class Maps {
         if (web != null && pageReady) web.evaluateJavascript(code, null);
     }
 
-    /** The Google Maps icon (else the chosen navigation app's, else a pin). */
+    /** The default navigation app's icon (Google Maps if none is set), else a pin. */
     private android.graphics.drawable.Drawable navIcon(int du) {
         android.graphics.drawable.Drawable d = null;
-        for (String p : new String[]{"com.google.android.apps.maps", Actions.navPkg()}) {
+        for (String p : new String[]{Actions.navPkg(), "com.google.android.apps.maps"}) {
             if (p == null || d != null) continue;
             try {
                 d = c.getPackageManager().getApplicationIcon(p);
@@ -614,19 +613,23 @@ final class Maps {
         return d;
     }
 
-    /** Navigate: the Google Maps icon in a round button at the left of the big map; a bar with the icon on the small one. */
+    /**
+     * Navigate: the Google Maps icon in a round button at the left of the big map; on the small map just the navigation
+     * app's icon as a shortcut in the corner, framed like the music app's icon on Now Playing.
+     */
     private void pill(boolean big) {
         FrameLayout.LayoutParams gl = big ? new FrameLayout.LayoutParams(Ui.u(52), Ui.u(52), Gravity.START | Gravity.CENTER_VERTICAL)
-                : new FrameLayout.LayoutParams(Ui.MATCH, Ui.u(36), Gravity.BOTTOM);
-        gl.setMargins(Ui.u(big ? 6 : 10), 0, Ui.u(10), Ui.u(big ? 0 : 10));
+                : new FrameLayout.LayoutParams(Ui.u(40), Ui.u(40), Gravity.TOP | Gravity.START);
+        if (big) gl.setMargins(Ui.u(6), 0, Ui.u(10), 0);
+        else gl.setMargins(Ui.u(10), Ui.u(10), 0, 0);
         go.setLayoutParams(gl);
-        go.setText(big ? "" : "Navigate");
-        go.setCompoundDrawables(navIcon(big ? 32 : 24), null, null, null);
-        go.setCompoundDrawablePadding(Ui.u(8));
+        go.setText("");
+        go.setCompoundDrawables(navIcon(big ? 32 : 28), null, null, null);
+        go.setCompoundDrawablePadding(0);
         go.setGravity(Gravity.CENTER);
-        Ui.pad(go, big ? 10 : 0, 0, big ? 10 : 0, 0);
-        go.setBackground(big ? btn(26) : Ui.round(Ui.ACCENT, 12));
-        go.setElevation(big ? Ui.uf(4) : 0);
+        Ui.pad(go, big ? 10 : 6, 0, big ? 10 : 6, 0);
+        go.setBackground(big ? btn(26) : Ui.outline(0xBF0B0E13, Ui.ACCENT_SOFT, 1.5f, 15));
+        go.setElevation(Ui.uf(big ? 4 : 3));
     }
 
     private static final int BTN_BG = 0xEB141922, BTN_EDGE = 0x33FFFFFF;
