@@ -29,7 +29,8 @@ html.round #m{border-radius:50%;overflow:hidden;transition:none}
 #cards{position:absolute;display:none;pointer-events:none;z-index:501}
 #cards b{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;text-align:center;font:700 16px/26px sans-serif;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.8)}
 #cards b.n{color:#ff5a5f}
-</style></head><body><div id="m"></div><div id="rings"></div><div id="edge"></div><div id="cards"><b class="n">N</b><b>E</b><b>S</b><b>W</b><b class="q" style="display:none"><svg viewBox="0 0 24 24" width="16" height="16" style="display:block;margin:5px auto 0"><path d="M3 7l9-4 9 4v12l-9 3-9-3z" fill="#111" stroke="#E8B84A" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 9.2l9 3.3 9-3.3v1.8l-9 3.3-9-3.3z" fill="#E8B84A"/></svg></b></div>
+#cards i.ql{position:absolute;width:0;height:12px;border-left:1.5px solid rgba(232,184,74,.9);transform-origin:0 0;display:none}
+</style></head><body><div id="m"></div><div id="rings"></div><div id="edge"></div><div id="cards"><b class="n">N</b><b>E</b><b>S</b><b>W</b><b class="q" style="display:none"><svg viewBox="0 0 24 24" width="16" height="16" style="display:block;margin:5px auto 0"><path d="M3 7l9-4 9 4v12l-9 3-9-3z" fill="#111" stroke="#E8B84A" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 9.2l9 3.3 9-3.3v1.8l-9 3.3-9-3.3z" fill="#E8B84A"/></svg></b><i class="ql"></i></div>
 <script src="gtraffic.js"></script>
 <script>
 // Map engines: 'osm' (Leaflet + OpenStreetMap tiles), 'ofm' (MapLibre + OpenFreeMap), 'pmtiles'
@@ -48,7 +49,7 @@ var headUp=true, rot=0, glBearing=0;
 function size(){
   var W=innerWidth,H=innerHeight,el=document.getElementById('m');
   // round (the Centre Stage): the map is a circle as big as fits, centred; the stage shows around it
-  var big=round, D=big?Math.min(W,H)-48:0; // a little smaller, so the N E S W on the edge are never cropped
+  var big=round, D=big?Math.min(W,H)-64:0; // a little smaller, so the N E S W on the edge are never cropped
   el.style.width=(big?D:W)+'px'; el.style.height=(big?D:H)+'px';
   el.style.left=(big?(W-D)/2:0)+'px'; el.style.top=(big?(H-D)/2:0)+'px';
   var rg=document.getElementById('rings');
@@ -83,17 +84,25 @@ function cardinals(){
   var mb=(isGl()&&gl)?b:0; // a turned Leaflet map carries its mask round with it, so there the holes stay put
   var holesG=[], holesM=[], HOLE=18, n=qiblaDeg>=0?5:4;
   ls[4].style.display=qiblaDeg>=0?'block':'none'; // the Kaaba marker (Faith add-on), set from the app
+  var ql=ls[5];
+  if(ql) ql.style.display=qiblaDeg>=0?'block':'none';
   for(var i=0;i<n;i++){
     var base=i<4?i*90:qiblaDeg;
     var a=(base-b)*Math.PI/180, am=(base-mb)*Math.PI/180;
+    if(i===4){ // the Kaaba sits just outside the circle, joined to it by a thin line (no punched-out hole)
+      var ro=r+20, sx=Math.sin(a), sy=-Math.cos(a);
+      ls[4].style.left=(D/2+ro*sx)+'px'; ls[4].style.top=(D/2+ro*sy)+'px';
+      if(ql){ ql.style.left=(D/2+r*sx)+'px'; ql.style.top=(D/2+r*sy)+'px'; ql.style.transform='rotate('+((a*180/Math.PI)+180)+'deg)'; }
+      continue;
+    }
     var x=D/2+r*Math.sin(a), y=D/2-r*Math.cos(a);
     ls[i].style.left=x+'px'; ls[i].style.top=y+'px';
     holesG.push('radial-gradient(circle at '+x+'px '+y+'px,transparent '+HOLE+'px,#000 '+(HOLE+.5)+'px)');
     holesM.push('radial-gradient(circle at '+(D/2+r*Math.sin(am))+'px '+(D/2-r*Math.cos(am))+'px,transparent '+HOLE+'px,#000 '+(HOLE+.5)+'px)');
   }
   var m=document.getElementById('m'), eg=document.getElementById('edge');
-  m.style.webkitMaskImage=holesM.join(','); m.style.webkitMaskComposite=Array(n).fill('source-in').join(',');
-  eg.style.webkitMaskImage=holesG.join(','); eg.style.webkitMaskComposite=Array(n).fill('source-in').join(',');
+  m.style.webkitMaskImage=holesM.join(','); m.style.webkitMaskComposite=Array(holesM.length).fill('source-in').join(',');
+  eg.style.webkitMaskImage=holesG.join(','); eg.style.webkitMaskComposite=Array(holesG.length).fill('source-in').join(',');
 }
 // the direction of the Kaaba from here (degrees from north), or -1 for none (add-on off, or switched off in Faith settings)
 var qiblaDeg=-1;
