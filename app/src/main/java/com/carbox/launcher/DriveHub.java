@@ -60,12 +60,15 @@ final class DriveHub {
 
     static final class Tile extends Widgets.W {
         private final TextView dist, unit, drive, since;
-        private final LinearLayout buttons;
+        private final LinearLayout buttons, card;
+        private final Widgets.Bar bar;
+        private int lastState = -1;
         private String shownPurpose = "";
 
         Tile(Context c, int i, JSONObject s) {
             super(c, i, s);
             LinearLayout l = Widgets.card(c, Ui.CARD);
+            card = l;
             l.addView(Widgets.label(c, "DRIVE"));
             l.addView(new View(c), Ui.weight(1, false));
 
@@ -94,6 +97,10 @@ final class DriveHub {
 
             since = Ui.line(c, "", Widgets.ts(12), Ui.TEXT2, false);
             l.addView(since, Widgets.top(6));
+            bar = new Widgets.Bar(c); // the break reminder: how far to the next break
+            LinearLayout.LayoutParams bl = Ui.lp(Ui.MATCH, Ui.u(5));
+            bl.topMargin = Ui.u(4);
+            l.addView(bar, bl);
             l.addView(new View(c), Ui.weight(1, false));
 
             buttons = Ui.row(c); // the lit button is what this trip is logged as
@@ -120,7 +127,33 @@ final class DriveHub {
             dist.setText(String.format(Locale.US, d < 100 ? "%.1f" : "%.0f", d));
             unit.setText(mi ? "mi" : "km");
             drive.setText(clock(Gps.tripMovingMs));
-            since.setText(Rest.stoppedMs() > 0 ? "Stopped " + Ui.dur(Rest.stoppedMs()) : "Since break " + clock(Rest.driveMs));
+            long stopped = Rest.stoppedMs();
+            int state;
+            if (!Rest.on()) {
+                state = 0;
+                since.setText("Break reminders off");
+                bar.color = Ui.MUTED;
+            } else if (Rest.due() && stopped > 60000) {
+                state = 1;
+                long left = Rest.breakMin() - stopped / 60000;
+                since.setText(left > 0 ? "Resting · break done in " + left + " min" : "Break done");
+                bar.color = Ui.TEAL;
+            } else if (Rest.due()) {
+                state = 2;
+                since.setText("Take a break · " + Rest.breakMin() + " min");
+                bar.color = Ui.AMBER;
+            } else {
+                state = 3;
+                long lm = Math.max(0, Rest.limitMin() - Rest.driveMs / 60000);
+                since.setText("Break in " + (lm < 60 ? lm + " min" : lm % 60 == 0 ? (lm / 60) + " h" : (lm / 60) + " h " + Ui.two((int) (lm % 60))));
+                bar.color = Ui.ACCENT;
+            }
+            bar.value = Rest.progress();
+            bar.invalidate();
+            if (state != lastState) {
+                lastState = state;
+                card.setBackground(state == 2 ? Themes.edged(0xFF4A3410, Ui.AMBER, 16) : Themes.card(Ui.CARD, 16));
+            }
             if (!shownPurpose.equals(Logbook.purpose())) fillButtons(); // changed elsewhere, or just now
         }
 
