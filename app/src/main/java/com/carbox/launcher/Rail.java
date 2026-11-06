@@ -192,16 +192,18 @@ final class Rail {
                 break;
             }
             case "weather": {
-                LinearLayout l = Ui.col(c);
-                l.setGravity(Gravity.CENTER_HORIZONTAL);
+                LinearLayout l = Ui.row(c); // a smaller icon with the high and low to its right
+                l.setGravity(Gravity.CENTER);
                 wIcon = Ui.icon(c, R.drawable.ic_w_partly, 0);
-                l.addView(wIcon, Ui.lpu(26, 26));
-                wHi = Ui.text(c, "--°", 16, Ui.TEXT, true);
-                LinearLayout.LayoutParams hl = Ui.lp(Ui.WRAP, Ui.WRAP);
-                hl.topMargin = Ui.u(2);
-                l.addView(wHi, hl);
-                wLo = Ui.text(c, "--°", 13, Ui.SUB, false);
-                l.addView(wLo);
+                l.addView(wIcon, Ui.lpu(20, 20));
+                LinearLayout range = Ui.col(c);
+                wHi = Ui.text(c, "--°", 14, Ui.TEXT, true);
+                range.addView(wHi);
+                wLo = Ui.text(c, "--°", 12, Ui.SUB, false);
+                range.addView(wLo);
+                LinearLayout.LayoutParams rl = Ui.lp(Ui.WRAP, Ui.WRAP);
+                rl.leftMargin = Ui.u(5);
+                l.addView(range, rl);
                 v = l;
                 v.setOnClickListener(x -> InfoPanels.weather(0));
                 v.setOnLongClickListener(x -> {
