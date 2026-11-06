@@ -341,6 +341,7 @@ final class SettingsPanels {
             if (MainActivity.I != null) MainActivity.I.pickWallpaperVideo();
         }));
         b.addView(Panels.row("Wallpaper", wr1));
+        b.addView(Panels.item("Download a video wallpaper", "Free looping clips from Wikimedia Commons, saved in the app", WallpaperVideos::open), top(6));
         // animated scenes
         String[][] scenes = {{"road", "Moving road"}, {"fishtank", "Fish tank"}, {"engine", "Coal engine"},
                 {"flux", "Flux capacitor"}, {"pistons", "Pistons"}, {"cogs", "Time cogs"}};
