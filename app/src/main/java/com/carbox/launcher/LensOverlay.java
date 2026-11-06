@@ -48,14 +48,8 @@ final class LensOverlay extends View {
         cv.drawRect(0, 0, w, h, p);
         p.setShader(null);
         cv.restoreToCount(save);
-        if (round) { // the lens rim
-            p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(rim);
-            p.setColor(0x66FFFFFF);
-            cv.drawCircle(cx, cy, rad - rim / 2, p);
-            p.setStrokeWidth(rim / 2);
-            p.setColor(0x22000000);
-            cv.drawCircle(cx, cy, rad - rim * 1.5f, p);
+        if (round) {
+            // no rim here: the map page draws the round rim itself, cut away round N E S W
         } else {
             r.set(rim / 2, rim / 2, w - rim / 2, h - rim / 2);
             p.setStyle(Paint.Style.STROKE);

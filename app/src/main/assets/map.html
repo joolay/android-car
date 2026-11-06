@@ -20,14 +20,16 @@ html,body{margin:0;height:100%;width:100%;background:#171c24;overflow:hidden}
 .me .a{position:absolute;left:4px;top:-9px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--acc,#3d8bfd);display:none}
 .gm-style-cc,.gmnoprint a,.gm-style a[href^="https://maps.google.com/maps"]{opacity:.55}
 html.round,html.round body,html.round .leaflet-container{background:transparent!important}
-html.round #m{border-radius:50%;overflow:hidden;transition:none;box-shadow:0 0 0 3px rgba(255,255,255,.4)}
+html.round #m{border-radius:50%;overflow:hidden;transition:none}
+/* the thin rim of the round map is its own ring so it can be cut away round each N E S W */
+#edge{position:absolute;display:none;pointer-events:none;z-index:499;box-sizing:border-box;border:3px solid rgba(255,255,255,.4);border-radius:50%}
 #rings{position:absolute;display:none;border-radius:50%;pointer-events:none;z-index:500;
   background:radial-gradient(circle,transparent 32.5%,rgba(255,255,255,.14) 33%,transparent 33.6%,transparent 65.5%,rgba(255,255,255,.14) 66%,transparent 66.6%)}
 /* N E S W round the edge of the big round map; they travel round as the map turns */
 #cards{position:absolute;display:none;pointer-events:none;z-index:501}
-#cards b{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;text-align:center;font:700 12px/22px sans-serif;color:#fff;background:rgba(10,18,32,.55);border-radius:50%}
+#cards b{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;text-align:center;font:700 13px/26px sans-serif;color:#fff;background:rgba(10,18,32,.55);border-radius:50%}
 #cards b.n{background:#e5484d}
-</style></head><body><div id="m"></div><div id="rings"></div><div id="cards"><b class="n">N</b><b>E</b><b>S</b><b>W</b></div>
+</style></head><body><div id="m"></div><div id="rings"></div><div id="edge"></div><div id="cards"><b class="n">N</b><b>E</b><b>S</b><b>W</b></div>
 <script src="gtraffic.js"></script>
 <script>
 // Map engines: 'osm' (Leaflet + OpenStreetMap tiles), 'ofm' (MapLibre + OpenFreeMap), 'pmtiles'
@@ -51,6 +53,9 @@ function size(){
   el.style.left=(big?(W-D)/2:0)+'px'; el.style.top=(big?(H-D)/2:0)+'px';
   var rg=document.getElementById('rings');
   if(rg){ rg.style.display=big?'block':'none'; rg.style.width=D+'px'; rg.style.height=D+'px'; rg.style.left=((W-D)/2)+'px'; rg.style.top=((H-D)/2)+'px'; }
+  var eg=document.getElementById('edge');
+  if(eg){ eg.style.display=big?'block':'none'; eg.style.width=D+'px'; eg.style.height=D+'px'; eg.style.left=((W-D)/2)+'px'; eg.style.top=((H-D)/2)+'px'; }
+  if(!big){ el.style.webkitMaskImage=''; el.style.webkitMaskComposite=''; }
   var cd=document.getElementById('cards');
   if(cd){ cd.style.display=big?'block':'none'; cd.style.width=D+'px'; cd.style.height=D+'px'; cd.style.left=((W-D)/2)+'px'; cd.style.top=((H-D)/2)+'px'; cardinals(); }
   document.documentElement.className=big?'round':'';
@@ -73,12 +78,20 @@ function isGl(){ return mode==='ofm'||mode==='pmtiles'; }
 function cardinals(){
   var cd=document.getElementById('cards');
   if(!cd||!round) return;
-  var D=cd.offsetWidth, r=D/2-15, b=(isGl()&&gl)?gl.getBearing():-rot, ls=cd.children;
+  // the letters sit right on the edge; the map and its rim are cut away in a ring round each one (punched out)
+  var D=cd.offsetWidth, r=D/2, b=(isGl()&&gl)?gl.getBearing():-rot, ls=cd.children;
+  var mb=(isGl()&&gl)?b:0; // a turned Leaflet map carries its mask round with it, so there the holes stay put
+  var holesG=[], holesM=[], HOLE=18;
   for(var i=0;i<4;i++){
-    var a=(i*90-b)*Math.PI/180;
-    ls[i].style.left=(D/2+r*Math.sin(a))+'px';
-    ls[i].style.top=(D/2-r*Math.cos(a))+'px';
+    var a=(i*90-b)*Math.PI/180, am=(i*90-mb)*Math.PI/180;
+    var x=D/2+r*Math.sin(a), y=D/2-r*Math.cos(a);
+    ls[i].style.left=x+'px'; ls[i].style.top=y+'px';
+    holesG.push('radial-gradient(circle at '+x+'px '+y+'px,transparent '+HOLE+'px,#000 '+(HOLE+.5)+'px)');
+    holesM.push('radial-gradient(circle at '+(D/2+r*Math.sin(am))+'px '+(D/2-r*Math.cos(am))+'px,transparent '+HOLE+'px,#000 '+(HOLE+.5)+'px)');
   }
+  var m=document.getElementById('m'), eg=document.getElementById('edge');
+  m.style.webkitMaskImage=holesM.join(','); m.style.webkitMaskComposite=Array(4).fill('source-in').join(',');
+  eg.style.webkitMaskImage=holesG.join(','); eg.style.webkitMaskComposite=Array(4).fill('source-in').join(',');
 }
 function turn(b,reset){
   if(isGl()){ glBearing=reset?0:b; if(gl) gl.easeTo({bearing:glBearing,duration:800}); return; }
