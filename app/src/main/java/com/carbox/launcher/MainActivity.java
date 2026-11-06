@@ -63,6 +63,7 @@ public class MainActivity extends Activity {
         NavCard.start();
         SpeedLimit.start();
         Logbook.start();
+        AutoPark.start();
         SpeedCard.start();
         CarHA.start();
         HomeApproach.start();
