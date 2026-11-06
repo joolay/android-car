@@ -80,11 +80,7 @@ final class StatusIcons {
 
         /** Colour this icon's signal by the speed of the given DataMeter connection (LTE, WIFI, HOTSPOT). */
         protected void trackSpeed(int kind) {
-            speedKind = kind;
-            if (isAttachedToWindow()) {
-                removeCallbacks(speedTick);
-                post(speedTick);
-            }
+            // no speed colouring on the rail icons any more: the data meter's arrow shows download activity
         }
 
         @Override

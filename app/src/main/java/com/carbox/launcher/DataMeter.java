@@ -174,6 +174,7 @@ final class DataMeter extends View {
 
     private final Paint cap = new Paint(Paint.ANTI_ALIAS_FLAG), dn = new Paint(Paint.ANTI_ALIAS_FLAG), up = new Paint(Paint.ANTI_ALIAS_FLAG),
             ring = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint arrow = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF r = new RectF();
     private double shownD = -1, shownU = -1; // count up smoothly to the real amounts
     private boolean running;
@@ -184,9 +185,11 @@ final class DataMeter extends View {
         cap.setFakeBoldText(true);
         cap.setTextAlign(Paint.Align.CENTER);
         cap.setLetterSpacing(0.08f);
-        dn.setColor(Ui.GREEN); // download in green (upload stays amber)
+        dn.setColor(Ui.TEXT); // the amount stays white; only the arrow turns green while data is coming down
         dn.setFakeBoldText(true);
-        dn.setTextAlign(Paint.Align.CENTER);
+        dn.setTextAlign(Paint.Align.LEFT);
+        arrow.setFakeBoldText(true);
+        arrow.setTextAlign(Paint.Align.LEFT);
         up.setColor(Ui.AMBER);
         up.setFakeBoldText(true);
         up.setTextAlign(Paint.Align.CENTER);
@@ -198,6 +201,7 @@ final class DataMeter extends View {
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
+            sample(); // keeps the live speeds fresh, for the arrow
             invalidate();
             if (running) postDelayed(this, 1000);
         }
@@ -236,14 +240,35 @@ final class DataMeter extends View {
             dn.setTextSize(Ui.uf(11));
             up.setTextSize(Ui.uf(11));
             float mid = h / 2f - (dn.descent() + dn.ascent()) / 2f, gap = Ui.uf(7);
-            cv.drawText("↓" + shortSize(Math.round(shownD)), cx, mid - gap, dn);
+            drawDown(cv, shortSize(Math.round(shownD)), cx, mid - gap);
             cv.drawText("↑" + shortSize(Math.round(shownU)), cx, mid + gap, up);
         } else {
             dn.setTextSize(Ui.uf(13));
             float y = h / 2f - (dn.descent() + dn.ascent()) / 2f;
-            cv.drawText("↓" + shortSize(Math.round(shownD)), cx, y, dn);
+            drawDown(cv, shortSize(Math.round(shownD)), cx, y);
         }
         if (anim && (Math.abs(m[0] - shownD) > 500 || Math.abs(m[1] - shownU) > 500)) postInvalidateOnAnimation();
+    }
+
+    /** Data is coming down on the connection(s) this meter counts. */
+    private static boolean downloading() {
+        String src = Prefs.str(SRC, "lte");
+        long d;
+        if ("wifi".equals(src)) d = speed[WIFI][0];
+        else if ("hotspot".equals(src)) d = speed[HOTSPOT][0];
+        else if ("total".equals(src)) d = speed[LTE][0] + speed[WIFI][0];
+        else d = speed[LTE][0];
+        return d > 2000;
+    }
+
+    /** The amount in white, with its ↓ arrow green while there's download activity (white otherwise). */
+    private void drawDown(Canvas cv, String text, float cx, float y) {
+        arrow.setTextSize(dn.getTextSize());
+        arrow.setColor(downloading() ? Ui.GREEN : Ui.TEXT);
+        String a = "↓";
+        float aw = arrow.measureText(a), tw = dn.measureText(text), x0 = cx - (aw + tw) / 2f;
+        cv.drawText(a, x0, y, arrow);
+        cv.drawText(text, x0 + aw, y, dn);
     }
 
     // ------------------------------------------------------------------ speed bar
