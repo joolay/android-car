@@ -19,13 +19,13 @@ import java.util.List;
 /** CarPlay-style status rail on the right edge. */
 final class Rail {
     // the clock (top) and the voice button (bottom) are fixed; these sit between them, evenly spaced
-    static final String[] IDS = {"weather", "cell", "wifi", "gps", "hotspot", "tailscale", "data"};
-    static final String[] NAMES = {"Weather", "Mobile signal", "Wi-Fi", "GPS", "Hotspot", "Tailscale", "Data meter"};
+    static final String[] IDS = {"weather", "cell", "wifi", "bluetooth", "gps", "hotspot", "tailscale", "data"};
+    static final String[] NAMES = {"Weather", "Mobile signal", "Wi-Fi", "Bluetooth", "GPS", "Hotspot", "Tailscale", "Data meter"};
 
     private final Context c;
     final LinearLayout view;
     private final LinearLayout items;
-    private ImageView wIcon, hotIcon, tsIcon;
+    private ImageView wIcon, hotIcon, tsIcon, btIcon;
     private TextView wHi, wLo, clock, day, date;
 
     private final Runnable clockTick = this::tickClock;
@@ -144,6 +144,7 @@ final class Rail {
         wIcon = null;
         hotIcon = null;
         tsIcon = null;
+        btIcon = null;
         items.addView(new View(c), new LinearLayout.LayoutParams(1, 0, 1));
         for (String[] e : order()) {
             if (!"1".equals(e[1])) continue;
@@ -232,6 +233,16 @@ final class Rail {
                 });
                 return withSpeed(wrap(v, 22, false), DataMeter.WIFI);
             }
+            case "bluetooth": { // off: dim, on: white, connected to the phone or a speaker: blue
+                btIcon = Ui.icon(c, R.drawable.ic_bt, Ui.MUTED);
+                v = btIcon;
+                v.setOnClickListener(x -> InfoPanels.quick("bluetooth"));
+                v.setOnLongClickListener(x -> {
+                    Status.open(c, Settings.ACTION_BLUETOOTH_SETTINGS);
+                    return true;
+                });
+                return wrap(v, 22, false);
+            }
             case "gps": {
                 gps = new StatusIcons.GpsIcon(c);
                 animated.add(gps);
@@ -308,6 +319,7 @@ final class Rail {
             int st = !Status.wifiOn ? StatusIcons.WifiIcon.OFF : Status.wifiConnected ? StatusIcons.WifiIcon.CONNECTED : StatusIcons.WifiIcon.SCANNING;
             wifi.setState(st, Status.wifiLevel);
         }
+        if (btIcon != null) btIcon.setColorFilter(!Status.btOn ? Ui.MUTED : Status.btConnected ? Ui.ACCENT : Ui.TEXT);
         if (hotIcon != null) hotIcon.setColorFilter(Status.hotspotOn ? Ui.ACCENT : Ui.MUTED);
         if (tsIcon != null) tsIcon.setColorFilter(Status.vpnOn && Status.tailscaleInstalled() ? Ui.GREEN : Ui.MUTED);
         updateGps();

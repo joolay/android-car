@@ -732,6 +732,14 @@ final class InfoPanels {
                         + (Gps.town != null ? "\nNear " + Gps.town : "");
                 hint = "Hold the icon for location settings";
                 break;
+            case "bluetooth":
+                icon = R.drawable.ic_bt;
+                title = "Bluetooth";
+                line1 = !Status.btOn ? "Off" : Status.btConnected ? "Connected" : "On, not connected";
+                line2 = "Your phone's calls and music";
+                hint = "Hold the icon for Bluetooth settings";
+                tint = Status.btConnected ? Ui.ACCENT : Ui.TEXT;
+                break;
             case "hotspot":
                 icon = R.drawable.ic_hot;
                 title = "Hotspot";

@@ -28,7 +28,7 @@ final class Status {
     static boolean wifiOn, wifiConnected;
     static int wifiLevel;
     static String ssid;
-    static boolean hotspotOn, vpnOn;
+    static boolean hotspotOn, vpnOn, btOn, btConnected;
 
     static final String TS_PKG = "com.tailscale.ipn";
 
@@ -116,6 +116,19 @@ final class Status {
             }
         }
         hotspotOn = apEnabled(wm);
+        // bluetooth: on, and whether the phone (hands-free) or a speaker (audio) is connected
+        btOn = false;
+        btConnected = false;
+        try {
+            android.bluetooth.BluetoothManager bm = (android.bluetooth.BluetoothManager) ctx.getSystemService(Context.BLUETOOTH_SERVICE);
+            android.bluetooth.BluetoothAdapter ba = bm == null ? null : bm.getAdapter();
+            if (ba != null && ba.isEnabled()) {
+                btOn = true;
+                btConnected = ba.getProfileConnectionState(android.bluetooth.BluetoothProfile.HEADSET) == android.bluetooth.BluetoothProfile.STATE_CONNECTED
+                        || ba.getProfileConnectionState(android.bluetooth.BluetoothProfile.A2DP) == android.bluetooth.BluetoothProfile.STATE_CONNECTED;
+            }
+        } catch (Exception ignored) { // no permission yet: shows as off
+        }
     }
 
     private static boolean apEnabled(WifiManager wm) {
