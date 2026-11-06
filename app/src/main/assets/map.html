@@ -27,8 +27,8 @@ html.round #m{border-radius:50%;overflow:hidden;transition:none}
   background:radial-gradient(circle,transparent 32.5%,rgba(255,255,255,.14) 33%,transparent 33.6%,transparent 65.5%,rgba(255,255,255,.14) 66%,transparent 66.6%)}
 /* N E S W round the edge of the big round map; they travel round as the map turns */
 #cards{position:absolute;display:none;pointer-events:none;z-index:501}
-#cards b{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;text-align:center;font:700 13px/26px sans-serif;color:#fff;background:rgba(10,18,32,.55);border-radius:50%}
-#cards b.n{background:#e5484d}
+#cards b{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;text-align:center;font:700 16px/26px sans-serif;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.8)}
+#cards b.n{color:#ff5a5f}
 </style></head><body><div id="m"></div><div id="rings"></div><div id="edge"></div><div id="cards"><b class="n">N</b><b>E</b><b>S</b><b>W</b><b class="q" style="display:none"><svg viewBox="0 0 24 24" width="16" height="16" style="display:block;margin:5px auto 0"><path d="M3 7l9-4 9 4v12l-9 3-9-3z" fill="#111" stroke="#E8B84A" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 9.2l9 3.3 9-3.3v1.8l-9 3.3-9-3.3z" fill="#E8B84A"/></svg></b></div>
 <script src="gtraffic.js"></script>
 <script>
@@ -48,7 +48,7 @@ var headUp=true, rot=0, glBearing=0;
 function size(){
   var W=innerWidth,H=innerHeight,el=document.getElementById('m');
   // round (the Centre Stage): the map is a circle as big as fits, centred; the stage shows around it
-  var big=round, D=big?Math.min(W,H)-12:0;
+  var big=round, D=big?Math.min(W,H)-48:0; // a little smaller, so the N E S W on the edge are never cropped
   el.style.width=(big?D:W)+'px'; el.style.height=(big?D:H)+'px';
   el.style.left=(big?(W-D)/2:0)+'px'; el.style.top=(big?(H-D)/2:0)+'px';
   var rg=document.getElementById('rings');
