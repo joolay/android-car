@@ -1,11 +1,8 @@
 package com.carbox.launcher;
 
-/**
- * Parks the car by itself: stationary for 5 minutes saves the spot; and whenever the car pulls away
- * (every start, after at least 2 min still) the spot it left counts as the previous parked-here place.
- */
+/** Parks the car by itself: stationary for 5 minutes saves the spot (the Park here widget only shows at 2 min, without saving). */
 final class AutoPark {
-    private static final long STAY = 5 * 60000L, MIN_STOP = 120000L;
+    private static final long STAY = 5 * 60000L;
     private static long since;      // when this stop began (0 = moving)
     private static double lat, lon;
     private static String town;
@@ -22,7 +19,6 @@ final class AutoPark {
         if (!Gps.has() || !Gps.fresh()) return;
         long now = System.currentTimeMillis();
         if (Gps.moving()) {
-            if (since != 0 && !saved && now - since >= MIN_STOP) save(since); // pulled away: where it stood is the parked spot
             since = 0;
             return;
         }
