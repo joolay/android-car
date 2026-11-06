@@ -275,11 +275,17 @@ final class InfoPanels {
     // ------------------------------------------------------------------ weather
 
     private static int weatherTab;
+    private static boolean weatherWatching;
+    private static final Panels.Page WEATHER_PAGE = InfoPanels::weatherPage;
 
     static void weather(int tab) {
         weatherTab = tab;
+        if (!weatherWatching) { // when a fresh forecast lands while the card is open, redraw it (hours filled in at once)
+            weatherWatching = true;
+            Weather.listen(() -> { if (Panels.isTop(WEATHER_PAGE)) Panels.refresh(); });
+        }
         // a centred card (not squeezed into the short tile area, where the forecast was getting cut off)
-        Panels.showCard(InfoPanels::weatherPage, false);
+        Panels.showCard(WEATHER_PAGE, false);
         Weather.maybeFetch();
     }
 

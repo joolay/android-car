@@ -100,6 +100,11 @@ final class Panels {
         } else close();
     }
 
+    /** This page is the one on top right now. */
+    static boolean isTop(Page p) {
+        return !stack.isEmpty() && stack.get(stack.size() - 1) == p;
+    }
+
     /** Rebuild the current page (after a setting changes). */
     static void refresh() {
         if (!stack.isEmpty()) render();
