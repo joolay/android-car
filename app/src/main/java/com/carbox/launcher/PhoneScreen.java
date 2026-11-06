@@ -120,21 +120,21 @@ final class PhoneScreen {
             boolean sel = id.equals(tab);
             FrameLayout b = new FrameLayout(c);
             b.setBackground(sel ? Ui.round(Ui.ACCENT, 14) : Themes.inner(Ui.CARD2, 14));
-            b.addView(Ui.icon(c, icons[i], sel ? Ui.TEXT : Ui.TEXT2), Ui.flpu(24, 24, Gravity.CENTER));
+            b.addView(Ui.icon(c, icons[i], sel ? Ui.TEXT : Ui.TEXT2), Ui.flpu(28, 28, Gravity.CENTER));
             b.setContentDescription(t[i][1]);
             b.setOnClickListener(v -> {
                 tab = id;
                 render();
             });
             Ui.press(b);
-            LinearLayout.LayoutParams bl = Ui.lpu(Ui.MATCH, 52);
-            bl.bottomMargin = Ui.u(6);
+            LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(Ui.MATCH, 0, 1); // the four tabs share the height evenly
+            if (i < t.length - 1) bl.bottomMargin = Ui.u(8);
             tabs.addView(b, bl);
         }
-        tabs.addView(new View(c), Ui.weight(1, false));
         String bt = Actions.btDialler();
         TextView via = Ui.text(c, "Calls go through\n" + (Prefs.str(Prefs.CALLS, "bt").equals("bt") ? (bt == null ? "Bluetooth" : Apps.label(bt)) : Widgets.callsLabel()), 11, Ui.SUB, false);
-        via.setPadding(Ui.u(4), 0, 0, Ui.u(4));
+        via.setGravity(Gravity.CENTER);
+        via.setPadding(0, Ui.u(8), 0, Ui.u(2));
         tabs.addView(via);
         row.addView(tabs, Ui.lpu(104, Ui.MATCH));
 
