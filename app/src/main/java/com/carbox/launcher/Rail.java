@@ -239,8 +239,10 @@ final class Rail {
                 btIcon = Ui.icon(c, R.drawable.ic_bt, Ui.MUTED);
                 v = btIcon;
                 v.setOnClickListener(x -> InfoPanels.quick("bluetooth"));
-                v.setOnLongClickListener(x -> {
-                    Status.open(c, Settings.ACTION_BLUETOOTH_SETTINGS);
+                v.setOnLongClickListener(x -> { // hold: the box's BT Phone (where the phone is paired)
+                    String bt = Actions.btDialler();
+                    if (bt != null && MainActivity.I != null) Apps.launchPkg(MainActivity.I, bt);
+                    else Status.open(c, Settings.ACTION_BLUETOOTH_SETTINGS);
                     return true;
                 });
                 return wrap(v, 22, false);
@@ -321,7 +323,10 @@ final class Rail {
             int st = !Status.wifiOn ? StatusIcons.WifiIcon.OFF : Status.wifiConnected ? StatusIcons.WifiIcon.CONNECTED : StatusIcons.WifiIcon.SCANNING;
             wifi.setState(st, Status.wifiLevel);
         }
-        if (btIcon != null) btIcon.setColorFilter(!Status.btOn ? Ui.MUTED : Status.btConnected ? Ui.ACCENT : Ui.TEXT);
+        if (btIcon != null) { // the box's phone link (BT Phone's own Bluetooth) when known, else Android's Bluetooth
+            Boolean lk = BtAuto.linked();
+            btIcon.setColorFilter(lk != null ? (lk ? Ui.ACCENT : Ui.MUTED) : !Status.btOn ? Ui.MUTED : Status.btConnected ? Ui.ACCENT : Ui.TEXT);
+        }
         if (hotIcon != null) hotIcon.setColorFilter(Status.hotspotOn ? Ui.ACCENT : Ui.MUTED);
         if (tsIcon != null) tsIcon.setColorFilter(Status.vpnOn && Status.tailscaleInstalled() ? Ui.GREEN : Ui.MUTED);
         updateGps();

@@ -59,6 +59,7 @@ final class BtAuto {
         String all = String.join(" | ", texts).toLowerCase(Locale.ROOT);
         boolean ringing = has(all, INCOMING);
         boolean inCall = !ringing && (has(all, IN_CALL) || all.matches(".*\\b\\d{1,2}:\\d{2}\\b.*") && seenCall);
+        if (!ringing && !inCall && !all.isEmpty()) linkFromScreen(all);
         if (ringing || inCall) {
             String name = callerName(texts);
             seenCall = true;
@@ -67,6 +68,32 @@ final class BtAuto {
             seenCall = false;
             CallState.screenGone();
         }
+    }
+
+    // ------------------------------------------------------------------ is the phone linked to BT Phone?
+    // The box's BT Phone has its own Bluetooth, apart from Android's, so the only way to know is its screen.
+    static int link = -1;      // -1 not known yet, 0 not linked, 1 linked (as last seen on BT Phone's screen)
+    static long linkAt;
+    private static String lastDump = "";
+
+    private static void linkFromScreen(String all) {
+        if (!all.equals(lastDump)) { // every new BT Phone screen goes in the log (read it to learn the exact wording)
+            lastDump = all;
+            Trace.event("BT Phone screen: " + (all.length() > 600 ? all.substring(0, 600) : all));
+        }
+        if (all.contains("not connected") || all.contains("disconnected") || all.contains("no device") || all.contains("not paired")
+                || all.contains("connect phone") || all.contains("waiting")) {
+            link = 0;
+            linkAt = System.currentTimeMillis();
+        } else if (all.contains("connected")) {
+            link = 1;
+            linkAt = System.currentTimeMillis();
+        }
+    }
+
+    /** True / false when BT Phone's screen was seen to say so in the last 6 hours, else null (not known). */
+    static Boolean linked() {
+        return link < 0 || System.currentTimeMillis() - linkAt > 6L * 3600 * 1000 ? null : link == 1;
     }
 
     private static String callerName(List<String> texts) {

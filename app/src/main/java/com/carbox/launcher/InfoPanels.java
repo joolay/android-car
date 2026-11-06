@@ -735,10 +735,12 @@ final class InfoPanels {
             case "bluetooth":
                 icon = R.drawable.ic_bt;
                 title = "Bluetooth";
-                line1 = !Status.btOn ? "Off" : Status.btConnected ? "Connected" : "On, not connected";
-                line2 = "Your phone's calls and music";
-                hint = "Hold the icon for Bluetooth settings";
-                tint = Status.btConnected ? Ui.ACCENT : Ui.TEXT;
+                Boolean lk = BtAuto.linked(); // the box's BT Phone link when it was last seen, else Android's Bluetooth
+                boolean linked = lk != null ? lk : Status.btConnected;
+                line1 = lk != null ? (lk ? "Phone connected" : "Phone not connected") : !Status.btOn ? "Off" : Status.btConnected ? "Connected" : "On, not connected";
+                line2 = lk != null ? "Seen on BT Phone's screen" : "Open BT Phone once so this can follow it";
+                hint = "Hold the icon to open BT Phone";
+                tint = linked ? Ui.ACCENT : Ui.TEXT;
                 break;
             case "hotspot":
                 icon = R.drawable.ic_hot;
