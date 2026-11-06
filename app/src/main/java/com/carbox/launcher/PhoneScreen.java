@@ -45,8 +45,8 @@ final class PhoneScreen {
         if (shown == null) {
             shown = new FrameLayout(a);
             shown.setClickable(true);
-            shown.setBackgroundColor(Ui.BG);
-            shown.setBackground(Ui.round(Ui.BG, 16));
+            // a flat dark slab was showing behind the tabs in the Glass theme: use a glass card there like the other screens
+            shown.setBackground(Themes.on() ? Themes.card(Ui.BG, 16) : Ui.round(Ui.BG, 16));
             // inside the tile area, under any open panel; a clipping holder keeps it inside the
             // tile area while it slides up out of the ticker, like the tile drawer
             holder = new FrameLayout(a);
