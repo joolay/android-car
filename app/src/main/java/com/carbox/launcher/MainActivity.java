@@ -125,6 +125,10 @@ public class MainActivity extends Activity {
     private void build() {
         root = new FrameLayout(this);
         liveWall = new LiveWallpaper(this); // the animated wallpaper and the lighting / weather overlays
+        wallVideo = new android.view.TextureView(this); // a looping video wallpaper plays here, under the lighting and the home
+        wallVideo.setVisibility(View.GONE);
+        root.addView(wallVideo, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        LiveWallpaper.videoSrc = wallVideo;
         root.addView(liveWall, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         applyWallpaper();
         Ui.ui.postDelayed(skyTick, 60000);
@@ -335,8 +339,90 @@ public class MainActivity extends Activity {
         }
     };
 
+    // ---- the video wallpaper: a looping, silent clip picked from the box's files, scaled to fill the screen
+    private android.view.TextureView wallVideo;
+    private android.media.MediaPlayer wallPlayer;
+
+    private void stopWallVideo() {
+        if (wallPlayer != null) {
+            try {
+                wallPlayer.release();
+            } catch (Exception ignored) {
+            }
+            wallPlayer = null;
+        }
+        if (wallVideo != null) wallVideo.setVisibility(View.GONE);
+    }
+
+    private void startWallVideo() {
+        stopWallVideo();
+        final String uri = Prefs.str("wall_video_uri", null);
+        if (uri == null || wallVideo == null) return;
+        wallVideo.setVisibility(View.VISIBLE);
+        final Runnable go = () -> {
+            try {
+                android.graphics.SurfaceTexture st = wallVideo.getSurfaceTexture();
+                if (st == null || wallPlayer != null) return;
+                final android.media.MediaPlayer mp = new android.media.MediaPlayer();
+                wallPlayer = mp;
+                mp.setDataSource(this, Uri.parse(uri));
+                mp.setSurface(new android.view.Surface(st));
+                mp.setLooping(true);
+                mp.setVolume(0f, 0f);
+                mp.setOnVideoSizeChangedListener((p, vw, vh) -> {
+                    if (vw <= 0 || vh <= 0) return;
+                    float w = wallVideo.getWidth(), h = wallVideo.getHeight(), s = Math.max(w / vw, h / vh); // fill the screen, trimming the edges
+                    android.graphics.Matrix mx = new android.graphics.Matrix();
+                    mx.setScale(vw * s / w, vh * s / h, w / 2f, h / 2f);
+                    wallVideo.setTransform(mx);
+                });
+                mp.setOnPreparedListener(p -> p.start());
+                mp.setOnErrorListener((p, what, extra) -> {
+                    Trace.event("wallpaper video error " + what + "/" + extra);
+                    return true;
+                });
+                mp.prepareAsync();
+            } catch (Exception e) {
+                Trace.event("wallpaper video: " + e);
+            }
+        };
+        if (wallVideo.isAvailable()) go.run();
+        else wallVideo.setSurfaceTextureListener(new android.view.TextureView.SurfaceTextureListener() {
+            @Override
+            public void onSurfaceTextureAvailable(android.graphics.SurfaceTexture s, int w, int h) {
+                go.run();
+            }
+
+            @Override
+            public void onSurfaceTextureSizeChanged(android.graphics.SurfaceTexture s, int w, int h) {
+            }
+
+            @Override
+            public boolean onSurfaceTextureDestroyed(android.graphics.SurfaceTexture s) {
+                stopWallVideo();
+                return true;
+            }
+
+            @Override
+            public void onSurfaceTextureUpdated(android.graphics.SurfaceTexture s) {
+            }
+        });
+    }
+
+    static final int REQ_WALLVIDEO = 42;
+
+    void pickWallpaperVideo() {
+        try {
+            startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("video/*"), REQ_WALLVIDEO);
+        } catch (Exception e) {
+            android.widget.Toast.makeText(this, "No file picker on this box", android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
     void applyWallpaper() {
         String mode = Themes.simple() ? "black" : Prefs.str(Prefs.WALL, "road"); // Simple theme: always plain black
+        if ("video".equals(mode) && Prefs.str("wall_video_uri", null) != null) startWallVideo();
+        else stopWallVideo();
         if ("color".equals(mode)) {
             root.setBackground(new ColorDrawable(Prefs.num(Prefs.WALL_COLOR, Ui.BG)));
         } else if ("image".equals(mode)) {
@@ -355,6 +441,8 @@ public class MainActivity extends Activity {
                 root.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
                         new CenterCrop(d), new ColorDrawable(0x66000000)}));
             } else root.setBackground(new ColorDrawable(0xFF000000));
+        } else if ("video".equals(mode)) {
+            root.setBackground(new ColorDrawable(0xFF000000));
         } else if (LiveWallpaper.animated(mode)) { // an animated scene (road, fish tank, engine, flux, pistons, cogs)
             root.setBackground(new ColorDrawable(LiveWallpaper.base(mode)));
         } else root.setBackground(new ColorDrawable(0xFF000000));
@@ -494,6 +582,17 @@ public class MainActivity extends Activity {
         if (req == OfflineMap.REQ_PICK && res == RESULT_OK && data != null && data.getData() != null) {
             OfflineMap.picked(this, data.getData());
             if (map != null) map.reload();
+            Panels.refresh();
+        }
+        if (req == REQ_WALLVIDEO && res == RESULT_OK && data != null && data.getData() != null) {
+            Uri u = data.getData();
+            try {
+                getContentResolver().takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            } catch (Exception ignored) {
+            }
+            Prefs.put("wall_video_uri", u.toString());
+            Prefs.put(Prefs.WALL, "video");
+            applyWallpaper();
             Panels.refresh();
         }
         if (req == REQ_WALLPAPER && res == RESULT_OK && data != null && data.getData() != null) {
@@ -684,6 +783,10 @@ public class MainActivity extends Activity {
         frontAt = android.os.SystemClock.elapsedRealtime();
         Trace.event(this, "Home screen shown");
         super.onResume();
+        try {
+            if (wallPlayer != null && !wallPlayer.isPlaying()) wallPlayer.start(); // the video wallpaper plays while the home is in front
+        } catch (Exception ignored) {
+        }
         resumed = true;
         immersive();
         applyNight();
@@ -715,6 +818,10 @@ public class MainActivity extends Activity {
         frontAt = 0;
         Trace.event(this, "Home screen left (another app in front)");
         super.onPause();
+        try {
+            if (wallPlayer != null && wallPlayer.isPlaying()) wallPlayer.pause();
+        } catch (Exception ignored) {
+        }
         resumed = false;
         if (liveWall != null) liveWall.run(false); // no wallpaper animation behind other apps
         ticker.stop();

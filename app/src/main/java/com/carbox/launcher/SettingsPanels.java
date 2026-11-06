@@ -336,6 +336,10 @@ final class SettingsPanels {
         wr1.addView(Ui.seg(c, "image".equals(w) ? "Image \u2713" : "Image\u2026", "image".equals(w), () -> {
             if (MainActivity.I != null) MainActivity.I.pickWallpaperImage();
         }));
+        wr1.addView(Ui.gap(c, 8, 1));
+        wr1.addView(Ui.seg(c, "video".equals(w) ? "Video \u2713" : "Video\u2026", "video".equals(w), () -> {
+            if (MainActivity.I != null) MainActivity.I.pickWallpaperVideo();
+        }));
         b.addView(Panels.row("Wallpaper", wr1));
         // animated scenes
         String[][] scenes = {{"road", "Moving road"}, {"fishtank", "Fish tank"}, {"engine", "Coal engine"},

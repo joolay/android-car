@@ -1,6 +1,7 @@
 package com.carbox.launcher;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
@@ -19,6 +20,8 @@ import java.util.Random;
  */
 final class LiveWallpaper extends View {
     static final String LIGHTING = "fx_lighting", WEATHER = "fx_weather";
+    static android.view.TextureView videoSrc; // the video wallpaper's surface (set by the home screen)
+    private Bitmap vidBm;
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Random rnd = new Random(7);
     private final float[][] stars = new float[60][3], clouds = new float[6][4], drops = new float[80][3],
@@ -119,7 +122,7 @@ final class LiveWallpaper extends View {
     }
 
     static boolean animated(String s) {
-        return "road".equals(s) || "fishtank".equals(s) || "engine".equals(s) || "flux".equals(s)
+        return "video".equals(s) || "road".equals(s) || "fishtank".equals(s) || "engine".equals(s) || "flux".equals(s)
                 || "pistons".equals(s) || "cogs".equals(s);
     }
 
@@ -141,6 +144,17 @@ final class LiveWallpaper extends View {
                 break;
             case "fishtank":
                 moving = fishtank(c, w, h, t, dt);
+                break;
+            case "video": // the video itself is the TextureView underneath; only Glass's blur asks us to draw a small copy of the current frame
+                if (!c.isHardwareAccelerated() && videoSrc != null && videoSrc.isAvailable()) {
+                    if (vidBm == null) vidBm = Bitmap.createBitmap(96, 54, Bitmap.Config.ARGB_8888);
+                    try {
+                        videoSrc.getBitmap(vidBm);
+                        c.drawBitmap(vidBm, null, new android.graphics.Rect(0, 0, w, h), p);
+                    } catch (Exception ignored) {
+                    }
+                }
+                moving = true;
                 break;
             case "engine":
                 moving = engine(c, w, h, t, dt);
