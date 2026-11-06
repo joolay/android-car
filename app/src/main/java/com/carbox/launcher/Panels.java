@@ -184,7 +184,7 @@ final class Panels {
         layer = target;
         layer.removeAllViews();
         View scrim = new View(ctx);
-        scrim.setBackgroundColor(scrimColor);
+        scrim.setBackgroundColor(!full && scrimColor == 0x99000000 ? 0 : scrimColor); // a tile-area page fills the area: no dark scrim showing as black triangles at its rounded corners
         // tapping beside a panel closes it, except full-screen pages (they have Done / ✕)
         scrim.setOnClickListener(v -> {
             if (sticky) return; // news and traffic: only their ✕ closes them
