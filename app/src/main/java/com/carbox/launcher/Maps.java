@@ -597,14 +597,34 @@ final class Maps {
         if (web != null && pageReady) web.evaluateJavascript(code, null);
     }
 
-    /** Navigate: a full-width bar on the small map, a centred pill on the big one. */
+    /** The Google Maps icon (else the chosen navigation app's, else a pin). */
+    private android.graphics.drawable.Drawable navIcon(int du) {
+        android.graphics.drawable.Drawable d = null;
+        for (String p : new String[]{"com.google.android.apps.maps", Actions.navPkg()}) {
+            if (p == null || d != null) continue;
+            try {
+                d = c.getPackageManager().getApplicationIcon(p);
+            } catch (Exception ignored) {
+            }
+        }
+        if (d == null) d = c.getResources().getDrawable(R.drawable.ic_pin, null);
+        d = d.mutate();
+        d.setBounds(0, 0, Ui.u(du), Ui.u(du));
+        return d;
+    }
+
+    /** Navigate: the Google Maps icon in a round button at the left of the big map; a bar with the icon on the small one. */
     private void pill(boolean big) {
-        FrameLayout.LayoutParams gl = big ? new FrameLayout.LayoutParams(Ui.WRAP, Ui.u(42), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL)
+        FrameLayout.LayoutParams gl = big ? new FrameLayout.LayoutParams(Ui.u(52), Ui.u(52), Gravity.START | Gravity.CENTER_VERTICAL)
                 : new FrameLayout.LayoutParams(Ui.MATCH, Ui.u(36), Gravity.BOTTOM);
-        gl.setMargins(Ui.u(10), 0, Ui.u(10), Ui.u(big ? 12 : 10));
+        gl.setMargins(Ui.u(big ? 6 : 10), 0, Ui.u(10), Ui.u(big ? 0 : 10));
         go.setLayoutParams(gl);
-        Ui.pad(go, big ? 22 : 0, 0, big ? 22 : 0, 0);
-        go.setBackground(Ui.round(Ui.ACCENT, big ? 21 : 12));
+        go.setText(big ? "" : "Navigate");
+        go.setCompoundDrawables(navIcon(big ? 32 : 24), null, null, null);
+        go.setCompoundDrawablePadding(Ui.u(8));
+        go.setGravity(Gravity.CENTER);
+        Ui.pad(go, big ? 10 : 0, 0, big ? 10 : 0, 0);
+        go.setBackground(big ? btn(26) : Ui.round(Ui.ACCENT, 12));
         go.setElevation(big ? Ui.uf(4) : 0);
     }
 
