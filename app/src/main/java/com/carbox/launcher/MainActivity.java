@@ -1085,6 +1085,22 @@ public class MainActivity extends Activity {
     private boolean drawerLyrics, drawerTicker, drawerSticky;
     private java.util.List<Panels.Page> drawerPages;
 
+    /** Pivot the tiles on the All apps icon, so they grow out of it and shrink back into it. */
+    private void pivotAtAllApps() {
+        View t = tiles.view;
+        View all = dock != null ? dock.allBtn : null;
+        if (all == null || all.getWidth() == 0) {
+            t.setPivotX(t.getWidth() / 2f);
+            t.setPivotY(t.getHeight());
+            return;
+        }
+        int[] a = new int[2], b = new int[2];
+        all.getLocationOnScreen(a);
+        t.getLocationOnScreen(b);
+        t.setPivotX(a[0] + all.getWidth() / 2f - (b[0] - t.getTranslationX()));
+        t.setPivotY(a[1] + all.getHeight() / 2f - (b[1] - t.getTranslationY()));
+    }
+
     void drawer(boolean open) {
         if (open == drawerOpen && !peeking) return;
         mapAside = false;
@@ -1111,13 +1127,12 @@ public class MainActivity extends Activity {
             tiles.view.setVisibility(View.VISIBLE);
             if (fromPeek) tiles.view.animate().translationY(0).setDuration(Ui.ms(340)).setInterpolator(ease).start(); // from a peek it carries on from where it is
             else { // they grow out of the dock (just below the tile area)
-                tiles.view.setPivotX(tiles.view.getWidth() / 2f);
-                tiles.view.setPivotY(tiles.view.getHeight());
-                tiles.view.setScaleX(0.15f);
-                tiles.view.setScaleY(0.05f);
+                tiles.view.setTranslationY(0);
+                pivotAtAllApps(); // they grow out of the All apps icon
+                tiles.view.setScaleX(0.04f);
+                tiles.view.setScaleY(0.04f);
                 tiles.view.setAlpha(0f);
-                tiles.view.setTranslationY(Ui.u(30));
-                tiles.view.animate().scaleX(1f).scaleY(1f).alpha(1f).translationY(0).setDuration(Ui.ms(340)).setInterpolator(ease).start();
+                tiles.view.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(Ui.ms(340)).setInterpolator(ease).start();
             }
             View big = map != null ? map.bigView() : null;
             if (big == null) return;
@@ -1130,9 +1145,8 @@ public class MainActivity extends Activity {
             if (fromPeek) tiles.view.animate().translationY(h).setDuration(Ui.ms(300)).setInterpolator(ease) // a peek just slides back down
                     .withEndAction(() -> { if (!drawerOpen && !peeking) tiles.view.setVisibility(View.INVISIBLE); }).start();
             else {
-            tiles.view.setPivotX(tiles.view.getWidth() / 2f);
-            tiles.view.setPivotY(tiles.view.getHeight());
-            tiles.view.animate().scaleX(0.15f).scaleY(0.05f).alpha(0f).translationY(Ui.u(30)).setDuration(Ui.ms(300)).setInterpolator(ease)
+            pivotAtAllApps(); // and shrink back into it
+            tiles.view.animate().scaleX(0.04f).scaleY(0.04f).alpha(0f).setDuration(Ui.ms(300)).setInterpolator(ease)
                     .withEndAction(() -> {
                         if (!drawerOpen && !peeking) tiles.view.setVisibility(View.INVISIBLE);
                         if (!peeking) { // ready for the next time (peeking slides them up from below)

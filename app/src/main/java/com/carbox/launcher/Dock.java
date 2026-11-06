@@ -100,8 +100,12 @@ final class Dock {
         });
     }
 
+    /** The All apps icon (the tiles grow out of it and shrink back into it). */
+    View allBtn;
+
     private void allApps() {
         FrameLayout all = new FrameLayout(a);
+        allBtn = all;
         // All apps: Car Launcher's own icon, the same size as the app icons beside it
         ImageView icon = new ImageView(a);
         try {
