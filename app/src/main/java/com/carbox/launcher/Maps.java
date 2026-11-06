@@ -23,6 +23,7 @@ final class Maps {
     final FrameLayout view;
     private WebView web;
     private final FrameLayout mapLayer;
+    private LensOverlay lens;
     private final LinearLayout navCard;
     private final ImageView turnIcon;
     private final TextView dist, road, eta, navApp;
@@ -90,6 +91,8 @@ final class Maps {
             }, "Android");
             web.loadUrl("file:///android_asset/map.html");
             mapLayer.addView(web, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            lens = new LensOverlay(c); // Glass theme: a glassy, magnifying-glass sheen over the map
+            mapLayer.addView(lens, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             // on the Centre Stage the map page crops itself to a round radar (setRound) and is see-through
             // around it, so the themed stage shows there; the buttons keep their corners
             if (GoogleTraffic.available()) { // traffic on/off on the small map too (the big map has its own)
@@ -548,6 +551,7 @@ final class Maps {
             bigHolder.addView(mapLayer, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             if (catcher != null) catcher.setVisibility(View.GONE); // big: the map takes the touches
             js("setRound(true)"); // round on the Centre Stage
+            if (lens != null) { lens.round = true; lens.invalidate(); }
             mapLayer.setVisibility(View.VISIBLE);
             bigHolder.addView(controls(a), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             trafficLook(); // the big map has its own traffic button
@@ -568,6 +572,7 @@ final class Maps {
             if (catcher != null) catcher.setVisibility(View.VISIBLE);
             a.tilesBehind(true);
             js("setRound(false)"); // square again
+            if (lens != null) { lens.round = false; lens.invalidate(); }
             trafficLook();
         }
     }
