@@ -156,6 +156,7 @@ final class Maps {
         FrameLayout.LayoutParams gl = new FrameLayout.LayoutParams(Ui.MATCH, Ui.u(36), Gravity.BOTTOM);
         gl.setMargins(Ui.u(10), 0, Ui.u(10), Ui.u(10));
         mapLayer.addView(go, gl);
+        pill(false); // with the Google Maps icon
 
         // turn-by-turn card
         navCard = Ui.col(c);
