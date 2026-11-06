@@ -223,8 +223,8 @@ final class DataMeter extends View {
 
     @Override
     protected void onDraw(Canvas cv) {
-        long[] m = usedFor(getContext(), Prefs.str(SRC, "lte"));
-        boolean both = "both".equals(Prefs.str(SHOW, "down"));
+        long[] m = usedFor(getContext(), "lte");
+        boolean both = false; // the meter always shows mobile data downloaded
         boolean anim = Ui.ms(1) > 0;
         if (shownD < 0 || !anim) {
             shownD = m[0];
@@ -252,7 +252,7 @@ final class DataMeter extends View {
 
     /** Data is coming down on the connection(s) this meter counts. */
     private static boolean downloading() {
-        String src = Prefs.str(SRC, "lte");
+        String src = "lte";
         long d;
         if ("wifi".equals(src)) d = speed[WIFI][0];
         else if ("hotspot".equals(src)) d = speed[HOTSPOT][0];

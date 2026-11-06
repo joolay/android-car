@@ -787,34 +787,6 @@ final class InfoPanels {
         card.addView(head);
         card.addView(Ui.text(c, line1, 14, Ui.TEXT, false), top(10));
         if (line2 != null && !line2.isEmpty()) card.addView(Ui.text(c, line2, 12, Ui.SUB, false), top(2));
-        if ("data".equals(id)) { // what the rail meter shows
-            String src = Prefs.str(DataMeter.SRC, "lte"), show = Prefs.str(DataMeter.SHOW, "down");
-            card.addView(Ui.line(c, "ON THE RAIL", 11, Ui.ACCENT_SOFT, true), top(12));
-            LinearLayout r1 = Ui.row(c);
-            String[][] ss = {{"lte", "Mobile"}, {"wifi", "Wi-Fi"}, {"hotspot", "Hotspot"}, {"total", "Total"}};
-            for (String[] s : ss) {
-                if (r1.getChildCount() > 0) r1.addView(Ui.gap(c, 6, 1));
-                TextView b = Ui.seg(c, s[1], s[0].equals(src), () -> {
-                    Prefs.put(DataMeter.SRC, s[0]);
-                    Panels.refresh();
-                });
-                b.setTextSize(12);
-                r1.addView(b, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
-            }
-            card.addView(r1, top(6));
-            LinearLayout r2 = Ui.row(c);
-            String[][] sh = {{"down", "Download"}, {"both", "Download + upload"}};
-            for (String[] s : sh) {
-                if (r2.getChildCount() > 0) r2.addView(Ui.gap(c, 6, 1));
-                TextView b = Ui.seg(c, s[1], s[0].equals(show), () -> {
-                    Prefs.put(DataMeter.SHOW, s[0]);
-                    Panels.refresh();
-                });
-                b.setTextSize(12);
-                r2.addView(b, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
-            }
-            card.addView(r2, top(6));
-        }
         View hr = new View(c);
         hr.setBackgroundColor(Ui.CARD3);
         LinearLayout.LayoutParams hl = Ui.lp(Ui.MATCH, Math.max(1, Ui.u(1)));
