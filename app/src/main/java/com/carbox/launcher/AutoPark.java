@@ -2,10 +2,10 @@ package com.carbox.launcher;
 
 /**
  * Parks the car by itself: stationary for 5 minutes saves the spot; and whenever the car pulls away
- * (every start, after at least 30 s still) the spot it left counts as the previous parked-here place.
+ * (every start, after at least 2 min still) the spot it left counts as the previous parked-here place.
  */
 final class AutoPark {
-    private static final long STAY = 5 * 60000L, MIN_STOP = 30000L;
+    private static final long STAY = 5 * 60000L, MIN_STOP = 120000L;
     private static long since;      // when this stop began (0 = moving)
     private static double lat, lon;
     private static String town;
