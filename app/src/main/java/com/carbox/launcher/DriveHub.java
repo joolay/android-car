@@ -59,7 +59,7 @@ final class DriveHub {
     // ------------------------------------------------------------------ the widget
 
     static final class Tile extends Widgets.W {
-        private final TextView dist, drive, since, buttonsHint;
+        private final TextView dist, unit, drive, since;
         private final LinearLayout buttons;
         private String shownPurpose = "";
 
@@ -69,13 +69,23 @@ final class DriveHub {
             l.addView(Widgets.label(c, "DRIVE"));
             l.addView(new View(c), Ui.weight(1, false));
 
+            // two even columns, numbers on one line (the unit small beside the distance, never wrapping)
             LinearLayout nums = Ui.row(c);
             LinearLayout a = Ui.col(c);
-            dist = Ui.text(c, "", tl ? 30 : 22, Ui.TEXT, true);
-            a.addView(dist);
+            LinearLayout ar = Ui.row(c);
+            ar.setGravity(Gravity.BOTTOM);
+            dist = Ui.text(c, "", tl ? 28 : 22, Ui.TEXT, true);
+            dist.setSingleLine(true);
+            ar.addView(dist);
+            unit = Ui.text(c, "", Widgets.ts(12), Ui.SUB, false);
+            unit.setSingleLine(true);
+            unit.setPadding(Ui.u(3), 0, 0, Ui.u(4));
+            ar.addView(unit);
+            a.addView(ar);
             a.addView(Ui.line(c, "Trip", Widgets.ts(11), Ui.SUB, false));
             LinearLayout b = Ui.col(c);
-            drive = Ui.text(c, "", tl ? 30 : 22, Ui.TEXT, true);
+            drive = Ui.text(c, "", tl ? 28 : 22, Ui.TEXT, true);
+            drive.setSingleLine(true);
             b.addView(drive);
             b.addView(Ui.line(c, "Driving", Widgets.ts(11), Ui.SUB, false));
             nums.addView(a, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
@@ -83,13 +93,11 @@ final class DriveHub {
             l.addView(nums);
 
             since = Ui.line(c, "", Widgets.ts(12), Ui.TEXT2, false);
-            l.addView(since, Widgets.top(8));
+            l.addView(since, Widgets.top(6));
             l.addView(new View(c), Ui.weight(1, false));
 
-            buttonsHint = Ui.line(c, "Log this trip as", Widgets.ts(11), Ui.SUB, false);
-            l.addView(buttonsHint);
-            buttons = Ui.row(c);
-            l.addView(buttons, Widgets.top(4));
+            buttons = Ui.row(c); // the lit button is what this trip is logged as
+            l.addView(buttons);
             fillButtons();
 
             l.setOnClickListener(x -> expanded());
@@ -107,7 +115,10 @@ final class DriveHub {
 
         @Override
         void tick() {
-            dist.setText(dist(Gps.tripMeters));
+            boolean mi = Widgets.mph();
+            double d = Gps.tripMeters / (mi ? 1609.34 : 1000.0);
+            dist.setText(String.format(Locale.US, d < 100 ? "%.1f" : "%.0f", d));
+            unit.setText(mi ? "mi" : "km");
             drive.setText(clock(Gps.tripMovingMs));
             since.setText(Rest.stoppedMs() > 0 ? "Stopped " + Ui.dur(Rest.stoppedMs()) : "Since break " + clock(Rest.driveMs));
             if (!shownPurpose.equals(Logbook.purpose())) fillButtons(); // changed elsewhere, or just now
