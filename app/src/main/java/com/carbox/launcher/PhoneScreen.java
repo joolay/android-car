@@ -52,12 +52,32 @@ final class PhoneScreen {
             holder = new FrameLayout(a);
             holder.addView(shown, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             a.tileArea.addView(holder, a.tileArea.indexOfChild(a.sheetHost), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-            shown.setTranslationY(a.tileArea.getHeight() + Ui.u(12));
-            shown.animate().translationY(0).setDuration(Ui.ms(340)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+            if (pivotAtIcon(shown)) { // grows out of the Phone icon
+                shown.setScaleX(0.04f);
+                shown.setScaleY(0.04f);
+                shown.setAlpha(0f);
+                shown.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(Ui.ms(340)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+            } else {
+                shown.setTranslationY(a.tileArea.getHeight() + Ui.u(12));
+                shown.animate().translationY(0).setDuration(Ui.ms(340)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+            }
         }
         Prefs.put("phone_seen", true);
         a.mapAside(true); // the big map steps aside for the dialler
         render();
+    }
+
+    /** Pivot a tile-area view on the dock's Phone icon, so it grows from and shrinks into it. False when there's no icon. */
+    private static boolean pivotAtIcon(View v) {
+        MainActivity a = MainActivity.I;
+        View ic = a != null && a.dock != null ? a.dock.dialBtn : null;
+        if (ic == null || !ic.isShown() || ic.getWidth() == 0) return false;
+        int[] i = new int[2], t = new int[2];
+        ic.getLocationOnScreen(i);
+        a.tileArea.getLocationOnScreen(t);
+        v.setPivotX(i[0] + ic.getWidth() / 2f - t[0]);
+        v.setPivotY(i[1] + ic.getHeight() / 2f - t[1]);
+        return true;
     }
 
     static boolean isShown() {
@@ -77,7 +97,9 @@ final class PhoneScreen {
             if (x.getParent() != null) ((ViewGroup) x.getParent()).removeView(x);
         };
         float down = (h != null ? h.getHeight() : v.getHeight()) + Ui.u(12);
-        if (Ui.ms(300) == 0 || down <= Ui.u(12)) gone.run();
+        if (Ui.ms(300) != 0 && down > Ui.u(12) && pivotAtIcon(v)) // shrinks back into the Phone icon
+            v.animate().scaleX(0.04f).scaleY(0.04f).alpha(0f).setDuration(Ui.ms(300)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).withEndAction(gone).start();
+        else if (Ui.ms(300) == 0 || down <= Ui.u(12)) gone.run();
         else v.animate().translationY(down).setDuration(Ui.ms(300)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).withEndAction(gone).start();
         return true;
     }

@@ -85,6 +85,7 @@ final class Dock {
 
     private void addDialler() {
         FrameLayout dial = new FrameLayout(a);
+        dialBtn = dial;
         dial.setBackground(Ui.oval(Ui.GREEN));
         dial.addView(Ui.icon(a, R.drawable.ic_call, Ui.TEXT), Ui.flpu(s(22), s(22), Gravity.CENTER));
         dial.setOnClickListener(v -> { // press again to close
@@ -99,6 +100,9 @@ final class Dock {
             return true;
         });
     }
+
+    /** The Phone icon (the dialler grows out of it and shrinks back into it). */
+    View dialBtn;
 
     /** The All apps icon (the tiles grow out of it and shrink back into it). */
     View allBtn;
