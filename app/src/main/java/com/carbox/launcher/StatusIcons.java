@@ -290,6 +290,52 @@ final class StatusIcons {
         }
     }
 
+    // ------------------------------------------------------------------ hotspot
+
+    /** Dot and two rings. Off = grey; on = white; the dot and rings turn green as hotspot data moves. */
+    static final class HotspotIcon extends AnimatedIcon {
+        private final Paint on = stroke(C_ON), off = stroke(C_OFF), dotOn = fill(C_ON), dotOff = fill(C_OFF);
+        private final Paint gStroke = stroke(C_GREEN), gDot = fill(C_GREEN);
+        private final RectF r = new RectF();
+        private boolean isOn;
+
+        HotspotIcon(Context c) {
+            super(c, 1500);
+            trackSpeed(DataMeter.HOTSPOT);
+        }
+
+        void setOn(boolean v) {
+            if (v == isOn) return;
+            isOn = v;
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas c) {
+            float u = unit();
+            float cx = getWidth() / 2f, cy = 13 * u, sw = 2.2f * u;
+            on.setStrokeWidth(sw);
+            off.setStrokeWidth(sw);
+            gStroke.setStrokeWidth(sw);
+            for (int i = 0; i < 2; i++) {
+                float rad = (5f + i * 4.6f) * u;
+                r.set(cx - rad, cy - rad, cx + rad, cy + rad);
+                c.drawArc(r, 120, 300, false, isOn ? on : off); // open at the bottom
+                float g = isOn ? Math.max(0f, Math.min(1f, speedT * 3 - (i + 1))) : 0f;
+                if (g > 0f) {
+                    gStroke.setAlpha(Math.round(255 * g));
+                    c.drawArc(r, 120, 300, false, gStroke);
+                }
+            }
+            c.drawCircle(cx, cy, 2f * u, isOn ? dotOn : dotOff);
+            float g = isOn ? Math.max(0f, Math.min(1f, speedT * 3)) : 0f;
+            if (g > 0f) {
+                gDot.setAlpha(Math.round(255 * g));
+                c.drawCircle(cx, cy, 2f * u, gDot);
+            }
+        }
+    }
+
     // ------------------------------------------------------------------ gps
 
     /**

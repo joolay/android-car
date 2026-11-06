@@ -25,7 +25,8 @@ final class Rail {
     private final Context c;
     final LinearLayout view;
     private final LinearLayout items;
-    private ImageView wIcon, hotIcon, tsIcon, btIcon;
+    private ImageView wIcon, tsIcon, btIcon;
+    private StatusIcons.HotspotIcon hot;
     private TextView wHi, wLo, clock, day, date;
 
     private final Runnable clockTick = this::tickClock;
@@ -142,7 +143,7 @@ final class Rail {
         wifi = null;
         gps = null;
         wIcon = null;
-        hotIcon = null;
+        hot = null;
         tsIcon = null;
         btIcon = null;
         items.addView(new View(c), new LinearLayout.LayoutParams(1, 0, 1));
@@ -259,14 +260,15 @@ final class Rail {
                 return wrap(v, 22, true);
             }
             case "hotspot": {
-                hotIcon = Ui.icon(c, R.drawable.ic_hot, Ui.MUTED);
-                v = hotIcon;
+                hot = new StatusIcons.HotspotIcon(c);
+                hot.setOn(Status.hotspotOn);
+                v = hot;
                 v.setOnClickListener(x -> InfoPanels.quick("hotspot"));
                 v.setOnLongClickListener(x -> {
                     Status.tetherSettings(c);
                     return true;
                 });
-                return withSpeed(wrap(v, 22, false), DataMeter.HOTSPOT);
+                return wrap(v, 22, false); // speed shows as the dot and rings turning green
             }
             case "tailscale": {
                 tsIcon = Ui.icon(c, R.drawable.ic_vpnkey, Ui.MUTED);
@@ -296,17 +298,6 @@ final class Rail {
         return v;
     }
 
-    /** A connection's icon with its live speed bar beside it. */
-    private View withSpeed(View icon, int kind) {
-        LinearLayout r = Ui.row(c);
-        r.setGravity(Gravity.CENTER_VERTICAL);
-        r.addView(icon);
-        LinearLayout.LayoutParams bl = Ui.lpu(4, 20);
-        bl.leftMargin = Ui.u(4);
-        r.addView(new DataMeter.SpeedBar(c, kind), bl);
-        return r;
-    }
-
     /** Give small icons a bigger tap area. */
     private View wrap(View v, float h, boolean wrapWidth) {
         android.widget.FrameLayout f = new android.widget.FrameLayout(c);
@@ -327,7 +318,7 @@ final class Rail {
             Boolean lk = BtAuto.linked();
             btIcon.setColorFilter(lk != null ? (lk ? Ui.ACCENT : Ui.MUTED) : !Status.btOn ? Ui.MUTED : Status.btConnected ? Ui.ACCENT : Ui.TEXT);
         }
-        if (hotIcon != null) hotIcon.setColorFilter(Status.hotspotOn ? Ui.ACCENT : Ui.MUTED);
+        if (hot != null) hot.setOn(Status.hotspotOn);
         if (tsIcon != null) tsIcon.setColorFilter(Status.vpnOn && Status.tailscaleInstalled() ? Ui.GREEN : Ui.MUTED);
         updateGps();
     }
