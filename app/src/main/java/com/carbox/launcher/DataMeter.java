@@ -156,7 +156,21 @@ final class DataMeter extends View {
         return (float) Math.max(0, Math.min(1, (Math.log10(b) - 3.3) / 3.7));
     }
 
-    // ------------------------------------------------------------------ the meter (LTE only)
+    // ------------------------------------------------------------------ the meter
+
+    /** What the rail meter counts (quick card): "lte" (default), "wifi", "hotspot" or "total"; and "down" (default) or "both". */
+    static final String SRC = "data_src", SHOW = "data_show";
+
+    /** This month's {down, up} for a source; "total" is mobile plus Wi-Fi (hotspot data is already in those). */
+    static long[] usedFor(Context c, String src) {
+        if ("wifi".equals(src)) return used(c, WIFI);
+        if ("hotspot".equals(src)) return used(c, HOTSPOT);
+        if ("total".equals(src)) {
+            long[] a = used(c, LTE), b = used(c, WIFI);
+            return new long[]{a[0] + b[0], a[1] + b[1]};
+        }
+        return used(c, LTE);
+    }
 
     private final Paint cap = new Paint(Paint.ANTI_ALIAS_FLAG), dn = new Paint(Paint.ANTI_ALIAS_FLAG), up = new Paint(Paint.ANTI_ALIAS_FLAG),
             ring = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -170,7 +184,7 @@ final class DataMeter extends View {
         cap.setFakeBoldText(true);
         cap.setTextAlign(Paint.Align.CENTER);
         cap.setLetterSpacing(0.08f);
-        dn.setColor(Ui.ACCENT_SOFT);
+        dn.setColor(Ui.GREEN); // download in green (upload stays amber)
         dn.setFakeBoldText(true);
         dn.setTextAlign(Paint.Align.CENTER);
         up.setColor(Ui.AMBER);
@@ -205,7 +219,8 @@ final class DataMeter extends View {
 
     @Override
     protected void onDraw(Canvas cv) {
-        long[] m = used(getContext(), LTE);
+        long[] m = usedFor(getContext(), Prefs.str(SRC, "lte"));
+        boolean both = "both".equals(Prefs.str(SHOW, "down"));
         boolean anim = Ui.ms(1) > 0;
         if (shownD < 0 || !anim) {
             shownD = m[0];
@@ -216,10 +231,18 @@ final class DataMeter extends View {
         }
         float w = getWidth(), h = getHeight();
         float cx = w / 2f;
-        // no box: just this month's mobile data downloaded, a little bigger (tap for the full breakdown)
-        dn.setTextSize(Ui.uf(13));
-        float y = h / 2f - (dn.descent() + dn.ascent()) / 2f;
-        cv.drawText("↓" + shortSize(Math.round(shownD)), cx, y, dn);
+        // no box: this month's data downloaded in green (and uploaded in amber below it if chosen); tap for the full breakdown
+        if (both) {
+            dn.setTextSize(Ui.uf(11));
+            up.setTextSize(Ui.uf(11));
+            float mid = h / 2f - (dn.descent() + dn.ascent()) / 2f, gap = Ui.uf(7);
+            cv.drawText("↓" + shortSize(Math.round(shownD)), cx, mid - gap, dn);
+            cv.drawText("↑" + shortSize(Math.round(shownU)), cx, mid + gap, up);
+        } else {
+            dn.setTextSize(Ui.uf(13));
+            float y = h / 2f - (dn.descent() + dn.ascent()) / 2f;
+            cv.drawText("↓" + shortSize(Math.round(shownD)), cx, y, dn);
+        }
         if (anim && (Math.abs(m[0] - shownD) > 500 || Math.abs(m[1] - shownU) > 500)) postInvalidateOnAnimation();
     }
 
