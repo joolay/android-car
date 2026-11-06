@@ -1097,8 +1097,8 @@ public class MainActivity extends Activity {
         int[] a = new int[2], b = new int[2];
         all.getLocationOnScreen(a);
         t.getLocationOnScreen(b);
-        t.setPivotX(a[0] + all.getWidth() / 2f - (b[0] - t.getTranslationX()));
-        t.setPivotY(a[1] + all.getHeight() / 2f - (b[1] - t.getTranslationY()));
+        t.setPivotX(a[0] + all.getWidth() / 2f - b[0]);
+        t.setPivotY(a[1] + all.getHeight() / 2f - b[1]);
     }
 
     void drawer(boolean open) {
