@@ -70,7 +70,7 @@ var accent='#3d8bfd';
 function setAccent(c){ accent=c; var r=parseInt(c.substr(1,2),16),g=parseInt(c.substr(3,2),16),b=parseInt(c.substr(5,2),16);
   var st=document.documentElement.style; st.setProperty('--acc',c); st.setProperty('--acc25','rgba('+r+','+g+','+b+',.25)');
   if(gmap&&pending) setPos(pending[0],pending[1],pending[2]); }
-function setRound(b){ round=!!b; size(); }
+function setRound(b){ round=!!b; document.documentElement.className=round?'round':''; size(); requestAnimationFrame(size); }
 function setHeadingUp(b){ headUp=!!b&&isGl(); if(!headUp) turn(0,true); size(); } // only vector maps turn: their labels stay upright
 // turn to a heading the short way round (no spinning past north)
 function isGl(){ return mode==='ofm'||mode==='pmtiles'; }

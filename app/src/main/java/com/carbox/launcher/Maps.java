@@ -411,6 +411,7 @@ final class Maps {
     private SwipeBox mini;
     private boolean tapBig;
     private Widgets.W miniW;
+    private DriveStage stage;
 
     /** Tap on the map: it fills the 2×4 grid and the small panel shows the Go to or Speed tile. */
     void expand(boolean on) {
@@ -450,8 +451,8 @@ final class Maps {
             mini = new SwipeBox(c, this::swapMini);
             mini.onHold(LeftStages::chooser); // hold: choose the alternate stage's widgets
             try {
-                miniW = LeftStages.make(c, miniId()); // same settings as in the tiles, its own design
-                if (miniW != null && miniW.v != null) mini.addView(miniW.v, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+                stage = new DriveStage(c); // Go To → Drive, with Next Prayer / Speed / Park here turning in when needed
+                mini.addView(stage, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             } catch (Exception ignored) {
             }
             view.addView(mini, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
@@ -461,6 +462,7 @@ final class Maps {
             view.removeView(mini);
             mini = null;
             miniW = null;
+            stage = null;
         }
     }
 
@@ -498,36 +500,19 @@ final class Maps {
     }
 
     private void swapMini() {
-        if (mini == null) return;
+        if (mini == null || stage == null) return;
         int dir = mini.dir;
-        if (miniOverMap && bigHolder == null) { // over the small map: past the last (or first) widget, the map comes back
-            java.util.List<String> l = LeftStages.list();
-            int i = l.indexOf(LeftStages.current());
-            if ((dir > 0 && i == l.size() - 1) || (dir < 0 && i == 0) || l.size() < 2) {
-                final View old = mini;
-                Ui.ui.removeCallbacks(miniTick);
-                mini = null;
-                miniW = null;
-                miniOverMap = false;
-                old.animate().translationX(-dir * view.getWidth()).setDuration(Ui.ms(260)).withEndAction(() -> view.removeView(old)).start();
-                if (Ui.ms(260) == 0) view.removeView(old);
-                return;
-            }
+        if (miniOverMap && bigHolder == null && ((dir > 0 && stage.index() == 1) || (dir < 0 && stage.index() == 0))) {
+            // over the small map: past the last (or first) face, the map comes back
+            final View old = mini;
+            mini = null;
+            stage = null;
+            miniOverMap = false;
+            old.animate().translationX(-dir * view.getWidth()).setDuration(Ui.ms(260)).withEndAction(() -> view.removeView(old)).start();
+            if (Ui.ms(260) == 0) view.removeView(old);
+            return;
         }
-        if (LeftStages.list().size() < 2) return;
-        LeftStages.step(dir);
-        final View old = mini;
-        float w = view.getWidth();
-        Ui.ui.removeCallbacks(miniTick);
-        mini = null;
-        miniW = null;
-        showMini(true);
-        if (mini == null) return;
-        mini.setTranslationX(dir * w);
-        mini.animate().translationX(0).setDuration(Ui.ms(260)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
-        old.animate().translationX(-dir * w).setDuration(Ui.ms(260)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f))
-                .withEndAction(() -> view.removeView(old)).start();
-        if (Ui.ms(260) == 0) view.removeView(old);
+        stage.turn(dir); // the cube turns
     }
 
     private final Runnable miniTick = new Runnable() {
@@ -565,6 +550,8 @@ final class Maps {
             a.tilesBehind(false); // the tiles would otherwise show through the round map's corners
         } else if (!on && bigHolder != null) {
             Ui.ui.removeCallbacks(controlTick);
+            js("setRound(false)"); // square first (before the map moves), so no circle shows while it fits the small panel
+            if (lens != null) { lens.round = false; lens.invalidate(); }
             js("setInteractive(false)");
             pill(false);
             bigHolder.removeView(mapLayer);
@@ -573,8 +560,7 @@ final class Maps {
             view.addView(mapLayer, 0, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
             if (catcher != null) catcher.setVisibility(View.VISIBLE);
             a.tilesBehind(true);
-            js("setRound(false)"); // square again
-            if (lens != null) { lens.round = false; lens.invalidate(); }
+            js("size()"); // fit the new size at once
             trafficLook();
         }
     }

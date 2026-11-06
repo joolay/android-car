@@ -163,7 +163,7 @@ final class SettingsPanels {
         final int BLUE = 0xFF1F4E9A, GREEN = 0xFF1F7A46, AMBER = 0xFF8A5A10, PURPLE = 0xFF5A3A9A, GREY = Ui.CARD3, PINK = 0xFF8A2F62, TEAL = 0xFF1C6B66;
         Object[][][] groups = {
                 {{"Home screen"},
-                        {R.drawable.ic_apps, PURPLE, "Left Stages", "Now Playing " + (LeftStages.nowPlayingTop() ? "top" : "bottom") + " · " + LeftStages.list().size() + " widgets", (Runnable) () -> LeftStages.chooser(false)},
+                        {R.drawable.ic_apps, PURPLE, "Left Stages", "Now Playing " + (LeftStages.nowPlayingTop() ? "top" : "bottom") + " · Drive " + (LeftStages.nowPlayingTop() ? "below" : "above"), (Runnable) () -> LeftStages.chooser(false)},
                         {R.drawable.ic_check, PURPLE, "Welcome wizard", "Theme, wallpaper, Now Playing, ticker", (Runnable) () -> { Panels.close(); Wizard.show(); }},
                         {R.drawable.ic_drag, PURPLE, "Rail Bar", railOn + " of " + Rail.IDS.length + " shown", (Runnable) SettingsPanels::railOrder},
                         {R.drawable.ic_apps, PURPLE, "Dock", Dock.icons() + " icons" + (Dock.dialler() ? " · dialler" : ""), (Runnable) SettingsPanels::dock},
@@ -1060,7 +1060,7 @@ final class SettingsPanels {
             boolean hu = Maps.headingUp();
             b.addView(Panels.row("Map faces", Ui.seg(c, "Direction of travel", hu, () -> { Prefs.put("map_heading_up", true); if (MainActivity.I != null) MainActivity.I.map.applyHeading(); Panels.refresh(); }),
                     Ui.seg(c, "North up", !hu, () -> { Prefs.put("map_heading_up", false); if (MainActivity.I != null) MainActivity.I.map.applyHeading(); Panels.refresh(); })), top(8));
-            b.addView(Panels.item("Alternate stage", LeftStages.list().size() + " widgets · swipe it to go through them", LeftStages::chooser), top(8));
+            b.addView(Panels.item("Alternate stage", "Drive · Go To, Next Prayer, Speed, Park here turn in by themselves", LeftStages::chooser), top(8));
             b.addView(Ui.text(c, "Maps lives on the Centre Stage. When something else opens there, or the Tile Drawer slides in, it shrinks into the alternate stage, never Now Playing's.", 12, Ui.SUB, false), top(6));
         }
     }

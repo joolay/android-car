@@ -339,6 +339,8 @@ final class NowPlaying {
     }
 
     private void swapArt() {
+        final int dir = ((SwipeBox) view).dir;
+        final Cube.Snap s = Cube.snap(view); // the faces turn like a cube
         if (folder != null && folderOver) {
             if (folder.hasNext()) folder.next();
             else {
@@ -346,24 +348,25 @@ final class NowPlaying {
                 swappedOnce = false;
                 folder.endEdit();
                 update();
+                s.play(dir);
             }
             return;
         }
         if (folder != null && folder.view.getVisibility() == View.VISIBLE) { // nothing playing: the music folder's pages
-            folder.page(((SwipeBox) view).dir);
+            folder.page(dir);
             return;
         }
         if (swappedOnce && folder != null) { // second swipe: the folder over the song
             folderOver = true;
             folder.first();
             update();
+            s.play(dir);
             return;
         }
         swappedOnce = true;
         Prefs.put("np_show", showIcon() ? "art" : "icon");
-        art.setAlpha(0f);
         update();
-        art.animate().alpha(1f).setDuration(Ui.ms(220)).start();
+        s.play(dir);
     }
 
     private void openMusicApp() {
