@@ -23,7 +23,11 @@ html.round,html.round body,html.round .leaflet-container{background:transparent!
 html.round #m{border-radius:50%;overflow:hidden;transition:none;box-shadow:0 0 0 3px rgba(255,255,255,.4)}
 #rings{position:absolute;display:none;border-radius:50%;pointer-events:none;z-index:500;
   background:radial-gradient(circle,transparent 32.5%,rgba(255,255,255,.14) 33%,transparent 33.6%,transparent 65.5%,rgba(255,255,255,.14) 66%,transparent 66.6%)}
-</style></head><body><div id="m"></div><div id="rings"></div>
+/* N E S W round the edge of the big round map; they travel round as the map turns */
+#cards{position:absolute;display:none;pointer-events:none;z-index:501}
+#cards b{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;text-align:center;font:700 12px/22px sans-serif;color:#fff;background:rgba(10,18,32,.55);border-radius:50%}
+#cards b.n{background:#e5484d}
+</style></head><body><div id="m"></div><div id="rings"></div><div id="cards"><b class="n">N</b><b>E</b><b>S</b><b>W</b></div>
 <script src="gtraffic.js"></script>
 <script>
 // Map engines: 'osm' (Leaflet + OpenStreetMap tiles), 'ofm' (MapLibre + OpenFreeMap), 'pmtiles'
@@ -47,6 +51,8 @@ function size(){
   el.style.left=(big?(W-D)/2:0)+'px'; el.style.top=(big?(H-D)/2:0)+'px';
   var rg=document.getElementById('rings');
   if(rg){ rg.style.display=big?'block':'none'; rg.style.width=D+'px'; rg.style.height=D+'px'; rg.style.left=((W-D)/2)+'px'; rg.style.top=((H-D)/2)+'px'; }
+  var cd=document.getElementById('cards');
+  if(cd){ cd.style.display=big?'block':'none'; cd.style.width=D+'px'; cd.style.height=D+'px'; cd.style.left=((W-D)/2)+'px'; cd.style.top=((H-D)/2)+'px'; cardinals(); }
   document.documentElement.className=big?'round':'';
   if(map) map.invalidateSize(false);
   if(gl) gl.resize();
@@ -63,11 +69,23 @@ function setRound(b){ round=!!b; size(); }
 function setHeadingUp(b){ headUp=!!b&&isGl(); if(!headUp) turn(0,true); size(); } // only vector maps turn: their labels stay upright
 // turn to a heading the short way round (no spinning past north)
 function isGl(){ return mode==='ofm'||mode==='pmtiles'; }
+// put N E S W round the edge where they belong for the way the map is turned (north up: N at the top)
+function cardinals(){
+  var cd=document.getElementById('cards');
+  if(!cd||!round) return;
+  var D=cd.offsetWidth, r=D/2-15, b=(isGl()&&gl)?gl.getBearing():-rot, ls=cd.children;
+  for(var i=0;i<4;i++){
+    var a=(i*90-b)*Math.PI/180;
+    ls[i].style.left=(D/2+r*Math.sin(a))+'px';
+    ls[i].style.top=(D/2-r*Math.cos(a))+'px';
+  }
+}
 function turn(b,reset){
   if(isGl()){ glBearing=reset?0:b; if(gl) gl.easeTo({bearing:glBearing,duration:800}); return; }
   var t=reset?0:-b, d=((t-rot)%360+540)%360-180;
   rot=reset?0:rot+d;
   document.getElementById('m').style.transform='rotate('+rot+'deg)';
+  cardinals();
 }
 function centre(){
   if(!pending) return;
@@ -185,7 +203,8 @@ function initGl(){
   gl=new maplibregl.Map({container:'m',style:style,center:[0,0],zoom:2,attributionControl:{compact:false},pitchWithRotate:false,fadeDuration:0,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),refreshExpiredTiles:false});
   // if the style never loads (slow or no network, a GPU hiccup), drop back to Standard instead of a blank map
   glReady=false;
-  gl.on('load',function(){ glReady=true; });
+  gl.on('load',function(){ glReady=true; cardinals(); });
+  gl.on('rotate',cardinals);
   gl.on('error',function(e){ note('map: '+((e&&e.error&&e.error.message)||'error')); });
   (function(myGl){ setTimeout(function(){ if(gl===myGl&&!glReady) fallback('The vector map was slow to load, using Standard'); },9000); })(gl);
   var el=document.createElement('div'); el.innerHTML='<div class="me"><div class="a" id="arr"></div><div class="d"></div></div>';
