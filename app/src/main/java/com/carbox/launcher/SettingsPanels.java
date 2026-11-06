@@ -1238,7 +1238,6 @@ final class SettingsPanels {
                     segNum(c, NewsTicker.READ_KEEP, 12, "12 h", rk), segNum(c, NewsTicker.READ_KEEP, 24, "24 h", rk)));
             b.addView(Panels.row("Unread, after publishing", segNum(c, NewsTicker.UNREAD_KEEP, 12, "12 h", uk), segNum(c, NewsTicker.UNREAD_KEEP, 24, "24 h", uk),
                     segNum(c, NewsTicker.UNREAD_KEEP, 48, "48 h", uk), segNum(c, NewsTicker.UNREAD_KEEP, 72, "72 h", uk)), top(6));
-            b.addView(Ui.text(c, "Archived headlines stay until you delete them.", 12, Ui.SUB, false), top(4));
             b.addView(Panels.section("News feed (RSS)"));
             b.addView(Widgets.field("Blank = Google News for " + (Gps.town != null ? Gps.town : "your area"), Prefs.str(Prefs.NEWS_URL, ""), false,
                     t -> Prefs.put(Prefs.NEWS_URL, t)), Ui.lp(Ui.MATCH, Ui.WRAP));
