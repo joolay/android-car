@@ -124,6 +124,12 @@ final class WallpaperVideos {
             if (!searching) search();
         }));
         card.addView(sb, top(10));
+        if (!results.isEmpty() && loadingUrl == null) card.addView(Ui.seg(c, "Try a sample: best aquarium match", false, () -> {
+            Clip best = null; // best-matching clip that's HD but not huge
+            for (Clip k : results) if (k.w >= 1280 && k.bytes < 40e6 && (best == null || k.index < best.index)) best = k;
+            if (best == null) for (Clip k : results) if (k.bytes < 40e6) { best = k; break; }
+            if (best != null) choose(Panels.ctx(), best);
+        }), top(6));
         card.addView(Ui.line(c, status, 12, Ui.SUB, false), top(6));
 
         LinearLayout list = Ui.col(c);
