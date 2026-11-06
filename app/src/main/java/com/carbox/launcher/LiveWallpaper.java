@@ -22,7 +22,7 @@ final class LiveWallpaper extends View {
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Random rnd = new Random(7);
     private final float[][] stars = new float[60][3], clouds = new float[6][4], drops = new float[80][3],
-            bubbles = new float[24][3], sparks = new float[40][4], fish = new float[7][6];
+            bubbles = new float[24][3], sparks = new float[40][4], fish = new float[7][8];
     private Themes.Sky sky;
     private String scene = "black";
     private long flashAt, last;
@@ -59,6 +59,8 @@ final class LiveWallpaper extends View {
             fish[i][3] = 0.6f + rnd.nextFloat() * 0.8f;   // size
             fish[i][4] = rnd.nextInt(FISH_COLS.length);   // colour
             fish[i][5] = rnd.nextFloat() * 6.28f;         // swim phase
+            fish[i][6] = Math.signum(fish[i][2]);         // which way it faces (eases through 0 when it turns round)
+            fish[i][7] = 0.35f + rnd.nextFloat() * 0.65f; // depth: 1 near, small and misty when far
         }
     }
 
@@ -160,6 +162,7 @@ final class LiveWallpaper extends View {
         if (lighting) lighting(c, w, h);
         if (weather) weather(c, w, h, t, dt, anim);
 
+        if (anim && moving && c.isHardwareAccelerated()) Themes.glassTick(); // glass cards redraw, so the scene moves behind them
         if (anim && (moving || (weather && sky.weather >= 1) || (weather && sky.night))) postInvalidateDelayed(50);
     }
 
@@ -361,12 +364,19 @@ final class LiveWallpaper extends View {
         p.setColor(al | (dark & 0xFFFFFF));
         c.drawPath(tmp, p);
         // body and lighter belly
-        p.setColor(al | (col & 0xFFFFFF));
-        c.drawOval(-sz, -sz * 0.5f, sz, sz * 0.5f, p);
-        p.setColor(al | (belly & 0xFFFFFF));
-        c.drawOval(-sz * 0.85f, sz * 0.08f, sz * 0.9f, sz * 0.48f, p);
-        p.setColor(al | (col & 0xFFFFFF));
-        c.drawOval(-sz * 0.9f, -sz * 0.48f, sz * 0.95f, sz * 0.18f, p);
+        // a streamlined body, shaded dark on the back to light on the belly
+        tmp.reset();
+        tmp.moveTo(sz, sz * 0.02f);
+        tmp.cubicTo(sz * 0.7f, -sz * 0.5f, -sz * 0.2f, -sz * 0.62f, -sz * 0.85f, -sz * 0.12f);
+        tmp.lineTo(-sz * 0.85f, sz * 0.12f);
+        tmp.cubicTo(-sz * 0.2f, sz * 0.58f, sz * 0.7f, sz * 0.45f, sz, sz * 0.02f);
+        tmp.close();
+        p.setShader(new LinearGradient(0, -sz * 0.6f, 0, sz * 0.5f, new int[]{al | (dark & 0xFFFFFF), al | (col & 0xFFFFFF), al | (belly & 0xFFFFFF)},
+                new float[]{0f, 0.55f, 1f}, Shader.TileMode.CLAMP));
+        c.drawPath(tmp, p);
+        p.setShader(null);
+        p.setColor(((int) (0x30 * alpha) << 24) | 0xFFFFFF); // a soft highlight along the back
+        c.drawOval(-sz * 0.6f, -sz * 0.42f, sz * 0.55f, -sz * 0.22f, p);
         if (alpha > 0.6f) {
             // two stripes across the body
             p.setColor(0x44000000);
@@ -403,7 +413,8 @@ final class LiveWallpaper extends View {
         // sunbeams, drifting and breathing
         for (int i = 0; i < 4; i++) {
             float x = w * (0.1f + i * 0.25f) + (float) Math.sin(t * 0.2f + i) * w * 0.03f;
-            p.setColor(((int) (0x10 + 0x08 * Math.sin(t * 0.5f + i * 2)) << 24) | 0xFFFFFF);
+            int ba = (int) (0x1C + 0x0C * Math.sin(t * 0.5f + i * 2));
+            p.setShader(new LinearGradient(0, 0, 0, h * 0.9f, (ba << 24) | 0xFFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)); // rays fade with depth
             tmp.reset();
             tmp.moveTo(x, 0);
             tmp.lineTo(x + w * 0.06f, 0);
@@ -412,6 +423,7 @@ final class LiveWallpaper extends View {
             tmp.close();
             c.drawPath(tmp, p);
         }
+        p.setShader(null);
         // rippling surface light near the top
         p.setStyle(Paint.Style.STROKE);
         p.setStrokeWidth(Ui.uf(1.5f));
@@ -447,6 +459,13 @@ final class LiveWallpaper extends View {
         tmp.close();
         c.drawPath(tmp, p);
         p.setShader(null);
+        // caustics: bright wobbling light patches dancing on the sand
+        for (int i = 0; i < 14; i++) {
+            float cx = w * frac(i * 0.37f + 0.05f * (float) Math.sin(t * 0.3f + i)) , cy = h - Ui.uf(10) - Ui.uf(12) * frac(i * 0.61f);
+            float rw = Ui.uf(14 + 10 * frac(i * 0.29f)) * (0.8f + 0.3f * (float) Math.sin(t * 1.4f + i * 2));
+            p.setColor(((int) (0x22 + 0x14 * Math.sin(t * 1.1f + i * 1.7f)) << 24) | 0xFFF6D8);
+            c.drawOval(cx - rw, cy - rw * 0.22f, cx + rw, cy + rw * 0.22f, p);
+        }
         // pebbles and shells
         for (int i = 0; i < 26; i++) {
             float px = w * frac(i * 0.381f + 0.07f), py = h - Ui.uf(4) - Ui.uf(14) * frac(i * 0.618f), pr = Ui.uf(1.5f + 2.5f * frac(i * 0.27f));
@@ -501,13 +520,20 @@ final class LiveWallpaper extends View {
             p.setColor(0xAAFFFFFF);
             c.drawCircle(bx3 - br3 * 0.35f, by3 - br3 * 0.35f, br3 * 0.28f, p);
         }
-        // fish
-        for (float[] f : fish) {
-            f[0] += f[2] * dt * 0.15f;
-            if (f[0] < -0.12f) f[0] = 1.12f;
-            if (f[0] > 1.12f) f[0] = -0.12f;
-            float y = f[1] * h + (float) Math.sin(t * 0.9f + f[5]) * Ui.uf(10);
-            fish(c, f[0] * w, y, Ui.uf(17) * f[3], Math.signum(f[2]), t, f[5], FISH_COLS[(int) f[4]], 1f);
+        // fish: far ones first (smaller, mistier), turning round at the glass instead of vanishing
+        for (int pass = 0; pass < 2; pass++) {
+            for (float[] f : fish) {
+                if ((f[7] < 0.6f) != (pass == 0)) continue;
+                float speed = Math.abs(f[2]) * (0.75f + 0.25f * (float) Math.sin(t * 0.4f + f[5])) * (0.6f + 0.6f * f[7]);
+                float sign = Math.signum(f[2]);
+                f[0] += sign * speed * dt * 0.15f;
+                if ((f[0] > 1.05f && sign > 0) || (f[0] < -0.05f && sign < 0)) f[2] = -f[2]; // turn round
+                f[6] += (Math.signum(f[2]) - f[6]) * Math.min(1f, dt * 2.5f); // the body swings round
+                float y = f[1] * h + (float) Math.sin(t * 0.9f + f[5]) * Ui.uf(10) * f[7];
+                float sz = Ui.uf(17) * f[3] * (0.55f + 0.5f * f[7]);
+                int col = mix(FISH_COLS[(int) f[4]], 0xFF1B5E88, (1 - f[7]) * 0.55f); // far: lost in the blue
+                fish(c, f[0] * w, y, sz, f[6], t, f[5], col, 0.6f + 0.4f * f[7]);
+            }
         }
         return true;
     }

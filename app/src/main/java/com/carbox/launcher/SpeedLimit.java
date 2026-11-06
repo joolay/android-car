@@ -25,7 +25,56 @@ final class SpeedLimit {
         Gps.listen(SpeedLimit::check);
     }
 
+    // ---- the street you're on (also while parked): the nearest named road, looked up every 20 s / 40 m
+    private static Location streetAsked;
+    private static long streetAt;
+    private static boolean streetBusy;
+
+    private static void street() {
+        if (streetBusy || !Gps.fresh()) return;
+        long now = SystemClock.elapsedRealtime();
+        Location here = new Location("gps");
+        here.setLatitude(Gps.lat);
+        here.setLongitude(Gps.lon);
+        if (streetAsked != null && (now - streetAt < 20000 || streetAsked.distanceTo(here) < 40)) return;
+        streetBusy = true;
+        streetAsked = here;
+        streetAt = now;
+        final double la = Gps.lat, lo = Gps.lon;
+        String q = String.format(java.util.Locale.US,
+                "[out:json][timeout:8];way(around:30,%.6f,%.6f)[highway][name];out geom 10;", la, lo);
+        Net.get("https://overpass-api.de/api/interpreter?data=" + Uri.encode(q), null, (body, code) -> Ui.ui.post(() -> {
+            streetBusy = false;
+            if (body == null) return;
+            try {
+                JSONArray els = new JSONObject(body).optJSONArray("elements");
+                String best = null;
+                double bd = 1e9, k = Math.cos(Math.toRadians(la)) * 111320, m = 110540;
+                if (els != null) for (int i = 0; i < els.length(); i++) {
+                    JSONObject w = els.getJSONObject(i);
+                    JSONArray g = w.optJSONArray("geometry");
+                    String nm = w.getJSONObject("tags").optString("name", "");
+                    if (g == null || nm.isEmpty()) continue;
+                    for (int j = 0; j + 1 < g.length(); j++) { // distance from here to each segment
+                        double ax = (g.getJSONObject(j).getDouble("lon") - lo) * k, ay = (g.getJSONObject(j).getDouble("lat") - la) * m;
+                        double bx = (g.getJSONObject(j + 1).getDouble("lon") - lo) * k, by = (g.getJSONObject(j + 1).getDouble("lat") - la) * m;
+                        double dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+                        double t = l2 == 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / l2));
+                        double d = Math.hypot(ax + t * dx, ay + t * dy);
+                        if (d < bd) {
+                            bd = d;
+                            best = nm;
+                        }
+                    }
+                }
+                road = best; // none nearby: no street line
+            } catch (Exception ignored) {
+            }
+        }));
+    }
+
     private static void check() {
+        street();
         if (busy || !Gps.fresh() || Gps.speed < 2f) return; // only while moving
         long now = SystemClock.elapsedRealtime();
         Location here = new Location("gps");
@@ -47,8 +96,6 @@ final class SpeedLimit {
                     JSONObject tg = els.getJSONObject(i).optJSONObject("tags");
                     int v = parse(tg.optString("maxspeed"));
                     if (v > 0) {
-                        String nm = tg.optString("name", tg.optString("ref", ""));
-                        if (!nm.isEmpty()) road = nm;
                         best = v; // nearest road first
                         break;
                     }

@@ -157,6 +157,18 @@ final class Themes {
     }
 
     private static long blurAt;
+    private static Bitmap smallBm, midBm;
+    private static final Paint blurPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
+    private static final java.util.Set<View> glassHosts = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<View, Boolean>());
+    private static long glassAt;
+
+    /** The live wallpaper moved: every glass card redraws so what's seen through it moves too (about 12 times a second). */
+    static void glassTick() {
+        long n = android.os.SystemClock.uptimeMillis();
+        if (n - glassAt < 80 || !on()) return;
+        glassAt = n;
+        for (View v : new java.util.ArrayList<>(glassHosts)) if (v != null && v.isShown()) v.invalidate();
+    }
 
     /** The screen's wallpaper, blurred: drawn small and scaled back up (soft, and cheap). With an animated
      *  scene the flat root background tells us nothing, so we blur the live frame instead (throttled). */
@@ -168,14 +180,18 @@ final class Themes {
         boolean live = lw != null && lw.isAnimated();
         long nowMs = android.os.SystemClock.uptimeMillis();
         // cache by size; for a live scene, refresh a few times a second so it stays see-through, not frozen
-        if (blur != null && blurW == w && blurH == h && (!live || nowMs - blurAt < 140)) return blur;
+        if (blur != null && blurW == w && blurH == h && (!live || nowMs - blurAt < 70)) return blur;
         Drawable bg = root.getBackground();
         if (bg == null && !live) return null;
         try {
             int div = 8 + frost() / 5; // more frost: softer blur (8 … 28)
             int sw = Math.max(1, w / div), sh = Math.max(1, h / div);
-            Bitmap small = Bitmap.createBitmap(sw, sh, Bitmap.Config.ARGB_8888);
-            Canvas cv = new Canvas(small);
+            if (smallBm == null || smallBm.getWidth() != sw || smallBm.getHeight() != sh) { // kept and reused: no garbage every frame
+                smallBm = Bitmap.createBitmap(sw, sh, Bitmap.Config.ARGB_8888);
+                midBm = Bitmap.createBitmap(sw * 3, sh * 3, Bitmap.Config.ARGB_8888);
+            }
+            Canvas cv = new Canvas(smallBm);
+            smallBm.eraseColor(0);
             cv.scale(sw / (float) w, sh / (float) h);
             if (live) { // the moving scene itself, over its base colour
                 cv.drawColor(lw.baseColor());
@@ -186,8 +202,9 @@ final class Themes {
                 bg.draw(cv);
                 bg.setBounds(old);
             }
-            Bitmap mid = Bitmap.createScaledBitmap(small, sw * 3, sh * 3, true); // two soft steps: smoother blur
-            blur = Bitmap.createScaledBitmap(mid, w, h, true);
+            // one soft step up; the card scales it to the screen, smoothly
+            new Canvas(midBm).drawBitmap(smallBm, null, new Rect(0, 0, midBm.getWidth(), midBm.getHeight()), blurPaint);
+            blur = midBm;
             blurW = w;
             blurH = h;
             blurAt = nowMs;
@@ -275,7 +292,12 @@ final class Themes {
             drawnX = at[0];
             drawnY = at[1];
             follow(host);
-            c.drawBitmap(b, ro[0] - at[0], ro[1] - at[1], pic); // the blurred wallpaper right behind this card
+            glassHosts.add(host);
+            c.translate(ro[0] - at[0], ro[1] - at[1]);
+            c.scale(blurW / (float) b.getWidth(), blurH / (float) b.getHeight());
+            c.drawBitmap(b, 0, 0, pic); // the blurred wallpaper right behind this card
+            c.scale(b.getWidth() / (float) blurW, b.getHeight() / (float) blurH);
+            c.translate(at[0] - ro[0], at[1] - ro[1]);
             // dark frost so text stays readable over a bright wallpaper; a coloured card (an alert) keeps its colour as tinted glass
             int fr = frost(); // 0 clear … 100 heavily frosted (Settings → Wallpaper)
             int dark = Math.round(0x10 + fr * (0xD0 - 0x10) / 100f), tint = Math.round(0x60 + fr * (0xE6 - 0x60) / 100f);
