@@ -66,6 +66,13 @@ final class Panels {
         render();
     }
 
+    private static View growIcon, exitIcon; // a full-screen page grows out of (and shrinks back into) this icon
+
+    /** The next full-screen page opens out of this icon (the All apps icon, say) and closes back into it. */
+    static void growFrom(View icon) {
+        growIcon = icon;
+    }
+
     private static boolean grow; // the next tile-area panel grows out of the tile that opened it
     private static boolean slide; // the next one slides down out of the ticker instead
     private static View slideView; // the page that slides back up when closed
@@ -128,7 +135,21 @@ final class Panels {
                         if (sv.getParent() == tl) tl.removeView(sv);
                     }).start();
         } else if (tileLayer != null) tileLayer.removeAllViews();
-        if (fullLayer != null) fullLayer.removeAllViews();
+        if (fullLayer != null && exitIcon != null && fullLayer.getChildCount() > 1 && Ui.ms(1) > 0 && exitIcon.isShown()) { // shrinks back into its icon
+            final FrameLayout fl = fullLayer;
+            final View page = fl.getChildAt(fl.getChildCount() - 1), ic = exitIcon;
+            int[] pl = new int[2], il = new int[2];
+            page.getLocationOnScreen(pl);
+            ic.getLocationOnScreen(il);
+            page.setPivotX(il[0] + ic.getWidth() / 2f - pl[0]);
+            page.setPivotY(il[1] + ic.getHeight() / 2f - pl[1]);
+            fl.getChildAt(0).animate().alpha(0f).setDuration(Ui.ms(260)).start();
+            page.animate().scaleX(0.04f).scaleY(0.04f).alpha(0f).setDuration(Ui.ms(260)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f))
+                    .withEndAction(() -> {
+                        if (fl.getChildCount() > 0 && fl.getChildAt(fl.getChildCount() - 1) == page) fl.removeAllViews();
+                    }).start();
+        } else if (fullLayer != null) fullLayer.removeAllViews();
+        exitIcon = null;
         full = false;
         layer = tileLayer;
         for (Runnable r : new ArrayList<>(onClose)) r.run();
@@ -202,6 +223,22 @@ final class Panels {
         if (!full) page.setLayoutParams(new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH)); // fill the tile area exactly
         else if (page.getLayoutParams() == null) page.setLayoutParams(centered(640, 440));
         layer.addView(page);
+        if (full && growIcon != null && Ui.ms(1) > 0) {
+            final View ic = growIcon;
+            exitIcon = ic;
+            page.setAlpha(0f);
+            page.post(() -> {
+                int[] pl = new int[2], il = new int[2];
+                page.getLocationOnScreen(pl);
+                ic.getLocationOnScreen(il);
+                page.setPivotX(il[0] + ic.getWidth() / 2f - pl[0]);
+                page.setPivotY(il[1] + ic.getHeight() / 2f - pl[1]);
+                page.setScaleX(0.04f);
+                page.setScaleY(0.04f);
+                page.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(Ui.ms(340)).setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+            });
+        }
+        growIcon = null;
         slideView = null;
         if (slide && !full) { // down out of the ticker, kept inside the tile area
             slideView = page;

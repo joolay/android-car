@@ -121,9 +121,13 @@ final class Dock {
         all.setContentDescription("All apps");
         all.setOnClickListener(v -> { // tap: the tiles slide in (map home view), else the widget chooser
             if (MainActivity.I != null && MainActivity.mapHome()) MainActivity.I.toggleDrawer();
-            else AppPanels.gallery(-1);
+            else {
+                Panels.growFrom(all);
+                AppPanels.gallery(-1);
+            }
         });
         all.setOnLongClickListener(v -> { // hold: all apps
+            Panels.growFrom(all);
             AppPanels.allApps(false);
             return true;
         });

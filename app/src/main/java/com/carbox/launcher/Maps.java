@@ -572,7 +572,7 @@ final class Maps {
             Ui.ui.post(controlTick);
             int at = a.tileArea.indexOfChild(a.sheetHost); // under panels and alerts
             a.tileArea.addView(bigHolder, Math.max(0, at), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
-            a.tilesBehind(false); // the tiles would otherwise show through the round map's corners
+            a.hideTilesAfterClose(); // the tiles would otherwise show through the round map's corners (once they've shrunk away)
         } else if (!on && bigHolder != null) {
             Ui.ui.removeCallbacks(controlTick);
             js("setRound(false)"); // square first (before the map moves), so no circle shows while it fits the small panel

@@ -212,6 +212,21 @@ public class MainActivity extends Activity {
         if (tilesClip != null) tilesClip.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
+    private boolean tilesAnim, tilesHidePending;
+
+    /** The big map is back over the Centre Stage: hide the tile grid once its shrink-away has finished (not in the middle of it). */
+    void hideTilesAfterClose() {
+        if (tilesAnim) tilesHidePending = true;
+        else tilesBehind(false);
+    }
+
+    /** The tiles on top of the map while they grow or shrink, panels still above them. */
+    private void tilesFront() {
+        if (tilesClip == null) return;
+        tilesClip.bringToFront();
+        if (sheetHost != null) sheetHost.bringToFront();
+    }
+
     // ---- the Bottom Left Widget
     private FrameLayout bottomSlot;
     private Widgets.W bottomW;
@@ -1125,6 +1140,10 @@ public class MainActivity extends Activity {
             if (drawerLyrics) LyricsView.hide();
             if (Panels.open()) Panels.close();
             tiles.view.setVisibility(View.VISIBLE);
+            tilesHidePending = false;
+            tilesAnim = false;
+            tilesBehind(true); // the grid is shown straight away (it was hidden behind the big map), so its growth can be seen
+            tilesFront();
             if (fromPeek) tiles.view.animate().translationY(0).setDuration(Ui.ms(340)).setInterpolator(ease).start(); // from a peek it carries on from where it is
             else { // they grow out of the dock (just below the tile area)
                 tiles.view.setTranslationY(0);
@@ -1146,8 +1165,14 @@ public class MainActivity extends Activity {
                     .withEndAction(() -> { if (!drawerOpen && !peeking) tiles.view.setVisibility(View.INVISIBLE); }).start();
             else {
             pivotAtAllApps(); // and shrink back into it
+            tilesAnim = true;
             tiles.view.animate().scaleX(0.04f).scaleY(0.04f).alpha(0f).setDuration(Ui.ms(300)).setInterpolator(ease)
                     .withEndAction(() -> {
+                        tilesAnim = false;
+                        if (tilesHidePending) {
+                            tilesHidePending = false;
+                            if (!drawerOpen) tilesBehind(false);
+                        }
                         if (!drawerOpen && !peeking) tiles.view.setVisibility(View.INVISIBLE);
                         if (!peeking) { // ready for the next time (peeking slides them up from below)
                             tiles.view.setScaleX(1f);
@@ -1177,6 +1202,7 @@ public class MainActivity extends Activity {
                 return;
             }
             if (!map.expanded()) map.expand(true);
+            tilesFront(); // the shrinking tiles stay on top of the growing map
             View big = map.bigView();
             if (big == null) return;
             big.post(() -> morph(big, false, null)); // once it's laid out at full size: start small, grow back
