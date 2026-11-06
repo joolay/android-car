@@ -118,6 +118,21 @@ final class Logbook {
         return cur != null ? cur.optString("purpose", "Personal") : Prefs.str("log_default", "Personal");
     }
 
+    /** Business or Personal for this trip (and the next ones). */
+    static void setPurpose(String p) {
+        Prefs.put("log_default", p);
+        try {
+            if (cur != null) cur.put("purpose", p);
+        } catch (Exception ignored) {
+        }
+        save();
+    }
+
+    /** Every finished trip, oldest first. */
+    static JSONArray trips() {
+        return Prefs.arr(TRIPS);
+    }
+
     /** Business ⇄ Personal for this trip (and the next ones). */
     static void togglePurpose() {
         String p = "Business".equals(purpose()) ? "Personal" : "Business";

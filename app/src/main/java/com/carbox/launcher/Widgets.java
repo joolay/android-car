@@ -41,6 +41,7 @@ final class Widgets {
     static final String[][] CATALOG = {
             {"carconnect", "Car Connect", "CarPlay, Android Auto, mirror or native car"},
             {"speed", "Speed", "Current speed and today's top speed"},
+            {"drive", "Drive", "Trip distance, driving time and Personal / Business logbook buttons in one; tap for the full details"},
             {"trip", "Trip", "Distance, time driving and average speed"},
             {"park", "Park here", "Save where you parked (and send it to Home Assistant)"},
             {"safety", "Safety check", "Pre-drive road safety checklist: tick off seatbelts, mirrors, lights, tyres and more"},
@@ -59,7 +60,7 @@ final class Widgets {
             {"ha", "Home Assistant", "Your own smart home toggles"}};
 
     /** Categories for the tile and Left Widget choosers (Music is a Left Widget only). */
-    static final String[][] CATS = {{"Driving", "speed,trip,rest,park,safety,logbook,heading,goto"}, {"Phone", "phone,quickdial,contact,whatsapp"},
+    static final String[][] CATS = {{"Driving", "drive,speed,trip,rest,park,safety,logbook,heading,goto"}, {"Phone", "phone,quickdial,contact,whatsapp"},
             {"Car & home", "carconnect,ha"}, {"Weather", "weather"}, {"Faith", "nextprayer,prayertimes,qibla"}};
 
     static String name(String id) {
@@ -162,6 +163,8 @@ final class Widgets {
                 return new CarConnect(c, index, spec);
             case "speed":
                 return new Speed(c, index, spec);
+            case "drive":
+                return new DriveHub.Tile(c, index, spec);
             case "trip":
                 return new Trip(c, index, spec);
             case "safety":
