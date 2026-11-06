@@ -27,8 +27,10 @@ html.round #m{border-radius:50%;overflow:hidden;transition:none}
   background:radial-gradient(circle,transparent 32.5%,rgba(255,255,255,.14) 33%,transparent 33.6%,transparent 65.5%,rgba(255,255,255,.14) 66%,transparent 66.6%)}
 /* N E S W round the edge of the big round map; they travel round as the map turns */
 #cards{position:absolute;display:none;pointer-events:none;z-index:501}
-#cards b{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;text-align:center;font:700 16px/26px sans-serif;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.8)}
+#cards b{pointer-events:auto;touch-action:none;position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;text-align:center;font:700 16px/26px sans-serif;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.8)}
 #cards b.n{color:#ff5a5f}
+#cards b::after{content:"";position:absolute;left:-10px;top:-10px;right:-10px;bottom:-10px}
+#cards b.drag{transform:scale(1.35);text-shadow:0 0 6px #fff}
 #cards i.ql{position:absolute;width:0;height:12px;border-left:1.5px solid rgba(232,184,74,.9);transform-origin:0 0;display:none}
 </style></head><body><div id="m"></div><div id="rings"></div><div id="edge"></div><div id="cards"><b class="n">N</b><b>E</b><b>S</b><b>W</b><b class="q" style="display:none"><svg viewBox="0 0 24 24" width="16" height="16" style="display:block;margin:5px auto 0"><path d="M3 7l9-4 9 4v12l-9 3-9-3z" fill="#111" stroke="#E8B84A" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 9.2l9 3.3 9-3.3v1.8l-9 3.3-9-3.3z" fill="#E8B84A"/></svg></b><i class="ql"></i></div>
 <script src="gtraffic.js"></script>
@@ -108,6 +110,7 @@ function cardinals(){
 var qiblaDeg=-1;
 function setQibla(q){ q=+q; q=isNaN(q)?-1:q; if(Math.abs(q-qiblaDeg)<0.5) return; qiblaDeg=q; cardinals(); }
 function turn(b,reset){
+  if(manual) return; // hold and dragged by hand: left alone for 15 s
   if(isGl()){ glBearing=reset?0:b; if(gl) gl.easeTo({bearing:glBearing,duration:800}); return; }
   var t=reset?0:-b, d=((t-rot)%360+540)%360-180;
   rot=reset?0:rot+d;
@@ -116,6 +119,7 @@ function turn(b,reset){
 }
 function centre(){
   if(!pending) return;
+  if(manual&&gl){ gl.easeTo({center:[pending[1],pending[0]],duration:700}); return; }
   if(gmap) gmap.panTo({lat:pending[0],lng:pending[1]});
   else if(gl) gl.easeTo({center:[pending[1],pending[0]],bearing:headUp&&follow?glBearing:(headUp?gl.getBearing():0),duration:700});
   else if(map) map.panTo([pending[0],pending[1]],{animate:true});
@@ -291,7 +295,8 @@ function setPos(lat,lon,bearing){
       // linear easing over a little longer than a GPS fix, so back-to-back fixes blend into one
       // steady glide instead of a start-stop every second
       var opts={center:[lon,lat],duration:1100,easing:function(t){return t;}};
-      if(headUp&&bearing>=0){
+      if(manual){ /* turned by hand: keep that bearing */ }
+      else if(headUp&&bearing>=0){
         var db=((bearing-glBearing)%360+540)%360-180;
         if(Math.abs(db)>4) glBearing=bearing; // only turn the map on a real heading change (no jitter when going straight)
         opts.bearing=glBearing;
@@ -307,4 +312,42 @@ function setPos(lat,lon,bearing){
          else {a.style.display='none';a.parentNode.style.transform='';} }
   if(follow) map.panTo([lat,lon],{animate:true});
 }
+// ---- hold a N / E / S / W and drag it round: the map turns by hand for 15 s, then goes back to how it was
+var manual=false, manualT=null;
+function applyBearing(b){
+  if(isGl()&&gl) gl.setBearing(b);
+  else { rot=-b; document.getElementById('m').style.transform='rotate('+rot+'deg)'; cardinals(); }
+}
+function endManual(){
+  manual=false;
+  var back=headUp&&pending&&pending[2]>=0;
+  if(isGl()&&gl) gl.easeTo({bearing:back?glBearing:0,duration:700});
+  else turn(back?pending[2]:0,!back);
+}
+(function(){
+  var cd=document.getElementById('cards'), drag=null, hold=null;
+  function ang(t){ var r=cd.getBoundingClientRect(), dx=t.clientX-(r.left+r.width/2), dy=t.clientY-(r.top+r.height/2); return Math.atan2(dx,-dy)*180/Math.PI; }
+  cd.addEventListener('touchstart',function(e){
+    var el=e.target; while(el&&el.parentNode!==cd) el=el.parentNode;
+    if(!el||!round) return;
+    var i=Array.prototype.indexOf.call(cd.children,el);
+    if(i<0||i>3) return; // N E S W only
+    e.preventDefault();
+    var t=e.touches[0]; clearTimeout(hold);
+    hold=setTimeout(function(){ drag={el:el,base:i*90}; el.classList.add('drag'); manual=true; clearTimeout(manualT); },350);
+  },{passive:false});
+  cd.addEventListener('touchmove',function(e){
+    if(!drag) return;
+    e.preventDefault();
+    var b=drag.base-ang(e.touches[0]); // the letter follows the finger round the rim
+    applyBearing(((b%360)+360)%360);
+  },{passive:false});
+  function done(){
+    clearTimeout(hold);
+    if(!drag) return;
+    drag.el.classList.remove('drag'); drag=null;
+    clearTimeout(manualT); manualT=setTimeout(endManual,15000);
+  }
+  cd.addEventListener('touchend',done); cd.addEventListener('touchcancel',done);
+})();
 </script></body></html>
