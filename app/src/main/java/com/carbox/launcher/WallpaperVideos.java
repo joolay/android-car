@@ -87,13 +87,15 @@ final class WallpaperVideos {
                     k.index = p.optInt("index", 999);
                     JSONObject md = info.optJSONObject("extmetadata");
                     k.licence = md != null && md.optJSONObject("LicenseShortName") != null ? md.getJSONObject("LicenseShortName").optString("value") : "";
+                    if (Math.min(k.w, k.h) > 576) continue; // 480p only: light on the box, sharp enough for 800×480
                     results.add(k);
                 }
                 Collections.sort(results, (a, b) -> {
-                    int ra = a.w >= 1280 ? 0 : 1, rb = b.w >= 1280 ? 0 : 1; // HD clips first, then by how well they match
+                    int ra = Math.abs(Math.min(a.w, a.h) - 480), rb = Math.abs(Math.min(b.w, b.h) - 480); // closest to 480p first
+                    ra /= 100; rb /= 100; // then by how well they match
                     return ra != rb ? ra - rb : a.index - b.index;
                 });
-                status = results.isEmpty() ? "No WebM videos for “" + query + "”: try another word" : results.size() + " clips · tap one to download it";
+                status = results.isEmpty() ? "No 480p WebM videos for “" + query + "”: try another word" : results.size() + " clips (480p) · tap one to download it";
             } catch (Exception e) {
                 status = "Couldn't read the results";
             }
@@ -124,10 +126,9 @@ final class WallpaperVideos {
             if (!searching) search();
         }));
         card.addView(sb, top(10));
-        if (!results.isEmpty() && loadingUrl == null) card.addView(Ui.seg(c, "Try a sample: best aquarium match", false, () -> {
-            Clip best = null; // best-matching clip that's HD but not huge
-            for (Clip k : results) if (k.w >= 1280 && k.bytes < 40e6 && (best == null || k.index < best.index)) best = k;
-            if (best == null) for (Clip k : results) if (k.bytes < 40e6) { best = k; break; }
+        if (!results.isEmpty() && loadingUrl == null) card.addView(Ui.seg(c, "Try a sample: best match", false, () -> {
+            Clip best = null; // best-matching clip that isn't huge
+            for (Clip k : results) if (k.bytes < 40e6) { best = k; break; }
             if (best != null) choose(Panels.ctx(), best);
         }), top(6));
         card.addView(Ui.line(c, status, 12, Ui.SUB, false), top(6));
@@ -145,7 +146,7 @@ final class WallpaperVideos {
             LinearLayout t = Ui.col(c);
             String name = k.title.replaceFirst("^File:", "").replaceAll("\\.webm$", "").replace('_', ' ');
             t.addView(Ui.line(c, name, 14, Ui.TEXT, true));
-            t.addView(Ui.line(c, k.w + "×" + k.h + " · " + String.format(Locale.US, "%.0f MB", k.bytes / 1e6) + (k.licence.isEmpty() ? "" : " · " + k.licence), 11, Ui.SUB, false), top(2));
+            t.addView(Ui.line(c, k.w + "×" + k.h + " (" + Math.min(k.w, k.h) + "p) · " + String.format(Locale.US, "%.0f MB", k.bytes / 1e6) + (k.licence.isEmpty() ? "" : " · " + k.licence), 11, Ui.SUB, false), top(2));
             row.addView(t, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
             String act = k.url.equals(loadingUrl) ? loadingPct + "%" : have ? "Use" : "Download";
             TextView btn = Ui.seg(c, act, have || k.url.equals(loadingUrl), () -> choose(c, fk));
