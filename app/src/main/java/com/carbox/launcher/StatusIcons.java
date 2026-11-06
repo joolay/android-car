@@ -61,15 +61,43 @@ final class StatusIcons {
             }
         }
 
+        // live speed (0..1, how fast data is moving on this connection): the lit bars or arcs turn green by this much
+        protected float speedT;
+        private int speedKind = -1;
+        private final Runnable speedTick = new Runnable() {
+            @Override
+            public void run() {
+                if (speedKind < 0 || !isAttachedToWindow()) return;
+                DataMeter.sample();
+                float t = DataMeter.level(DataMeter.speed[speedKind][0] + DataMeter.speed[speedKind][1]);
+                float was = speedT;
+                speedT = t > speedT ? speedT + (t - speedT) * 0.7f : speedT + (t - speedT) * 0.35f; // quick up, easy down
+                if (speedT < 0.02f) speedT = 0f;
+                if (Math.abs(was - speedT) > 0.005f) invalidate();
+                postDelayed(this, 1000);
+            }
+        };
+
+        /** Colour this icon's signal by the speed of the given DataMeter connection (LTE, WIFI, HOTSPOT). */
+        protected void trackSpeed(int kind) {
+            speedKind = kind;
+            if (isAttachedToWindow()) {
+                removeCallbacks(speedTick);
+                post(speedTick);
+            }
+        }
+
         @Override
         protected void onAttachedToWindow() {
             super.onAttachedToWindow();
             sync();
+            if (speedKind >= 0) post(speedTick);
         }
 
         @Override
         protected void onDetachedFromWindow() {
             loop.cancel();
+            removeCallbacks(speedTick);
             super.onDetachedFromWindow();
         }
 
@@ -102,7 +130,8 @@ final class StatusIcons {
      */
     static final class CellIcon extends AnimatedIcon {
         private final Paint on = fill(C_ON), dim = fill(C_DIM), slash = stroke(C_OFF), scan = fill(0x6EFFFFFF);
-        private final RectF r = new RectF(), part = new RectF();
+        private final RectF r = new RectF(), part = new RectF(), green = new RectF();
+        private final Paint speedPaint = fill(C_GREEN);
         private final Paint type = new Paint(Paint.ANTI_ALIAS_FLAG);
         private int level;
         private boolean noSim = true;
@@ -113,6 +142,7 @@ final class StatusIcons {
 
         CellIcon(Context c) {
             super(c, 1400);
+            trackSpeed(DataMeter.LTE);
             type.setTypeface(Typeface.DEFAULT_BOLD);
             type.setTextAlign(Paint.Align.LEFT);
         }
@@ -178,6 +208,12 @@ final class StatusIcons {
                 } else if (fillAmount > 0f) {
                     part.set(r.left, r.bottom - r.height() * fillAmount, r.right, r.bottom);
                     c.drawRoundRect(part, 1.2f * u, 1.2f * u, on);
+                    // speed: the white bars turn green from the first bar up, as far as data is moving
+                    float g = Math.max(0f, Math.min(1f, speedT * Math.min(4, level) - i));
+                    if (g > 0f) {
+                        green.set(part.left, part.bottom - part.height() * g, part.right, part.bottom);
+                        c.drawRoundRect(green, 1.2f * u, 1.2f * u, speedPaint);
+                    }
                 }
             }
             if (noSim) {
@@ -194,12 +230,14 @@ final class StatusIcons {
         static final int OFF = 0, SCANNING = 1, CONNECTED = 2;
         private final Paint on = stroke(C_ON), dim = stroke(C_DIM), dotOn = fill(C_ON), dotDim = fill(C_DIM);
         private final Paint slash = stroke(C_OFF);
+        private final Paint speedStroke = stroke(C_GREEN), speedDot = fill(C_GREEN);
         private final RectF r = new RectF();
         private int state = OFF;
         private int arcs;               // 0..3 lit arcs when connected
 
         WifiIcon(Context c) {
             super(c, 1500);
+            trackSpeed(DataMeter.WIFI);
         }
 
         void setState(int state, int level0to4) {
@@ -227,9 +265,24 @@ final class StatusIcons {
                 else if (state == SCANNING) lit = i < scanStep;
                 else lit = false;
                 c.drawArc(r, 225, 90, false, lit ? on : dim);
+                if (lit && state == CONNECTED) { // speed: the dot, then each arc outward, turns green
+                    float g = Math.max(0f, Math.min(1f, speedT * (arcs + 1) - (i + 1)));
+                    if (g > 0f) {
+                        speedStroke.setStrokeWidth(sw);
+                        speedStroke.setAlpha(Math.round(255 * g));
+                        c.drawArc(r, 225, 90, false, speedStroke);
+                    }
+                }
             }
             boolean dotLit = state == CONNECTED || (state == SCANNING && scanStep > 0);
             c.drawCircle(cx, cy, 1.9f * u, dotLit ? dotOn : dotDim);
+            if (state == CONNECTED) {
+                float g = Math.max(0f, Math.min(1f, speedT * (arcs + 1)));
+                if (g > 0f) {
+                    speedDot.setAlpha(Math.round(255 * g));
+                    c.drawCircle(cx, cy, 1.9f * u, speedDot);
+                }
+            }
             if (state == OFF) {
                 slash.setStrokeWidth(2.2f * u);
                 c.drawLine(cx - 10 * u, 4 * u, cx + 10 * u, 21 * u, slash);

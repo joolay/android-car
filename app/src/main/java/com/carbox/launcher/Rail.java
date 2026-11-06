@@ -222,7 +222,7 @@ final class Rail {
                     Status.open(c, Settings.ACTION_DATA_ROAMING_SETTINGS);
                     return true;
                 });
-                return withSpeed(wrap(v, 22, true), DataMeter.LTE);
+                return wrap(v, 22, true); // speed shows as the bars turning green
             }
             case "wifi": {
                 wifi = new StatusIcons.WifiIcon(c);
@@ -233,7 +233,7 @@ final class Rail {
                     Status.open(c, Settings.ACTION_WIFI_SETTINGS);
                     return true;
                 });
-                return withSpeed(wrap(v, 22, false), DataMeter.WIFI);
+                return wrap(v, 22, false); // speed shows as the arcs turning green
             }
             case "bluetooth": { // off: dim, on: white, connected to the phone or a speaker: blue
                 btIcon = Ui.icon(c, R.drawable.ic_bt, Ui.MUTED);
