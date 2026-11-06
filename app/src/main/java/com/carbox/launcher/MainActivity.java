@@ -1109,8 +1109,16 @@ public class MainActivity extends Activity {
             if (drawerLyrics) LyricsView.hide();
             if (Panels.open()) Panels.close();
             tiles.view.setVisibility(View.VISIBLE);
-            if (!fromPeek) tiles.view.setTranslationY(h); // from a peek it carries on from where it is
-            tiles.view.animate().translationY(0).setDuration(Ui.ms(340)).setInterpolator(ease).start();
+            if (fromPeek) tiles.view.animate().translationY(0).setDuration(Ui.ms(340)).setInterpolator(ease).start(); // from a peek it carries on from where it is
+            else { // they grow out of the dock (just below the tile area)
+                tiles.view.setPivotX(tiles.view.getWidth() / 2f);
+                tiles.view.setPivotY(tiles.view.getHeight());
+                tiles.view.setScaleX(0.15f);
+                tiles.view.setScaleY(0.05f);
+                tiles.view.setAlpha(0f);
+                tiles.view.setTranslationY(Ui.u(30));
+                tiles.view.animate().scaleX(1f).scaleY(1f).alpha(1f).translationY(0).setDuration(Ui.ms(340)).setInterpolator(ease).start();
+            }
             View big = map != null ? map.bigView() : null;
             if (big == null) return;
             morph(big, true, () -> {
@@ -1119,8 +1127,22 @@ public class MainActivity extends Activity {
         } else {
             if (tiles.editing()) tiles.setEditing(false);
             // once down, hide them so no bits of tiles show between the ticker and the dock
-            tiles.view.animate().translationY(h).setDuration(Ui.ms(300)).setInterpolator(ease)
+            if (fromPeek) tiles.view.animate().translationY(h).setDuration(Ui.ms(300)).setInterpolator(ease) // a peek just slides back down
                     .withEndAction(() -> { if (!drawerOpen && !peeking) tiles.view.setVisibility(View.INVISIBLE); }).start();
+            else {
+            tiles.view.setPivotX(tiles.view.getWidth() / 2f);
+            tiles.view.setPivotY(tiles.view.getHeight());
+            tiles.view.animate().scaleX(0.15f).scaleY(0.05f).alpha(0f).translationY(Ui.u(30)).setDuration(Ui.ms(300)).setInterpolator(ease)
+                    .withEndAction(() -> {
+                        if (!drawerOpen && !peeking) tiles.view.setVisibility(View.INVISIBLE);
+                        if (!peeking) { // ready for the next time (peeking slides them up from below)
+                            tiles.view.setScaleX(1f);
+                            tiles.view.setScaleY(1f);
+                            tiles.view.setAlpha(1f);
+                            tiles.view.setTranslationY(tileArea.getHeight() + Ui.u(12));
+                        }
+                    }).start();
+            }
             if (map == null) return;
             if (drawerLyrics || drawerTicker || drawerPages != null) { // bring back what the tiles covered, not the map
                 final boolean lyr = drawerLyrics, tick = drawerTicker, st = drawerSticky;
