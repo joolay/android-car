@@ -344,6 +344,7 @@ final class LiveWallpaper extends View {
         c.scale(dir, 1);
         c.rotate((float) Math.cos(t * 1.3f + ph) * 4f);
         float wag = (float) Math.sin(t * 6f + ph);
+        c.skew(0f, wag * 0.05f); // the whole body flexes with the tail, like a real swimmer
         // tail (forked), wagging at its root
         c.save();
         c.translate(-sz * 0.8f, 0);
@@ -421,8 +422,8 @@ final class LiveWallpaper extends View {
     }
 
     private boolean fishtank(Canvas c, int w, int h, float t, float dt) {
-        t *= 0.55f; // calmer: everything in the tank moves at about half speed
-        dt *= 0.55f;
+        t *= 0.35f; // calm: everything in the tank moves at about a third of the original speed
+        dt *= 0.35f;
         p.setShader(new LinearGradient(0, 0, 0, h, new int[]{0xFF2A8FC4, 0xFF0F4A70, 0xFF062538}, new float[]{0, 0.5f, 1}, Shader.TileMode.CLAMP));
         c.drawRect(0, 0, w, h, p);
         p.setShader(null);
@@ -464,6 +465,12 @@ final class LiveWallpaper extends View {
             float px = frac(s[0] + (float) Math.sin(t * 0.1f + s[2]) * 0.02f + t * 0.002f), py = s[1] * 2.1f + 0.02f;
             p.setColor(((int) (0x22 + 0x22 * Math.sin(t * 1.5f + s[2] * 3)) << 24) | 0xDFF3FF);
             c.drawCircle(px * w, py * h, Ui.uf(1.2f), p);
+        }
+        // marine snow: bigger soft flecks sinking slowly, nearer ones faster
+        for (int i = 0; i < 30; i++) {
+            float spd = 0.5f + frac(i * 0.7f), px = frac(i * 0.137f + (float) Math.sin(t * 0.3f + i) * 0.02f), py = frac(i * 0.311f + t * 0.012f * spd);
+            p.setColor(((int) (0x1A + 0x14 * frac(i * 0.53f)) << 24) | 0xE6F4FF);
+            c.drawCircle(px * w, py * h, Ui.uf(1f + 2.2f * frac(i * 0.43f) * spd), p);
         }
         // sandy floor with ripples
         p.setShader(new LinearGradient(0, h - Ui.uf(34), 0, h, 0xFFD6C08C, 0xFFA38B57, Shader.TileMode.CLAMP));
