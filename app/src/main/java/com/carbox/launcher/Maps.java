@@ -402,7 +402,9 @@ final class Maps {
         }
         if (!pageReady || !running || !Gps.has()) return;
         float b = Float.isNaN(Gps.bearing) ? -1 : Gps.bearing;
-        web.evaluateJavascript(String.format(Locale.US, "setPos(%.6f,%.6f,%.0f)", Gps.lat, Gps.lon, b), null);
+        // the Kaaba marker on the big map's edge: part of the Islam add-on, switched off in Settings → Faith
+        double q = Faith.islam() && Prefs.flag("map_qibla", true) ? Prayer.qibla() : -1;
+        web.evaluateJavascript(String.format(Locale.US, "setQibla(%.1f);setPos(%.6f,%.6f,%.0f)", q, Gps.lat, Gps.lon, b), null);
     }
 
     private FrameLayout bigHolder;

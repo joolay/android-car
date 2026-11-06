@@ -199,6 +199,7 @@ final class SettingsPanels {
                         {R.drawable.ic_moon, TEAL, "Faith add-ons", Faith.label(), (Runnable) Faith::picker},
                         {R.drawable.ic_apps, TEAL, "Religious widgets", faithWidgetLabel(), (Runnable) SettingsPanels::faithWidgets},
                         Faith.islam() ? new Object[]{R.drawable.ic_kaaba, TEAL, "Prayer times", Prayer.METHODS[Prefs.num(Prefs.PRAY_METHOD, 0)], (Runnable) SettingsPanels::prayerTimes} : null,
+                        Faith.islam() ? new Object[]{R.drawable.ic_kaaba, TEAL, "Qibla on the map", "Kaaba marker round the big map's edge", (Runnable) null, "map_qibla", true} : null,
                         {R.drawable.ic_sun, TEAL, "Splash screen", "Travel prayer or your own words", (Runnable) SettingsPanels::splash, Prefs.SPLASH_ON, false}},
                 {{"System"},
                         {R.drawable.ic_check, GREY, "Set-up checklist", null, (Runnable) SettingsPanels::setupChecklist},

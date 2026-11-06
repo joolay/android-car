@@ -29,7 +29,7 @@ html.round #m{border-radius:50%;overflow:hidden;transition:none}
 #cards{position:absolute;display:none;pointer-events:none;z-index:501}
 #cards b{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;text-align:center;font:700 13px/26px sans-serif;color:#fff;background:rgba(10,18,32,.55);border-radius:50%}
 #cards b.n{background:#e5484d}
-</style></head><body><div id="m"></div><div id="rings"></div><div id="edge"></div><div id="cards"><b class="n">N</b><b>E</b><b>S</b><b>W</b></div>
+</style></head><body><div id="m"></div><div id="rings"></div><div id="edge"></div><div id="cards"><b class="n">N</b><b>E</b><b>S</b><b>W</b><b class="q" style="display:none"><svg viewBox="0 0 24 24" width="16" height="16" style="display:block;margin:5px auto 0"><path d="M3 7l9-4 9 4v12l-9 3-9-3z" fill="#111" stroke="#E8B84A" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 9.2l9 3.3 9-3.3v1.8l-9 3.3-9-3.3z" fill="#E8B84A"/></svg></b></div>
 <script src="gtraffic.js"></script>
 <script>
 // Map engines: 'osm' (Leaflet + OpenStreetMap tiles), 'ofm' (MapLibre + OpenFreeMap), 'pmtiles'
@@ -81,18 +81,23 @@ function cardinals(){
   // the letters sit right on the edge; the map and its rim are cut away in a ring round each one (punched out)
   var D=cd.offsetWidth, r=D/2, b=(isGl()&&gl)?gl.getBearing():-rot, ls=cd.children;
   var mb=(isGl()&&gl)?b:0; // a turned Leaflet map carries its mask round with it, so there the holes stay put
-  var holesG=[], holesM=[], HOLE=18;
-  for(var i=0;i<4;i++){
-    var a=(i*90-b)*Math.PI/180, am=(i*90-mb)*Math.PI/180;
+  var holesG=[], holesM=[], HOLE=18, n=qiblaDeg>=0?5:4;
+  ls[4].style.display=qiblaDeg>=0?'block':'none'; // the Kaaba marker (Faith add-on), set from the app
+  for(var i=0;i<n;i++){
+    var base=i<4?i*90:qiblaDeg;
+    var a=(base-b)*Math.PI/180, am=(base-mb)*Math.PI/180;
     var x=D/2+r*Math.sin(a), y=D/2-r*Math.cos(a);
     ls[i].style.left=x+'px'; ls[i].style.top=y+'px';
     holesG.push('radial-gradient(circle at '+x+'px '+y+'px,transparent '+HOLE+'px,#000 '+(HOLE+.5)+'px)');
     holesM.push('radial-gradient(circle at '+(D/2+r*Math.sin(am))+'px '+(D/2-r*Math.cos(am))+'px,transparent '+HOLE+'px,#000 '+(HOLE+.5)+'px)');
   }
   var m=document.getElementById('m'), eg=document.getElementById('edge');
-  m.style.webkitMaskImage=holesM.join(','); m.style.webkitMaskComposite=Array(4).fill('source-in').join(',');
-  eg.style.webkitMaskImage=holesG.join(','); eg.style.webkitMaskComposite=Array(4).fill('source-in').join(',');
+  m.style.webkitMaskImage=holesM.join(','); m.style.webkitMaskComposite=Array(n).fill('source-in').join(',');
+  eg.style.webkitMaskImage=holesG.join(','); eg.style.webkitMaskComposite=Array(n).fill('source-in').join(',');
 }
+// the direction of the Kaaba from here (degrees from north), or -1 for none (add-on off, or switched off in Faith settings)
+var qiblaDeg=-1;
+function setQibla(q){ q=+q; q=isNaN(q)?-1:q; if(Math.abs(q-qiblaDeg)<0.5) return; qiblaDeg=q; cardinals(); }
 function turn(b,reset){
   if(isGl()){ glBearing=reset?0:b; if(gl) gl.easeTo({bearing:glBearing,duration:800}); return; }
   var t=reset?0:-b, d=((t-rot)%360+540)%360-180;
