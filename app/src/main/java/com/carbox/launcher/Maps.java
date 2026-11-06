@@ -52,7 +52,9 @@ final class Maps {
                 // the offline map file: answered straight from the file the user picked (byte ranges)
                 @Override
                 public android.webkit.WebResourceResponse shouldInterceptRequest(WebView v, android.webkit.WebResourceRequest r) {
-                    if (!"pmtiles.local".equals(r.getUrl().getHost())) return null;
+                    String host = r.getUrl().getHost();
+                    if (TileCache.wants(host)) return TileCache.serve(c, r); // live map tiles are kept on the box
+                    if (!"pmtiles.local".equals(host)) return null;
                     return OfflineMap.serve(c, r);
                 }
 
