@@ -28,7 +28,7 @@ final class Maps {
     private final ImageView turnIcon;
     private final TextView dist, road, eta, navApp;
     private final TextView noLoc;
-    private TextView go;
+    private TextView go, miniStreet;
     private boolean pageReady, running;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -156,6 +156,12 @@ final class Maps {
         FrameLayout.LayoutParams gl = new FrameLayout.LayoutParams(Ui.u(40), Ui.u(40), Gravity.TOP | Gravity.START);
         mapLayer.addView(go, gl);
         pill(false); // with the Google Maps icon
+        // the small map's bottom strip: the street you're on (it covers the shaded map-credit line; the credit shows when no street is known)
+        miniStreet = Ui.line(c, "", 13, Ui.TEXT, true);
+        miniStreet.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
+        miniStreet.setBackgroundColor(0xE60B0E13);
+        Ui.pad(miniStreet, 12, 0, 12, 0);
+        mapLayer.addView(miniStreet, new FrameLayout.LayoutParams(Ui.MATCH, Ui.u(26), Gravity.BOTTOM));
 
         // turn-by-turn card
         navCard = Ui.col(c);
@@ -391,7 +397,19 @@ final class Maps {
         if (web != null) web.onPause();
     }
 
+    private void updateMiniStreet() {
+        if (miniStreet == null) return;
+        String road = SpeedLimit.road, area = Gps.town;
+        boolean has = road != null && !road.isEmpty();
+        miniStreet.setVisibility(bigHolder == null ? View.VISIBLE : View.GONE);
+        miniStreet.setText(has ? road : area != null && !area.isEmpty() ? area : "© OpenStreetMap contributors");
+        miniStreet.setTextColor(has || (area != null && !area.isEmpty()) ? Ui.TEXT : Ui.SUB);
+        miniStreet.setSingleLine(true);
+        miniStreet.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    }
+
     private void push() {
+        updateMiniStreet();
         noLoc.setVisibility(Gps.has() ? View.GONE : View.VISIBLE);
         if (web == null) {
             if (Gps.has()) {
@@ -794,6 +812,7 @@ final class Maps {
     }
 
     private void updateControls() {
+        updateMiniStreet();
         if (street == null || bigHolder == null) return;
         String area = Gps.town, road = SpeedLimit.road;
         boolean hasArea = area != null && !area.isEmpty(), hasRoad = road != null && !road.isEmpty();
