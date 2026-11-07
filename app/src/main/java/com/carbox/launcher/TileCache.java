@@ -37,7 +37,10 @@ final class TileCache {
             if (!"GET".equals(r.getMethod())) return null;
             String url = r.getUrl().toString();
             File f = file(c, url);
-            if (f.exists()) { // road maps change slowly: a kept tile is shown as is (and counts as recently used)
+            // the map's style and tile list point at the current map data, so they're refreshed daily (kept copy used offline)
+            boolean live = url.contains("/styles/") || url.matches(".*tiles\\.openfreemap\\.org/planet/?(\\?.*)?$");
+            boolean stale = live && f.exists() && System.currentTimeMillis() - f.lastModified() > 86400000L;
+            if (f.exists() && !stale) { // road maps change slowly: a kept tile is shown as is (and counts as recently used)
                 f.setLastModified(System.currentTimeMillis());
                 return reply(url, new FileInputStream(f));
             }
@@ -46,6 +49,7 @@ final class TileCache {
                 save(f, data);
                 return reply(url, new ByteArrayInputStream(data));
             }
+            if (stale) return reply(url, new FileInputStream(f));
         } catch (Throwable ignored) {
         }
         return null; // let the WebView try by itself

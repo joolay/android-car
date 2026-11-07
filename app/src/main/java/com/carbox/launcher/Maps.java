@@ -86,6 +86,7 @@ final class Maps {
 
                 @android.webkit.JavascriptInterface
                 public void mapNote(String msg) {
+                    Trace.event("Map: " + msg); // so the logs show why a map fell back or lost labels
                     Ui.ui.post(() -> android.widget.Toast.makeText(c, msg, android.widget.Toast.LENGTH_LONG).show());
                 }
             }, "Android");
