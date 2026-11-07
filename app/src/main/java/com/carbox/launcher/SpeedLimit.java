@@ -36,16 +36,31 @@ final class SpeedLimit {
         Location here = new Location("gps");
         here.setLatitude(Gps.lat);
         here.setLongitude(Gps.lon);
-        if (streetAsked != null && (now - streetAt < 20000 || streetAsked.distanceTo(here) < 40)) return;
+        if (streetAsked != null && (now - streetAt < 10000 || streetAsked.distanceTo(here) < 25)) return;
         streetBusy = true;
         streetAsked = here;
         streetAt = now;
-        final double la = Gps.lat, lo = Gps.lon;
+        askStreet(OVERPASS[0], Gps.lat, Gps.lon);
+    }
+
+    private static final String[] OVERPASS = {"https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"};
+    private static boolean streetLogged;
+
+    /** Asks one Overpass server for the nearest named road; if it fails, the second server gets one go. */
+    private static void askStreet(String base, final double la, final double lo) {
         String q = String.format(java.util.Locale.US,
-                "[out:json][timeout:8];way(around:30,%.6f,%.6f)[highway][name];out geom 10;", la, lo);
-        Net.get("https://overpass-api.de/api/interpreter?data=" + Uri.encode(q), null, (body, code) -> Ui.ui.post(() -> {
+                "[out:json][timeout:8];way(around:40,%.6f,%.6f)[highway][name];out geom 10;", la, lo);
+        Net.get(base + "?data=" + Uri.encode(q), null, (body, code) -> Ui.ui.post(() -> {
+            if (body == null || code != 200) {
+                if (base.equals(OVERPASS[0])) { askStreet(OVERPASS[1], la, lo); return; }
+                streetBusy = false;
+                if (!streetLogged) { // once per start, so the logs say why the street line stayed empty
+                    streetLogged = true;
+                    Trace.event("Street name lookup failed (HTTP " + code + ")");
+                }
+                return;
+            }
             streetBusy = false;
-            if (body == null) return;
             try {
                 JSONArray els = new JSONObject(body).optJSONArray("elements");
                 String best = null;
