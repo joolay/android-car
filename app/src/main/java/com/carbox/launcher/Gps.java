@@ -170,6 +170,8 @@ final class Gps {
                 float d = last.distanceTo(l);
                 long dt = now - lastAt;
                 // ignore jumps (bad fixes) and standing still
+                // the box's GPS gave no heading: work it out from how far the car moved since the last fix
+                if (!l.hasBearing() && d > 8 && d < 200 && dt < 5000) bearing = (last.bearingTo(l) + 360f) % 360f;
                 if (speed > 1.0f && d < 200 && dt < 10000) {
                     tripMeters += d;
                     tripMovingMs += dt;

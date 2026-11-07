@@ -218,6 +218,13 @@ function pmStyle(){
     sources:{protomaps:{type:'vector',url:'pmtiles://https://pmtiles.local/map.pmtiles',attribution:'© OpenStreetMap · Protomaps'}},
     layers:layers};
 }
+// street names from a lower zoom (the style hides the small streets' names until you're zoomed right in)
+function roadNames(){
+  try{ gl.getStyle().layers.forEach(function(l){
+    if(l.type==='symbol'&&l.layout&&l.layout['text-field']&&/highway|road|street/i.test(l.id)&&/name|label/i.test(l.id)&&!/shield|ref|oneway|one-way|exit|junction/i.test(l.id)&&(l.minzoom||0)>13)
+      gl.setLayerZoomRange(l.id,13,l.maxzoom||24); });
+  }catch(e){}
+}
 function initGl(){
   if(gl) return;
   var style;
@@ -234,7 +241,7 @@ function initGl(){
   gl=new maplibregl.Map({container:'m',style:style,center:[0,0],zoom:2,attributionControl:{compact:false},pitchWithRotate:false,fadeDuration:0,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),refreshExpiredTiles:false});
   // if the style never loads (slow or no network, a GPU hiccup), drop back to Standard instead of a blank map
   glReady=false;
-  gl.on('load',function(){ glReady=true; cardinals(); });
+  gl.on('load',function(){ glReady=true; roadNames(); cardinals(); });
   gl.on('rotate',cardinals);
   gl.on('error',function(e){ note('map: '+((e&&e.error&&e.error.message)||'error')); });
   (function(myGl){ setTimeout(function(){ if(gl===myGl&&!glReady) fallback('The vector map was slow to load, using Standard'); },9000); })(gl);
