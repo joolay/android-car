@@ -62,6 +62,11 @@ final class Gps {
         lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
         String today = day();
         if (today.equals(Prefs.str(Prefs.TOP_SPEED_DAY, ""))) topSpeedToday = Prefs.num(Prefs.TOP_SPEED, 0);
+        long at = Prefs.lng("trip_at", 0);
+        if (at > 0 && System.currentTimeMillis() - at < 15 * 60000L) { // the last drive ended under 15 minutes ago: same trip
+            tripMeters = Prefs.lng("trip_m", 0);
+            tripMovingMs = Prefs.lng("trip_ms", 0);
+        }
     }
 
     static void listen(Runnable r) {
@@ -183,8 +188,15 @@ final class Gps {
                     Trace.event("Heading: GPS gives it (" + Math.round(l.getBearing()) + "°)");
                 }
                 if (speed > 1.0f && d < 200 && dt < 10000) {
+                    long wall = System.currentTimeMillis();
+                    if (lastMoveAt > 0 && wall - lastMoveAt > 15 * 60000L) { // parked over 15 minutes: this is a new trip
+                        tripMeters = 0;
+                        tripMovingMs = 0;
+                    }
+                    lastMoveAt = wall;
                     tripMeters += d;
                     tripMovingMs += dt;
+                    saveTrip();
                 }
             }
             last = l;
@@ -202,9 +214,26 @@ final class Gps {
         for (Runnable r : new ArrayList<>(listeners)) r.run();
     }
 
+    /** New trip from zero. Also closes the logbook's trip: only a reset (never a short stop) separates trips. */
     static void resetTrip() {
         tripMeters = 0;
         tripMovingMs = 0;
+        Prefs.put("trip_m", 0L);
+        Prefs.put("trip_ms", 0L);
+        Prefs.put("trip_at", 0L);
+        Logbook.reset();
+    }
+
+    /** The trip meter is kept across a box restart: a drive that starts within 15 minutes of the last one carries on. */
+    private static long tripSavedAt, lastMoveAt;
+
+    private static void saveTrip() {
+        long now = System.currentTimeMillis();
+        if (now - tripSavedAt < 10000) return;
+        tripSavedAt = now;
+        Prefs.put("trip_m", Math.round(tripMeters));
+        Prefs.put("trip_ms", tripMovingMs);
+        Prefs.put("trip_at", now);
     }
 
     private static String day() {

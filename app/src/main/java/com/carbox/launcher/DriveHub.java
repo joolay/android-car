@@ -3,6 +3,7 @@ package com.carbox.launcher;
 import android.content.Context;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -69,7 +70,20 @@ final class DriveHub {
             super(c, i, s);
             LinearLayout l = Widgets.card(c, Ui.CARD);
             card = l;
-            l.addView(Widgets.label(c, "DRIVE"));
+            // the title, and a small button to start a new trip (the trip meter back to zero)
+            LinearLayout head = Ui.row(c);
+            head.setGravity(Gravity.CENTER_VERTICAL);
+            head.addView(Widgets.label(c, "DRIVE"), new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+            FrameLayout rb = new FrameLayout(c);
+            rb.setBackground(Ui.oval(Ui.CARD2));
+            rb.addView(Ui.icon(c, R.drawable.ic_refresh, Ui.TEXT2), Ui.flpu(16, 16, Gravity.CENTER));
+            rb.setOnClickListener(x -> {
+                Gps.resetTrip(); // also closes the logbook's trip, so the next drive isn't joined to it
+                tick();
+            });
+            Ui.press(rb);
+            head.addView(rb, new LinearLayout.LayoutParams(Ui.u(26), Ui.u(26)));
+            l.addView(head);
             l.addView(new View(c), Ui.weight(1, false));
 
             // two even columns, numbers on one line (the unit small beside the distance, never wrapping)

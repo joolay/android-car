@@ -63,7 +63,42 @@ final class Logbook {
         }
     }
 
+    /** The reset button: the trip in progress ends here, and the next drive is never joined to it. */
+    static void reset() {
+        finish();
+        Prefs.put(RESET_AT, System.currentTimeMillis());
+    }
+
+    private static final String RESET_AT = "log_reset_at";
+
+    /**
+     * A drive that starts within 15 minutes of the last trip's end carries on that trip (a stop at the shops,
+     * a restart of the box), unless the reset button was pressed since. Returns true when it took the trip back.
+     */
+    private static boolean resume() {
+        try {
+            JSONArray a = Prefs.arr(TRIPS);
+            JSONObject last = a.length() == 0 ? null : a.optJSONObject(a.length() - 1);
+            if (last == null) return false;
+            long end = last.optLong("end", 0), now = System.currentTimeMillis();
+            if (end <= Prefs.lng(RESET_AT, 0) || now - end > 15 * 60000L || now < end) return false;
+            a.remove(a.length() - 1);
+            Prefs.put(TRIPS, a);
+            Prefs.put("log_odo_km", Prefs.lng("log_odo_km", 0) - Math.round(last.optDouble("km", 0) * 10)); // finish() adds it back
+            last.remove("end");
+            last.remove("to");
+            last.remove("km");
+            last.put("last", now);
+            cur = last;
+            save();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private static void begin() {
+        if (resume()) return;
         try {
             cur = new JSONObject();
             cur.put("start", System.currentTimeMillis());
