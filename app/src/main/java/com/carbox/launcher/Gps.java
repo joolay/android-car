@@ -23,6 +23,7 @@ import java.util.Locale;
 final class Gps {
     static double lat = Double.NaN, lon = Double.NaN, alt = Double.NaN;
     static float speed = -1;          // m/s, -1 = unknown
+    private static boolean headingLogged;
     static float bearing = Float.NaN;  // degrees; the last direction driven (held while parked)
     private static float savedBearing = -999;
 
@@ -171,7 +172,16 @@ final class Gps {
                 long dt = now - lastAt;
                 // ignore jumps (bad fixes) and standing still
                 // the box's GPS gave no heading: work it out from how far the car moved since the last fix
-                if (!l.hasBearing() && d > 8 && d < 200 && dt < 5000) bearing = (last.bearingTo(l) + 360f) % 360f;
+                if (!l.hasBearing() && speed > 1.5f && d > 8 && d < 200 && dt < 5000) { // moving only, so parked GPS drift never turns the map
+                    bearing = (last.bearingTo(l) + 360f) % 360f;
+                    if (!headingLogged) { // once per start: the logs then show whether this box's GPS gives a heading
+                        headingLogged = true;
+                        Trace.event("Heading: GPS gave none, worked out from movement (" + Math.round(bearing) + "°)");
+                    }
+                } else if (l.hasBearing() && speed > 1.5f && !headingLogged) {
+                    headingLogged = true;
+                    Trace.event("Heading: GPS gives it (" + Math.round(l.getBearing()) + "°)");
+                }
                 if (speed > 1.0f && d < 200 && dt < 10000) {
                     tripMeters += d;
                     tripMovingMs += dt;

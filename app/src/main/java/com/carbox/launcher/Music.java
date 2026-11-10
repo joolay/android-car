@@ -148,15 +148,17 @@ final class Music {
     // ---- start-up guard: for the first 45 s, nothing but your own pause button stops the music.
     // Touching the screen, closing the splash or other apps starting can make the music app pause
     // (or stop it loading); the guard simply presses play again.
-    private static long guardUntil;
+    private static long guardUntil, guardStart;
     private static boolean paused, started;
 
     private static void guard(Context c) {
-        guardUntil = SystemClock.elapsedRealtime() + 45000;
+        guardStart = SystemClock.elapsedRealtime();
+        guardUntil = guardStart + 45000;
         paused = false;
         started = false;
         Ui.ui.postDelayed(new Runnable() {
             int quiet;
+            boolean waited;
 
             @Override
             public void run() {
@@ -177,7 +179,19 @@ final class Music {
                     MediaController mc = MediaListener.controller;
                     android.media.session.PlaybackState ps = mc == null ? null : mc.getPlaybackState();
                     android.net.ConnectivityManager cm = (android.net.ConnectivityManager) c.getSystemService(Context.CONNECTIVITY_SERVICE);
-                    boolean net = cm != null && cm.getActiveNetwork() != null;
+                    android.net.Network an = cm == null ? null : cm.getActiveNetwork();
+                    android.net.NetworkCapabilities nc = an == null ? null : cm.getNetworkCapabilities(an);
+                    boolean net = nc != null && nc.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED); // really online, not just linked
+                    if (!net && SystemClock.elapsedRealtime() - guardStart < 120000) {
+                        // Spotify can't start without internet, and the box's link comes up late: wait for it (up to 2 min) instead of pressing play into nothing
+                        guardUntil = SystemClock.elapsedRealtime() + 20000;
+                        if (!waited) {
+                            waited = true;
+                            log("Guard: waiting for the internet to come up before pressing play");
+                        }
+                        Ui.ui.postDelayed(this, 1500);
+                        return;
+                    }
                     log("Guard: silent, pressing play again (session: " + (mc == null ? "none" : Apps.label(mc.getPackageName()) + " state " + (ps == null ? "?" : ps.getState()))
                             + ", internet " + (net ? "yes" : "no") + ")");
                     resume(c); // play on the music app's own session when it has one, else its play button (not any other app's)

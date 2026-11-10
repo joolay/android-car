@@ -45,6 +45,7 @@ function lib(local, cdn, done){
 }
 var mode='osm', map=null, me=null, gmap=null, gme=null, gl=null, glMe=null, glOn=false, glReady=false, follow=true, pending=null, key='', opt='';
 var headUp=true, rot=0, glBearing=0;
+var wantHead=true, wantGl='', glTry=0, glRetryT=null; // what was asked for (the vector map may be down for now)
 
 // ---- heading up. Leaflet and Google: the whole map element turns (made as big as the screen's
 // diagonal so no corners show). MapLibre: the map turns itself, so labels stay upright.
@@ -74,7 +75,7 @@ function setAccent(c){ accent=c; var r=parseInt(c.substr(1,2),16),g=parseInt(c.s
   var st=document.documentElement.style; st.setProperty('--acc',c); st.setProperty('--acc25','rgba('+r+','+g+','+b+',.25)');
   if(gmap&&pending) setPos(pending[0],pending[1],pending[2]); }
 function setRound(b){ round=!!b; document.documentElement.className=round?'round':''; size(); requestAnimationFrame(size); }
-function setHeadingUp(b){ headUp=!!b&&isGl(); if(!headUp) turn(0,true); size(); } // only vector maps turn: their labels stay upright
+function setHeadingUp(b){ wantHead=!!b; headUp=wantHead&&isGl(); if(!headUp) turn(0,true); size(); } // only vector maps turn: their labels stay upright
 // turn to a heading the short way round (no spinning past north)
 function isGl(){ return mode==='ofm'||mode==='pmtiles'; }
 // put N E S W round the edge where they belong for the way the map is turned (north up: N at the top)
@@ -170,11 +171,28 @@ function note(t){ try{ Android.mapNote(t); }catch(e){} }
 // option: the OpenFreeMap style, or the offline map's colour flavour
 function setup(m,k,o){
   mode=m; key=k||''; opt=o||'';
+  wantGl=(mode==='ofm'||mode==='pmtiles')?mode:'';
   if(mode==='google' && key) loadGoogle();
   else if(mode==='ofm' || mode==='pmtiles') loadGl();
   else { mode='osm'; loadOsm(); }
 }
-function fallback(msg){ note(msg); if(gl){ try{gl.remove();}catch(e){} } document.getElementById('m').innerHTML=''; document.getElementById('m').className=''; gl=null; gmap=null; map=null; mode='osm'; loadOsm(); }
+function fallback(msg){
+  if(glTry===0) note(msg); // told once; the retries below stay quiet
+  if(gl){ try{gl.remove();}catch(e){} } document.getElementById('m').innerHTML=''; document.getElementById('m').className=''; gl=null; gmap=null; map=null; mode='osm'; headUp=false; loadOsm();
+  scheduleGl();
+}
+// the box's internet comes up late after a start: Standard shows meanwhile, and the vector map is tried again
+// (15 s, 30 s, 45 s, then every minute) until it loads, so the map can turn and show street names
+function scheduleGl(){ if(!wantGl) return; clearTimeout(glRetryT); glRetryT=setTimeout(retryGl,Math.min(60000,15000*(++glTry))); }
+function retryGl(){
+  if(!wantGl||isGl()) return;
+  if(navigator.onLine===false){ scheduleGl(); return; }
+  try{ if(map) map.remove(); }catch(e){}
+  map=null; me=null;
+  var el=document.getElementById('m'); el.innerHTML=''; el.className=''; el.style.transform=''; rot=0;
+  mode=wantGl; loadGl();
+}
+window.addEventListener('online',function(){ if(wantGl&&!isGl()){ clearTimeout(glRetryT); glRetryT=setTimeout(retryGl,2000); } });
 
 // ---- Standard: Leaflet + OpenStreetMap
 function loadOsm(){ if(typeof L!=='undefined') initOsm(); else lib('lib/leaflet.js','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',initOsm); }
@@ -241,7 +259,7 @@ function initGl(){
   gl=new maplibregl.Map({container:'m',style:style,center:[0,0],zoom:2,attributionControl:{compact:false},pitchWithRotate:false,fadeDuration:0,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),refreshExpiredTiles:false});
   // if the style never loads (slow or no network, a GPU hiccup), drop back to Standard instead of a blank map
   glReady=false;
-  gl.on('load',function(){ glReady=true; roadNames(); cardinals(); });
+  gl.on('load',function(){ glReady=true; glTry=0; clearTimeout(glRetryT); headUp=wantHead; roadNames(); cardinals(); if(pending&&headUp&&pending[2]>=0) turn(pending[2]); });
   gl.on('rotate',cardinals);
   gl.on('error',function(e){ note('map: '+((e&&e.error&&e.error.message)||'error')); });
   (function(myGl){ setTimeout(function(){ if(gl===myGl&&!glReady) fallback('The vector map was slow to load, using Standard'); },9000); })(gl);

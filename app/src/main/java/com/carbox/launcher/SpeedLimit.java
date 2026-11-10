@@ -37,6 +37,7 @@ final class SpeedLimit {
         here.setLatitude(Gps.lat);
         here.setLongitude(Gps.lon);
         if (streetAsked != null && (now - streetAt < 10000 || streetAsked.distanceTo(here) < 25)) return;
+        if (streetAsked == null && now - streetAt < 10000) return; // after a failed try: wait 10 s, not every GPS fix
         streetBusy = true;
         streetAsked = here;
         streetAt = now;
@@ -54,6 +55,7 @@ final class SpeedLimit {
             if (body == null || code != 200) {
                 if (base.equals(OVERPASS[0])) { askStreet(OVERPASS[1], la, lo); return; }
                 streetBusy = false;
+                streetAsked = null; // try again in 10 s even when parked (the internet often comes up late after a start)
                 if (!streetLogged) { // once per start, so the logs say why the street line stayed empty
                     streetLogged = true;
                     Trace.event("Street name lookup failed (HTTP " + code + ")");
