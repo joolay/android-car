@@ -1,0 +1,393 @@
+package com.carbox.launcher;
+
+import android.app.Activity;
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.TextUtils;
+import android.util.DisplayMetrics;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+/**
+ * Tiny UI kit. Every size is given in "design units" for an 800 x 480 screen and scaled
+ * to the real display, so the layout matches the mockups whatever the box's density is.
+ */
+final class Ui {
+    private Ui() {
+    }
+
+    static final int BG = 0xFF0B0E13;
+    static final int CARD = 0xFF171C24;
+    static final int CARD2 = 0xFF222A37;
+    static final int CARD3 = 0xFF2E3747;
+    static final int LINE = 0xFF2A3342;
+    static final int TEXT = 0xFFFFFFFF;
+    static final int TEXT2 = 0xFFD6DBE3;
+    static final int SUB = 0xFF9AA4B2;
+    static final int MUTED = 0xFF5C6675;
+    // the accent colour: chosen in Settings → Theme (blue by default); ACCENT_SOFT is a lighter tint of it
+    static int ACCENT = 0xFF3D8BFD;
+    static int ACCENT_SOFT = 0xFF85B7EB;
+    static final String ACCENT_KEY = "accent_colour";
+    /** {colour, name} offered in Settings → Theme. */
+    static final Object[][] ACCENTS = {{0xFF3D8BFD, "Blue"}, {0xFF2BB5A0, "Teal"}, {0xFF3FB950, "Green"}, {0xFFF0A020, "Amber"},
+            {0xFFF26B3A, "Orange"}, {0xFFE5484D, "Red"}, {0xFFE0559B, "Pink"}, {0xFF8B6CF0, "Purple"}};
+
+    /** A colour with another opacity (0–255), e.g. a see-through tint of the accent. */
+    static int alpha(int color, int a) {
+        return (color & 0x00FFFFFF) | (a << 24);
+    }
+
+    /** A colour darkened towards black: keep is how much of its brightness stays (0–1). */
+    static int shade(int color, float keep) {
+        int r = (int) (((color >> 16) & 0xFF) * keep), g = (int) (((color >> 8) & 0xFF) * keep), b = (int) ((color & 0xFF) * keep);
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
+
+    /** Load the chosen accent (called once Prefs is ready). */
+    static void applyAccent() {
+        int a = Prefs.num(ACCENT_KEY, 0xFF3D8BFD);
+        ACCENT = a;
+        // the soft tint: the accent mixed half way towards white, for icons and secondary text on dark cards
+        int r = (a >> 16) & 0xFF, g = (a >> 8) & 0xFF, b = a & 0xFF;
+        ACCENT_SOFT = a == 0xFF3D8BFD ? 0xFF85B7EB : 0xFF000000 | ((r + (255 - r) * 45 / 100) << 16) | ((g + (255 - g) * 45 / 100) << 8) | (b + (255 - b) * 45 / 100);
+    }
+    static final int GREEN = 0xFF34C759;
+    static final int DGREEN = 0xFF1F7A46;
+    static final int TEAL = 0xFF5DCAA5;
+    static final int MINT = 0xFF9FE1CB;
+    static final int AMBER = 0xFFFFB020;
+    static final int RED = 0xFFE24B4A;
+
+    static final int MATCH = ViewGroup.LayoutParams.MATCH_PARENT;
+    static final int WRAP = ViewGroup.LayoutParams.WRAP_CONTENT;
+
+    static float S = 1f;
+    static final Handler ui = new Handler(Looper.getMainLooper());
+
+    /** Works out the scale from the real full-screen size. */
+    static void init(Activity a) {
+        DisplayMetrics dm = new DisplayMetrics();
+        a.getWindowManager().getDefaultDisplay().getRealMetrics(dm);
+        int w = Math.max(dm.widthPixels, dm.heightPixels);
+        int h = Math.min(dm.widthPixels, dm.heightPixels);
+        S = Math.min(w / 800f, h / 480f);
+        if (S <= 0) S = 1f;
+    }
+
+    /** Same scale for a service (the system keyboard), which has no Activity. */
+    static void init(Context c) {
+        DisplayMetrics dm = new DisplayMetrics();
+        ((android.view.WindowManager) c.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRealMetrics(dm);
+        int w = Math.max(dm.widthPixels, dm.heightPixels);
+        int h = Math.min(dm.widthPixels, dm.heightPixels);
+        S = Math.min(w / 800f, h / 480f);
+        if (S <= 0) S = 1f;
+    }
+
+    static int u(float v) {
+        return Math.round(v * S);
+    }
+
+    static float uf(float v) {
+        return v * S;
+    }
+
+    // ------------------------------------------------------------------ drawables
+
+    static GradientDrawable round(int color, float radius) {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(color);
+        g.setCornerRadius(uf(radius));
+        return g;
+    }
+
+    static GradientDrawable outline(int fill, int stroke, float width, float radius) {
+        GradientDrawable g = round(fill, radius);
+        g.setStroke(Math.max(1, u(width)), stroke);
+        return g;
+    }
+
+    static GradientDrawable dashed(int stroke, float radius) {
+        GradientDrawable g = round(Color.TRANSPARENT, radius);
+        g.setStroke(u(2), stroke, uf(6), uf(4));
+        return g;
+    }
+
+    static GradientDrawable oval(int color) {
+        GradientDrawable g = new GradientDrawable();
+        g.setShape(GradientDrawable.OVAL);
+        g.setColor(color);
+        return g;
+    }
+
+    // ------------------------------------------------------------------ views
+
+    static TextView text(Context c, CharSequence s, float size, int color, boolean bold) {
+        TextView t = new TextView(c);
+        t.setText(s);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_PX, uf(size));
+        t.setTextColor(color);
+        t.setIncludeFontPadding(false);
+        if (bold) t.setTypeface(Typeface.DEFAULT_BOLD);
+        return t;
+    }
+
+    static TextView line(Context c, CharSequence s, float size, int color, boolean bold) {
+        TextView t = text(c, s, size, color, bold);
+        t.setSingleLine(true);
+        t.setEllipsize(TextUtils.TruncateAt.END);
+        return t;
+    }
+
+    static ImageView icon(Context c, int res, int tint) {
+        ImageView iv = new ImageView(c);
+        iv.setImageResource(res);
+        if (tint != 0) iv.setColorFilter(tint);
+        iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        return iv;
+    }
+
+    static LinearLayout row(Context c) {
+        LinearLayout l = new LinearLayout(c);
+        l.setOrientation(LinearLayout.HORIZONTAL);
+        l.setGravity(Gravity.CENTER_VERTICAL);
+        return l;
+    }
+
+    static LinearLayout col(Context c) {
+        LinearLayout l = new LinearLayout(c);
+        l.setOrientation(LinearLayout.VERTICAL);
+        return l;
+    }
+
+    static LinearLayout.LayoutParams lp(int w, int h) {
+        return new LinearLayout.LayoutParams(w, h);
+    }
+
+    /** Size in design units (MATCH / WRAP pass through). */
+    static LinearLayout.LayoutParams lpu(float w, float h) {
+        return new LinearLayout.LayoutParams(w < 0 ? (int) w : u(w), h < 0 ? (int) h : u(h));
+    }
+
+    static LinearLayout.LayoutParams weight(float wgt, boolean horizontal) {
+        return horizontal ? new LinearLayout.LayoutParams(0, MATCH, wgt) : new LinearLayout.LayoutParams(MATCH, 0, wgt);
+    }
+
+    static LinearLayout.LayoutParams margins(LinearLayout.LayoutParams lp, float l, float t, float r, float b) {
+        lp.setMargins(u(l), u(t), u(r), u(b));
+        return lp;
+    }
+
+    static FrameLayout.LayoutParams flp(int w, int h, int gravity) {
+        return new FrameLayout.LayoutParams(w, h, gravity);
+    }
+
+    static FrameLayout.LayoutParams flpu(float w, float h, int gravity) {
+        return new FrameLayout.LayoutParams(w < 0 ? (int) w : u(w), h < 0 ? (int) h : u(h), gravity);
+    }
+
+    static View gap(Context c, float w, float h) {
+        View v = new View(c);
+        v.setLayoutParams(new LinearLayout.LayoutParams(u(w), u(h)));
+        return v;
+    }
+
+    static View hr(Context c) {
+        View v = new View(c);
+        v.setBackgroundColor(LINE);
+        v.setLayoutParams(new LinearLayout.LayoutParams(MATCH, Math.max(1, u(1))));
+        return v;
+    }
+
+    static void pad(View v, float l, float t, float r, float b) {
+        v.setPadding(u(l), u(t), u(r), u(b));
+    }
+
+    static void pad(View v, float all) {
+        pad(v, all, all, all, all);
+    }
+
+    /** Rounded "segment" chip used for choices. */
+    static TextView seg(Context c, String label, boolean on, Runnable click) {
+        TextView t = text(c, label, 14, TEXT, false);
+        t.setGravity(Gravity.CENTER);
+        t.setSingleLine(true);
+        pad(t, 16, 12, 16, 12); // finger-sized
+        t.setMinHeight(u(44));
+        t.setBackground(on ? round(ACCENT, 20) : Themes.inner(CARD2, 20));
+        if (click != null) t.setOnClickListener(v -> click.run());
+        return t;
+    }
+
+    /** Buttons whose meaning an icon says on its own: shown as the icon only (the label stays for screen readers). */
+    private static final Object[][] ICON_ONLY = {{"Save", R.drawable.ic_check}, {"Done", R.drawable.ic_check}, {"Done editing", R.drawable.ic_check},
+            {"Cancel", R.drawable.ic_x}, {"Close", R.drawable.ic_x}, {"Clear", R.drawable.ic_x}, {"Add folder", R.drawable.ic_plus},
+            {"Reload headlines now", R.drawable.ic_refresh}, {"Check now", R.drawable.ic_refresh}, {"Start again", R.drawable.ic_refresh},
+            {"Filter", R.drawable.ic_search}, {"Paste", R.drawable.ic_enter}};
+
+    /** A round icon button (finger-sized) with a hidden name for screen readers and voice control. */
+    static View iconButton(Context c, int icon, String name, Runnable click) {
+        return iconButton(c, icon, name, false, click);
+    }
+
+    static View iconButton(Context c, int icon, String name, boolean primary, Runnable click) {
+        android.widget.FrameLayout f = new android.widget.FrameLayout(c);
+        f.setBackground(primary ? oval(ACCENT) : Themes.inner(CARD2, 22));
+        f.addView(icon(c, icon, TEXT), flpu(22, 22, Gravity.CENTER));
+        f.setContentDescription(name);
+        f.setMinimumWidth(u(44));
+        f.setMinimumHeight(u(44));
+        if (click != null) f.setOnClickListener(v -> click.run());
+        press(f);
+        return f;
+    }
+
+    static View button(Context c, String label, boolean primary, Runnable click) {
+        for (Object[] o : ICON_ONLY) if (o[0].equals(label)) return iconButton(c, (int) o[1], label, primary, click);
+        return textButton(c, label, primary, click);
+    }
+
+    /** A button that keeps its words (where an icon couldn't say it clearly). */
+    static TextView textButton(Context c, String label, boolean primary, Runnable click) {
+        TextView t = text(c, label, 14, TEXT, primary);
+        t.setGravity(Gravity.CENTER);
+        t.setSingleLine(true);
+        pad(t, 20, 12, 20, 12); // finger-sized
+        t.setMinHeight(u(44));
+        t.setBackground(primary ? round(ACCENT, 20) : Themes.inner(CARD2, 20));
+        if (click != null) t.setOnClickListener(v -> click.run());
+        return t;
+    }
+
+    /** Animation length: as given, or instant when animations are switched off (Settings → Home screen). */
+    static long ms(long d) {
+        return (Prefs.flag("anim_on", true) && !Themes.simple()) ? d : 0; // Simple theme: no animations
+    }
+
+    static void press(View v) {
+        v.setOnTouchListener((view, e) -> {
+            if (e.getAction() == MotionEvent.ACTION_DOWN) view.animate().scaleX(.96f).scaleY(.96f).setDuration(Ui.ms(80)).start();
+            else if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL)
+                view.animate().scaleX(1f).scaleY(1f).setDuration(Ui.ms(120)).start();
+            return false;
+        });
+    }
+
+    interface Cb<T> {
+        void on(T value);
+    }
+
+    /** iOS-style switch. */
+    static final class Toggle extends View {
+        private boolean on;
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF r = new RectF();
+        private Cb<Boolean> listener;
+
+        Toggle(Context c, boolean on, Cb<Boolean> l) {
+            super(c);
+            this.on = on;
+            this.listener = l;
+            setOnClickListener(v -> {
+                set(!this.on);
+                if (listener != null) listener.on(this.on);
+            });
+            setLayoutParams(new LinearLayout.LayoutParams(u(40), u(24)));
+        }
+
+        void set(boolean v) {
+            on = v;
+            invalidate();
+        }
+
+        boolean isOn() {
+            return on;
+        }
+
+        @Override
+        protected void onDraw(Canvas c) {
+            float w = getWidth(), h = getHeight();
+            p.setColor(on ? ACCENT : CARD3);
+            r.set(0, 0, w, h);
+            c.drawRoundRect(r, h / 2, h / 2, p);
+            p.setColor(on ? TEXT : SUB);
+            float d = h - uf(6);
+            float cx = on ? w - uf(3) - d / 2 : uf(3) + d / 2;
+            c.drawCircle(cx, h / 2, d / 2, p);
+        }
+    }
+
+    /** Small progress ring with an optional number in the middle. */
+    static final class Ring extends View {
+        private float progress;
+        private String label;
+        private int color = ACCENT;
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF r = new RectF();
+
+        Ring(Context c) {
+            super(c);
+            p.setStrokeCap(Paint.Cap.ROUND);
+        }
+
+        void set(float progress, String label, int color) {
+            this.progress = Math.max(0, Math.min(1, progress));
+            this.label = label;
+            this.color = color;
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas c) {
+            float s = Math.min(getWidth(), getHeight());
+            float sw = s * 0.13f;
+            r.set(sw / 2 + 1, sw / 2 + 1, s - sw / 2 - 1, s - sw / 2 - 1);
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(sw);
+            p.setColor(0x26FFFFFF);
+            c.drawOval(r, p);
+            p.setColor(color);
+            c.drawArc(r, -90, 360 * progress, false, p);
+            if (label != null) {
+                p.setStyle(Paint.Style.FILL);
+                p.setColor(TEXT);
+                p.setTextAlign(Paint.Align.CENTER);
+                p.setTypeface(Typeface.DEFAULT_BOLD);
+                p.setTextSize(s * 0.38f);
+                c.drawText(label, s / 2, s / 2 + s * 0.13f, p);
+            }
+        }
+    }
+
+    static String two(int v) {
+        return v < 10 ? "0" + v : String.valueOf(v);
+    }
+
+    static String hm(double hours) {
+        if (Double.isNaN(hours)) return "--:--";
+        int mins = (int) Math.round(((hours % 24) + 24) % 24 * 60);
+        if (mins >= 1440) mins -= 1440;
+        return two(mins / 60) + ":" + two(mins % 60);
+    }
+
+    static String dur(long ms) {
+        long m = Math.max(0, ms / 60000);
+        if (m < 60) return m + " min";
+        return (m / 60) + " h " + (m % 60) + " min";
+    }
+}

@@ -1,0 +1,378 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<link rel="stylesheet" href="lib/leaflet.css" onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'">
+<link rel="stylesheet" href="lib/maplibre-gl.css" onerror="this.onerror=null;this.href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css'">
+<style>
+html,body{margin:0;height:100%;width:100%;background:#171c24;overflow:hidden}
+#m{position:absolute;left:0;top:0;width:100%;height:100%;background:#171c24;transition:transform .8s ease-out}
+/* Standard (OpenStreetMap): dark by inverting the standard tiles; as it is in light mode */
+.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
+.light .leaflet-tile-pane{filter:none}
+.light,.light #m,.light .leaflet-container{background:#e9e6df}
+.leaflet-container{background:#171c24;font-family:sans-serif}
+.leaflet-control-attribution,.maplibregl-ctrl-attrib{font-size:7px;background:rgba(11,14,19,.6)!important;color:#778!important}
+.leaflet-control-attribution a,.maplibregl-ctrl-attrib a{color:#99a!important}
+.maplibregl-ctrl-attrib-button{display:none}
+.me{width:18px;height:18px;margin:-9px 0 0 -9px;position:relative}
+.gl .me{margin:0}
+.gl.dark .maplibregl-canvas{filter:invert(1) hue-rotate(180deg) brightness(.95) contrast(.9)}
+.me .d{position:absolute;inset:3px;border-radius:50%;background:var(--acc,#3d8bfd);border:2px solid #fff;box-shadow:0 0 0 6px var(--acc25,rgba(61,139,253,.25))}
+.me .a{position:absolute;left:4px;top:-9px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--acc,#3d8bfd);display:none}
+.gm-style-cc,.gmnoprint a,.gm-style a[href^="https://maps.google.com/maps"]{opacity:.55}
+html.round,html.round body,html.round .leaflet-container{background:transparent!important}
+html.round #m{border-radius:50%;overflow:hidden;transition:none}
+/* the thin rim of the round map is its own ring so it can be cut away round each N E S W */
+#edge{position:absolute;display:none;pointer-events:none;z-index:499;box-sizing:border-box;border:3px solid rgba(255,255,255,.4);border-radius:50%}
+#rings{position:absolute;display:none;border-radius:50%;pointer-events:none;z-index:500;
+  background:radial-gradient(circle,transparent 32.5%,rgba(255,255,255,.14) 33%,transparent 33.6%,transparent 65.5%,rgba(255,255,255,.14) 66%,transparent 66.6%)}
+/* N E S W round the edge of the big round map; they travel round as the map turns */
+#cards{position:absolute;display:none;pointer-events:none;z-index:501}
+#cards b{pointer-events:auto;touch-action:none;position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;text-align:center;font:700 16px/26px sans-serif;color:#fff;text-shadow:0 0 3px rgba(0,0,0,.8)}
+#cards b.n{color:#ff5a5f}
+#cards b::after{content:"";position:absolute;left:-10px;top:-10px;right:-10px;bottom:-10px}
+#cards b.drag{transform:scale(1.35);text-shadow:0 0 6px #fff}
+#cards i.ql{position:absolute;width:0;height:12px;border-left:1.5px solid rgba(232,184,74,.9);transform-origin:0 0;display:none}
+</style></head><body><div id="m"></div><div id="rings"></div><div id="edge"></div><div id="cards"><b class="n">N</b><b>E</b><b>S</b><b>W</b><b class="q" style="display:none"><svg viewBox="0 0 24 24" width="16" height="16" style="display:block;margin:5px auto 0"><path d="M3 7l9-4 9 4v12l-9 3-9-3z" fill="#111" stroke="#E8B84A" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 9.2l9 3.3 9-3.3v1.8l-9 3.3-9-3.3z" fill="#E8B84A"/></svg></b><i class="ql"></i></div>
+<script src="gtraffic.js"></script>
+<script>
+// Map engines: 'osm' (Leaflet + OpenStreetMap tiles), 'ofm' (MapLibre + OpenFreeMap), 'pmtiles'
+// (MapLibre + an offline .pmtiles file served by the app) and 'google' (your own API key).
+// Libraries come bundled in lib/ (so offline maps work without internet), else from unpkg.
+function lib(local, cdn, done){
+  var s=document.createElement('script'); s.src=local;
+  s.onload=done; s.onerror=function(){ var t=document.createElement('script'); t.src=cdn; t.onload=done; t.onerror=done; document.head.appendChild(t); };
+  document.head.appendChild(s);
+}
+var mode='osm', map=null, me=null, gmap=null, gme=null, gl=null, glMe=null, glOn=false, glReady=false, follow=true, pending=null, key='', opt='';
+var headUp=true, rot=0, glBearing=0;
+var wantHead=true, wantGl='', glTry=0, glRetryT=null; // what was asked for (the vector map may be down for now)
+
+// ---- heading up. Leaflet and Google: the whole map element turns (made as big as the screen's
+// diagonal so no corners show). MapLibre: the map turns itself, so labels stay upright.
+function size(){
+  var W=innerWidth,H=innerHeight,el=document.getElementById('m');
+  // round (the Centre Stage): the map is a circle as big as fits, centred; the stage shows around it
+  var big=round, D=big?Math.min(W,H)-64:0; // a little smaller, so the N E S W on the edge are never cropped
+  el.style.width=(big?D:W)+'px'; el.style.height=(big?D:H)+'px';
+  el.style.left=(big?(W-D)/2:0)+'px'; el.style.top=(big?(H-D)/2:0)+'px';
+  var rg=document.getElementById('rings');
+  if(rg){ rg.style.display=big?'block':'none'; rg.style.width=D+'px'; rg.style.height=D+'px'; rg.style.left=((W-D)/2)+'px'; rg.style.top=((H-D)/2)+'px'; }
+  var eg=document.getElementById('edge');
+  if(eg){ eg.style.display=big?'block':'none'; eg.style.width=D+'px'; eg.style.height=D+'px'; eg.style.left=((W-D)/2)+'px'; eg.style.top=((H-D)/2)+'px'; }
+  if(!big){ el.style.webkitMaskImage=''; el.style.webkitMaskComposite=''; }
+  var cd=document.getElementById('cards');
+  if(cd){ cd.style.display=big?'block':'none'; cd.style.width=D+'px'; cd.style.height=D+'px'; cd.style.left=((W-D)/2)+'px'; cd.style.top=((H-D)/2)+'px'; cardinals(); }
+  document.documentElement.className=big?'round':'';
+  if(map) map.invalidateSize(false);
+  if(gl) gl.resize();
+  if(pending&&follow) centre();
+}
+window.addEventListener('resize',size);
+var round=false;
+// your position's dot and arrow in the launcher's accent colour (Settings → Theme)
+var accent='#3d8bfd';
+function setAccent(c){ accent=c; var r=parseInt(c.substr(1,2),16),g=parseInt(c.substr(3,2),16),b=parseInt(c.substr(5,2),16);
+  var st=document.documentElement.style; st.setProperty('--acc',c); st.setProperty('--acc25','rgba('+r+','+g+','+b+',.25)');
+  if(gmap&&pending) setPos(pending[0],pending[1],pending[2]); }
+function setRound(b){ round=!!b; document.documentElement.className=round?'round':''; size(); requestAnimationFrame(size); }
+function setHeadingUp(b){ wantHead=!!b; headUp=wantHead&&isGl(); if(!headUp) turn(0,true); size(); } // only vector maps turn: their labels stay upright
+// turn to a heading the short way round (no spinning past north)
+function isGl(){ return mode==='ofm'||mode==='pmtiles'; }
+// put N E S W round the edge where they belong for the way the map is turned (north up: N at the top)
+function cardinals(){
+  var cd=document.getElementById('cards');
+  if(!cd||!round) return;
+  // the letters sit right on the edge; the map and its rim are cut away in a ring round each one (punched out)
+  var D=cd.offsetWidth, r=D/2, b=(isGl()&&gl)?gl.getBearing():-rot, ls=cd.children;
+  var mb=(isGl()&&gl)?b:0; // a turned Leaflet map carries its mask round with it, so there the holes stay put
+  var holesG=[], holesM=[], HOLE=18, n=qiblaDeg>=0?5:4;
+  ls[4].style.display=qiblaDeg>=0?'block':'none'; // the Kaaba marker (Faith add-on), set from the app
+  var ql=ls[5];
+  if(ql) ql.style.display=qiblaDeg>=0?'block':'none';
+  for(var i=0;i<n;i++){
+    var base=i<4?i*90:qiblaDeg;
+    var a=(base-b)*Math.PI/180, am=(base-mb)*Math.PI/180;
+    if(i===4){ // the Kaaba sits just outside the circle, joined to it by a thin line (no punched-out hole)
+      var ro=r+20, sx=Math.sin(a), sy=-Math.cos(a);
+      ls[4].style.left=(D/2+ro*sx)+'px'; ls[4].style.top=(D/2+ro*sy)+'px';
+      if(ql){ ql.style.left=(D/2+r*sx)+'px'; ql.style.top=(D/2+r*sy)+'px'; ql.style.transform='rotate('+((a*180/Math.PI)+180)+'deg)'; }
+      continue;
+    }
+    var x=D/2+r*Math.sin(a), y=D/2-r*Math.cos(a);
+    ls[i].style.left=x+'px'; ls[i].style.top=y+'px';
+    holesG.push('radial-gradient(circle at '+x+'px '+y+'px,transparent '+HOLE+'px,#000 '+(HOLE+.5)+'px)');
+    holesM.push('radial-gradient(circle at '+(D/2+r*Math.sin(am))+'px '+(D/2-r*Math.cos(am))+'px,transparent '+HOLE+'px,#000 '+(HOLE+.5)+'px)');
+  }
+  var m=document.getElementById('m'), eg=document.getElementById('edge');
+  m.style.webkitMaskImage=holesM.join(','); m.style.webkitMaskComposite=Array(holesM.length).fill('source-in').join(',');
+  eg.style.webkitMaskImage=holesG.join(','); eg.style.webkitMaskComposite=Array(holesG.length).fill('source-in').join(',');
+}
+// the direction of the Kaaba from here (degrees from north), or -1 for none (add-on off, or switched off in Faith settings)
+var qiblaDeg=-1;
+function setQibla(q){ q=+q; q=isNaN(q)?-1:q; if(Math.abs(q-qiblaDeg)<0.5) return; qiblaDeg=q; cardinals(); }
+function turn(b,reset){
+  if(manual) return; // hold and dragged by hand: left alone for 15 s
+  if(isGl()){ glBearing=reset?0:b; if(gl) gl.easeTo({bearing:glBearing,duration:800}); return; }
+  var t=reset?0:-b, d=((t-rot)%360+540)%360-180;
+  rot=reset?0:rot+d;
+  document.getElementById('m').style.transform='rotate('+rot+'deg)';
+  cardinals();
+}
+function centre(){
+  if(!pending) return;
+  if(manual&&gl){ gl.easeTo({center:[pending[1],pending[0]],duration:700}); return; }
+  if(gmap) gmap.panTo({lat:pending[0],lng:pending[1]});
+  else if(gl) gl.easeTo({center:[pending[1],pending[0]],bearing:headUp&&follow?glBearing:(headUp?gl.getBearing():0),duration:700});
+  else if(map) map.panTo([pending[0],pending[1]],{animate:true});
+}
+// exploring by finger: north up again until you tap the locate button (or 30 s pass)
+var backT=null;
+function explore(){ follow=false;
+  // vector map: turning north while the finger drags fought the drag (jerky); turn once it settles
+  if(headUp){ if(gl) gl.once('moveend',function(){ if(!follow) turn(0,true); }); else turn(0,true); }
+  state(); clearTimeout(backT); backT=setTimeout(recenter,30000); }
+function recenter(){ clearTimeout(backT); follow=true; centre(); if(headUp&&pending&&pending[2]>=0) turn(pending[2]); state(); }
+// the small map is a picture only (no dragging or zooming); the big one is a normal map
+var inter=false;
+function setInteractive(b){
+  inter=!!b;
+  if(map){ [map.dragging,map.touchZoom,map.doubleClickZoom,map.scrollWheelZoom,map.boxZoom].forEach(function(x){ if(x){ b?x.enable():x.disable(); } }); }
+  if(gl){ [gl.dragPan,gl.scrollZoom,gl.doubleClickZoom,gl.boxZoom,gl.keyboard].forEach(function(x){ if(x){ b?x.enable():x.disable(); } });
+          if(gl.touchZoomRotate){ if(b){ gl.touchZoomRotate.enable(); gl.touchZoomRotate.disableRotation(); } else gl.touchZoomRotate.disable(); }
+          gl.dragRotate.disable(); }
+  if(gmap) gmap.setOptions({gestureHandling:b?'greedy':'none'});
+  if(!b) recenter();
+}
+function zoomBy(d){ if(map) map.setZoom(map.getZoom()+d); if(gl) gl.easeTo({zoom:gl.getZoom()+d,duration:300}); if(gmap) gmap.setZoom(gmap.getZoom()+d); }
+var traffic=null, trafficOn=false;
+// traffic: the official Google layer on the Google (API key) map; Google's tiles (gtraffic.js) on the others
+function setTraffic(b){ trafficOn=!!b;
+  if(mode!=='google'&&window.GTraffic) GTraffic.set(trafficOn);
+  if(!gmap) return; if(!traffic) traffic=new google.maps.TrafficLayer(); traffic.setMap(trafficOn?gmap:null); }
+// tell Android whether the map follows you, and a scale bar length (px) with its label
+function state(){
+  try{
+    var lat=pending?pending[0]:0, mpp;
+    if(gl) mpp=40075016.686*Math.cos(lat*Math.PI/180)/Math.pow(2,gl.getZoom()+9);
+    else mpp=40075016.686*Math.cos(lat*Math.PI/180)/Math.pow(2,(map?map.getZoom():gmap?gmap.getZoom():15)+8);
+    var nice=[5,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000], m=nice[0];
+    for(var i=0;i<nice.length;i++){ if(nice[i]/mpp<=70) m=nice[i]; }
+    Android.mapState(follow, Math.round(m/mpp), m>=1000?(m/1000)+' km':m+' m');
+  }catch(e){}
+}
+// the zoom you last chose is kept (raster maps and vector maps count zoom one apart)
+var zoomPref=15, darkMap=true;
+function setDark(b){ darkMap=!!b; document.body.className=darkMap?'':'light'; }
+function setZoomPref(z){ if(z>=3&&z<=19) zoomPref=z; }
+function saveZoom(){ try{ var z=gl?gl.getZoom()+1:map?map.getZoom():gmap?gmap.getZoom():15; zoomPref=z; Android.mapZoom(z); }catch(e){} }
+function note(t){ try{ Android.mapNote(t); }catch(e){} }
+
+// Called from Android once the page has loaded: setup(mode, googleKey, option)
+// option: the OpenFreeMap style, or the offline map's colour flavour
+function setup(m,k,o){
+  mode=m; key=k||''; opt=o||'';
+  wantGl=(mode==='ofm'||mode==='pmtiles')?mode:'';
+  if(mode==='google' && key) loadGoogle();
+  else if(mode==='ofm' || mode==='pmtiles') loadGl();
+  else { mode='osm'; loadOsm(); }
+}
+function fallback(msg){
+  if(glTry===0) note(msg); // told once; the retries below stay quiet
+  if(gl){ try{gl.remove();}catch(e){} } document.getElementById('m').innerHTML=''; document.getElementById('m').className=''; gl=null; gmap=null; map=null; mode='osm'; headUp=false; loadOsm();
+  scheduleGl();
+}
+// the box's internet comes up late after a start: Standard shows meanwhile, and the vector map is tried again
+// (15 s, 30 s, 45 s, then every minute) until it loads, so the map can turn and show street names
+function scheduleGl(){ if(!wantGl) return; clearTimeout(glRetryT); glRetryT=setTimeout(retryGl,Math.min(60000,15000*(++glTry))); }
+function retryGl(){
+  if(!wantGl||isGl()) return;
+  if(navigator.onLine===false){ scheduleGl(); return; }
+  try{ if(map) map.remove(); }catch(e){}
+  map=null; me=null;
+  var el=document.getElementById('m'); el.innerHTML=''; el.className=''; el.style.transform=''; rot=0;
+  mode=wantGl; loadGl();
+}
+window.addEventListener('online',function(){ if(wantGl&&!isGl()){ clearTimeout(glRetryT); glRetryT=setTimeout(retryGl,2000); } });
+
+// ---- Standard: Leaflet + OpenStreetMap
+function loadOsm(){ if(typeof L!=='undefined') initOsm(); else lib('lib/leaflet.js','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',initOsm); }
+function initOsm(){
+  if(map) return;
+  if(typeof L==='undefined'){ setTimeout(loadOsm,5000); return; }
+  map=L.map('m',{zoomControl:false,attributionControl:true}).setView([0,0],2);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  map.attributionControl.setPrefix('');
+  var icon=L.divIcon({className:'',html:'<div class="me"><div class="a" id="arr"></div><div class="d"></div></div>',iconSize:[0,0]});
+  me=L.marker([0,0],{icon:icon,interactive:false});
+  map.on('dragstart',explore);
+  map.on('zoomend',state);
+  map.on('zoomend',saveZoom);
+  setInteractive(inter);
+  size();
+  if(pending) setPos(pending[0],pending[1],pending[2]);
+}
+
+// ---- OpenFreeMap and offline PMTiles: MapLibre (vector maps)
+function loadGl(){
+  lib('lib/maplibre-gl.js','https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js',function(){
+    if(typeof maplibregl==='undefined'){ fallback('Couldn\'t load the vector map, using Standard'); return; }
+    if(mode==='pmtiles') lib('lib/pmtiles.js','https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js',function(){
+      lib('lib/basemaps.js','https://unpkg.com/@protomaps/basemaps@5.0.0/dist/basemaps.js',initGl); });
+    else initGl();
+  });
+}
+function pmStyle(){
+  var flavor=opt||'dark', layers=[];
+  try{
+    if(window.basemaps&&basemaps.layers&&basemaps.namedFlavor) layers=basemaps.layers('protomaps',basemaps.namedFlavor(flavor),{lang:'en'});
+    else if(window.protomaps_themes_base) layers=protomaps_themes_base.default('protomaps',flavor);
+  }catch(e){}
+  if(!layers||!layers.length) layers=[{id:'bg',type:'background',paint:{'background-color':'#171c24'}},
+    {id:'water',type:'fill',source:'protomaps','source-layer':'water',paint:{'fill-color':'#0f1a2a'}},
+    {id:'roads',type:'line',source:'protomaps','source-layer':'roads',paint:{'line-color':'#4b5566','line-width':1.5}}];
+  return {version:8,
+    glyphs:'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
+    sprite:'https://protomaps.github.io/basemaps-assets/sprites/v4/'+flavor,
+    sources:{protomaps:{type:'vector',url:'pmtiles://https://pmtiles.local/map.pmtiles',attribution:'© OpenStreetMap · Protomaps'}},
+    layers:layers};
+}
+// street names from a lower zoom (the style hides the small streets' names until you're zoomed right in)
+function roadNames(){
+  try{ gl.getStyle().layers.forEach(function(l){
+    if(l.type==='symbol'&&l.layout&&l.layout['text-field']&&/highway|road|street/i.test(l.id)&&/name|label/i.test(l.id)&&!/shield|ref|oneway|one-way|exit|junction/i.test(l.id)&&(l.minzoom||0)>13)
+      gl.setLayerZoomRange(l.id,13,l.maxzoom||24); });
+  }catch(e){}
+}
+function initGl(){
+  if(gl) return;
+  var style;
+  if(mode==='pmtiles'){
+    if(typeof pmtiles==='undefined'){ fallback('Couldn\'t load the offline map, using Standard'); return; }
+    var proto=new pmtiles.Protocol(); maplibregl.addProtocol('pmtiles',proto.tile);
+    style=pmStyle();
+  } else style='https://tiles.openfreemap.org/styles/'+(opt==='dark'||!opt?'positron':opt);
+  var el0=document.getElementById('m');
+  el0.style.transform=''; rot=0; // never the CSS turn for vector maps
+  var darkOfm=mode==='ofm'&&(opt==='dark'||!opt);
+  document.getElementById('m').className=darkOfm?'gl dark':'gl'; // dark: only the map picture is turned dark, not your arrow
+  glOn=false;
+  gl=new maplibregl.Map({container:'m',style:style,center:[0,0],zoom:2,attributionControl:{compact:false},pitchWithRotate:false,fadeDuration:0,pixelRatio:Math.min(window.devicePixelRatio||1,1.5),refreshExpiredTiles:false});
+  // if the style never loads (slow or no network, a GPU hiccup), drop back to Standard instead of a blank map
+  glReady=false;
+  gl.on('load',function(){ glReady=true; glTry=0; clearTimeout(glRetryT); headUp=wantHead; roadNames(); cardinals(); if(pending&&headUp&&pending[2]>=0) turn(pending[2]); });
+  gl.on('rotate',cardinals);
+  gl.on('error',function(e){ note('map: '+((e&&e.error&&e.error.message)||'error')); });
+  (function(myGl){ setTimeout(function(){ if(gl===myGl&&!glReady) fallback('The vector map was slow to load, using Standard'); },9000); })(gl);
+  var el=document.createElement('div'); el.innerHTML='<div class="me"><div class="a" id="arr"></div><div class="d"></div></div>';
+  glMe=new maplibregl.Marker({element:el.firstChild,rotationAlignment:'map'});
+  gl.on('dragstart',explore);
+  gl.on('zoomend',state);
+  gl.on('zoomend',saveZoom);
+  setInteractive(inter);
+  size();
+  if(pending) setPos(pending[0],pending[1],pending[2]);
+}
+
+// ---- Google Maps (only with your own API key)
+var NIGHT=[{elementType:'geometry',stylers:[{color:'#1d2430'}]},{elementType:'labels.text.stroke',stylers:[{color:'#1d2430'}]},
+ {elementType:'labels.text.fill',stylers:[{color:'#8a94a3'}]},{featureType:'poi',stylers:[{visibility:'off'}]},
+ {featureType:'road',elementType:'geometry',stylers:[{color:'#38414e'}]},{featureType:'road',elementType:'geometry.stroke',stylers:[{color:'#212a37'}]},
+ {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#4b5566'}]},{featureType:'transit',stylers:[{visibility:'off'}]},
+ {featureType:'water',elementType:'geometry',stylers:[{color:'#0f1a2a'}]}];
+window.gm_authFailure=function(){ fallback('Google Maps refused the API key, so the map is using Standard'); };
+function loadGoogle(){
+  var s=document.createElement('script');
+  s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&callback=gInit&loading=async';
+  s.onerror=function(){ fallback('Couldn\'t reach Google Maps, using Standard'); };
+  document.head.appendChild(s);
+}
+function gInit(){
+  gmap=new google.maps.Map(document.getElementById('m'),{center:{lat:0,lng:0},zoom:15,disableDefaultUI:true,
+    clickableIcons:false,keyboardShortcuts:false,gestureHandling:'greedy',styles:darkMap?NIGHT:[],backgroundColor:'#171c24'});
+  gmap.addListener('dragstart',explore);
+  gmap.addListener('zoom_changed',state);
+  gmap.addListener('zoom_changed',saveZoom);
+  gmap.setZoom(Math.round(zoomPref));
+  setTraffic(trafficOn);
+  setInteractive(inter);
+  size();
+  if(pending) setPos(pending[0],pending[1],pending[2]);
+}
+
+function setPos(lat,lon,bearing){
+  pending=[lat,lon,bearing];
+  // picture-tile maps (Standard, Google) stay north up so their labels are never sideways
+  if(gmap){
+    var p={lat:lat,lng:lon};
+    var ic=bearing>=0?{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:6,rotation:bearing,fillColor:accent,fillOpacity:1,strokeColor:'#fff',strokeWeight:2}
+                     :{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:accent,fillOpacity:1,strokeColor:'#fff',strokeWeight:3};
+    if(!gme) gme=new google.maps.Marker({map:gmap,position:p,icon:ic,clickable:false}); else { gme.setPosition(p); gme.setIcon(ic); }
+    if(follow) gmap.panTo(p);
+    return;
+  }
+  var a=document.getElementById('arr');
+  if(gl){
+    glMe.setLngLat([lon,lat]);
+    if(!glOn){ glOn=true; glMe.addTo(gl); gl.jumpTo({center:[lon,lat],zoom:zoomPref-1}); }
+    if(a) a.style.display=bearing>=0?'block':'none';
+    glMe.setRotation(bearing>=0?bearing:0);
+    if(follow){
+      // linear easing over a little longer than a GPS fix, so back-to-back fixes blend into one
+      // steady glide instead of a start-stop every second
+      var opts={center:[lon,lat],duration:1100,easing:function(t){return t;}};
+      if(manual){ /* turned by hand: keep that bearing */ }
+      else if(headUp&&bearing>=0){
+        var db=((bearing-glBearing)%360+540)%360-180;
+        if(Math.abs(db)>4) glBearing=bearing; // only turn the map on a real heading change (no jitter when going straight)
+        opts.bearing=glBearing;
+      } else if(!headUp) opts.bearing=0;
+      gl.easeTo(opts);
+    }
+    return;
+  }
+  if(!map) return;
+  if(!map.hasLayer(me)){ me.setLatLng([lat,lon]).addTo(map); map.setView([lat,lon],Math.round(zoomPref)); }
+  me.setLatLng([lat,lon]);
+  if(a){ if(bearing>=0){a.style.display='block';a.parentNode.style.transform='rotate('+bearing+'deg)';}
+         else {a.style.display='none';a.parentNode.style.transform='';} }
+  if(follow) map.panTo([lat,lon],{animate:true});
+}
+// ---- hold a N / E / S / W and drag it round: the map turns by hand for 15 s, then goes back to how it was
+var manual=false, manualT=null;
+function applyBearing(b){
+  if(isGl()&&gl) gl.setBearing(b);
+  else { rot=-b; document.getElementById('m').style.transform='rotate('+rot+'deg)'; cardinals(); }
+}
+function endManual(){
+  manual=false;
+  var back=headUp&&pending&&pending[2]>=0;
+  if(isGl()&&gl) gl.easeTo({bearing:back?glBearing:0,duration:700});
+  else turn(back?pending[2]:0,!back);
+}
+(function(){
+  var cd=document.getElementById('cards'), drag=null, hold=null;
+  function ang(t){ var r=cd.getBoundingClientRect(), dx=t.clientX-(r.left+r.width/2), dy=t.clientY-(r.top+r.height/2); return Math.atan2(dx,-dy)*180/Math.PI; }
+  cd.addEventListener('touchstart',function(e){
+    var el=e.target; while(el&&el.parentNode!==cd) el=el.parentNode;
+    if(!el||!round) return;
+    var i=Array.prototype.indexOf.call(cd.children,el);
+    if(i<0||i>3) return; // N E S W only
+    e.preventDefault();
+    var t=e.touches[0]; clearTimeout(hold);
+    hold=setTimeout(function(){ drag={el:el,base:i*90}; el.classList.add('drag'); manual=true; clearTimeout(manualT); },350);
+  },{passive:false});
+  cd.addEventListener('touchmove',function(e){
+    if(!drag) return;
+    e.preventDefault();
+    var b=drag.base-ang(e.touches[0]); // the letter follows the finger round the rim
+    applyBearing(((b%360)+360)%360);
+  },{passive:false});
+  function done(){
+    clearTimeout(hold);
+    if(!drag) return;
+    drag.el.classList.remove('drag'); drag=null;
+    clearTimeout(manualT); manualT=setTimeout(endManual,15000);
+  }
+  cd.addEventListener('touchend',done); cd.addEventListener('touchcancel',done);
+})();
+</script></body></html>

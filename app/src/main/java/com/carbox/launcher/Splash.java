@@ -1,0 +1,339 @@
+package com.carbox.launcher;
+
+import android.app.Activity;
+import android.content.Context;
+import android.os.SystemClock;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+/** Full-screen travel prayer (or your own text) shown when the car starts. Tap to close. */
+final class Splash {
+    private Splash() {
+    }
+
+    // Themed splash colours. The splash is an overlay above the White theme's colour layer, so it never
+    // changes on its own — the White theme is handled here by hand (light background, dark text).
+    private static boolean inv() {
+        return Themes.white();
+    }
+
+    private static int bg() {
+        return inv() ? 0xFFF4F6F9 : 0xFF05080C;
+    }
+
+    private static int cText() {
+        return inv() ? 0xFF0B0E13 : Ui.TEXT;
+    }
+
+    private static int cText2() {
+        return inv() ? 0xFF2A2F38 : Ui.TEXT2;
+    }
+
+    private static int cSub() {
+        return inv() ? 0xB3000000 : Ui.SUB;
+    }
+
+    private static int cMuted() {
+        return inv() ? 0x73000000 : Ui.MUTED;
+    }
+
+    private static int accent() {
+        return inv() ? 0xFF0A7A57 : Ui.TEAL;
+    }
+
+    private static FrameLayout shown;
+    private static Ui.Ring ring;
+    private static long endsAt, startedAt;
+
+    static void maybeShow(Activity a, String trigger) {
+        maybeShow(a, trigger, null);
+    }
+
+    static boolean voiceStarted;
+
+    /** Returns true if the splash is showing; `after` then runs once it closes. */
+    static boolean maybeShow(Activity a, String trigger, Runnable after) {
+        if (!Prefs.flag(Prefs.SPLASH_ON, false)) return false;
+        String when = Prefs.str(Prefs.SPLASH_WHEN, "start");
+        if ("nav".equals(when) != "nav".equals(trigger)) return false;
+        if ("day".equals(when) && "start".equals(trigger)) {
+            String today = new SimpleDateFormat("yyyyMMdd", Locale.US).format(new Date());
+            if (today.equals(Prefs.str(Prefs.SPLASH_LAST_DAY, ""))) return false;
+            Prefs.put(Prefs.SPLASH_LAST_DAY, today);
+        }
+        if ("start".equals(trigger)) {
+            // once per car start (boot), not every time the launcher reopens
+            long bootAt = System.currentTimeMillis() - SystemClock.elapsedRealtime();
+            if (Math.abs(Prefs.lng("splash_boot", 0) - bootAt) < 60000) return false;
+            Prefs.put("splash_boot", bootAt);
+        }
+        String mode = mode();
+        // the voice waits until the music is really playing (or ~20 s): started together, this box
+        // handed the sound to Car Launcher and the music never began
+        // the voice first, then the car-start music (which waits for it)
+        if (!"screen".equals(mode)) {
+            voiceStarted = true;
+            recite(a);
+            Music.afterVoice();
+        } else Music.go("splash has no voice");
+        if ("voice".equals(mode)) return false; // voice only: nothing on screen, start-up carries on
+        return show(a, after);
+    }
+
+    /** "screen", "both" (screen and voice) or "voice" (voice only). */
+    static String mode() {
+        return Prefs.str("splash_mode", "screen");
+    }
+
+    /** Recite the chosen prayer (or own text) aloud: original language, or English if chosen or no voice for it. */
+    static void recite(Context c) {
+        // 1. the user's own recording, 2. the built-in natural recording, 3. text-to-speech
+        String own = Prefs.str("splash_audio_uri", "");
+        if ("own".equals(Prefs.str("splash_audio", "builtin")) && !own.isEmpty() && Rest.play(c, null, android.net.Uri.parse(own))) return;
+        if (!"custom".equals(Prefs.str(Prefs.SPLASH_TYPE, "prayer"))) {
+            String id = Prefs.str(Prefs.PRAYER_ID, null);
+            String lang = "orig".equals(Prefs.str("splash_voice_lang", "orig")) ? "orig" : "en";
+            if (id != null && (Rest.play(c, "voice/" + id + "_" + lang + ".mp3", null)
+                    || ("orig".equals(lang) && Rest.play(c, "voice/" + id + "_en.mp3", null)))) return;
+        }
+        String text, fallback = null;
+        Locale loc = null;
+        if ("custom".equals(Prefs.str(Prefs.SPLASH_TYPE, "prayer"))) {
+            text = Prefs.str(Prefs.CUSTOM_TEXT, "");
+        } else {
+            Prayers.P p = Prayers.get(Prefs.str(Prefs.PRAYER_ID, null));
+            if (p == null) return;
+            fallback = p.english;
+            boolean original = "orig".equals(Prefs.str("splash_voice_lang", "orig")) && p.orig != null && !p.orig.isEmpty();
+            text = original ? p.orig : p.english;
+            if (original) loc = scriptLocale(p.orig);
+        }
+        if (text == null || text.trim().isEmpty()) return;
+        Rest.say(c, text, loc, fallback);
+    }
+
+    /** Pick the voice language from the script the prayer is written in. */
+    private static Locale scriptLocale(String s) {
+        for (int i = 0; i < s.length(); i++) {
+            Character.UnicodeBlock b = Character.UnicodeBlock.of(s.charAt(i));
+            if (b == Character.UnicodeBlock.ARABIC) return new Locale("ar");
+            if (b == Character.UnicodeBlock.HEBREW) return new Locale("he");
+            if (b == Character.UnicodeBlock.DEVANAGARI) return new Locale("hi");
+            if (b == Character.UnicodeBlock.GURMUKHI) return new Locale("pa");
+            if (b == Character.UnicodeBlock.GREEK) return new Locale("el");
+            if (b == Character.UnicodeBlock.CYRILLIC) return new Locale("ru");
+        }
+        return null; // Latin script: the normal voice
+    }
+
+    private static Runnable afterClose;
+
+    static void show(Activity a) {
+        show(a, null);
+    }
+
+    /** afterClose runs when the splash finishes (timeout or tap), e.g. to reopen the setup page after a preview. */
+    static boolean show(Activity a, Runnable after) {
+        cancel();
+        afterClose = after;
+        View content = build(a, Prefs.str(Prefs.PRAYER_LAYOUT, "stacked"));
+        if (content == null) return false;
+        FrameLayout layer = new FrameLayout(a);
+        layer.setClickable(true);
+        layer.setOnClickListener(v -> dismiss());
+        layer.addView(content, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        ViewGroup root = a.findViewById(android.R.id.content);
+        root.addView(layer, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+        layer.setAlpha(0f);
+        layer.animate().alpha(1f).setDuration(Ui.ms(300)).start();
+        shown = layer;
+        int secs = Prefs.num(Prefs.SPLASH_SECS, 10);
+        startedAt = SystemClock.elapsedRealtime();
+        endsAt = secs <= 0 ? 0 : startedAt + secs * 1000L;
+        Ui.ui.post(countdown);
+        return true;
+    }
+
+    private static final Runnable countdown = new Runnable() {
+        @Override
+        public void run() {
+            if (shown == null) return;
+            long now = SystemClock.elapsedRealtime();
+            if (MainActivity.I != null && !MainActivity.I.isResumed2() && endsAt != 0) {
+                // covered by another app (e.g. the music app starting a playlist): hold the countdown
+                endsAt += 100;
+                startedAt += 100;
+                Ui.ui.postDelayed(this, 100);
+                return;
+            }
+            if (endsAt != 0 && now >= endsAt) {
+                dismiss();
+                return;
+            }
+            if (ring != null && endsAt != 0) {
+                long left = endsAt - now;
+                ring.set(1f - left / (float) (endsAt - startedAt), String.valueOf((left + 999) / 1000), accent());
+            }
+            Ui.ui.postDelayed(this, 100);
+        }
+    };
+
+    static boolean dismiss() {
+        if (shown == null) return false;
+        final FrameLayout s = shown;
+        shown = null;
+        ring = null;
+        Ui.ui.removeCallbacks(countdown);
+        final Runnable after = afterClose;
+        afterClose = null;
+        s.animate().alpha(0f).setDuration(Ui.ms(250)).withEndAction(() -> {
+            if (s.getParent() != null) ((ViewGroup) s.getParent()).removeView(s);
+            if (after != null) after.run();
+        }).start();
+        return true;
+    }
+
+    /** Close without returning anywhere (Home pressed). */
+    static boolean cancel() {
+        afterClose = null;
+        return dismiss();
+    }
+
+    private static Ui.Ring newRing(Context c) {
+        Ui.Ring r = new Ui.Ring(c);
+        int secs = Prefs.num(Prefs.SPLASH_SECS, 10);
+        r.set(0, secs > 0 ? String.valueOf(secs) : null, accent());
+        if (secs <= 0) r.setVisibility(View.GONE);
+        ring = r;
+        return r;
+    }
+
+    /** layout: stacked | split | card. Returns null if nothing is set up to show. */
+    static View build(Context c, String layout) {
+        boolean custom = "custom".equals(Prefs.str(Prefs.SPLASH_TYPE, "prayer"));
+        Prayers.P p = custom ? null : Prayers.get(Prefs.str(Prefs.PRAYER_ID, null));
+        String main, sub, orig = null, tl = null, label;
+        boolean rtl = false;
+        int show = Prefs.num(Prefs.PRAYER_SHOW, 7);
+        if (custom) {
+            main = Prefs.str(Prefs.CUSTOM_TEXT, "");
+            if (main.isEmpty()) return null;
+            sub = Prefs.str(Prefs.CUSTOM_SUB, "");
+            label = "";
+        } else {
+            if (p == null) return null;
+            orig = (show & 1) != 0 ? p.orig : null;
+            tl = (show & 2) != 0 ? p.translit : null;
+            main = (show & 4) != 0 || orig == null ? p.english : null;
+            sub = p.source;
+            rtl = p.rtl;
+            label = "TRAVEL PRAYER · " + p.faith.toUpperCase(Locale.ROOT);
+        }
+        if ("split".equals(layout) && orig != null) return split(c, label, orig, tl, main, sub);
+        if ("card".equals(layout)) return card(c, label, orig, tl, main, sub, rtl);
+        return stacked(c, label, orig, tl, main, sub, rtl, true);
+    }
+
+    private static LinearLayout topRow(Context c, String label) {
+        LinearLayout top = Ui.row(c);
+        TextView l = Ui.line(c, label, 13, accent(), true);
+        l.setLetterSpacing(0.08f);
+        top.addView(l, new LinearLayout.LayoutParams(0, Ui.WRAP, 1));
+        top.addView(newRing(c), Ui.lpu(34, 34));
+        return top;
+    }
+
+    private static View stacked(Context c, String label, String orig, String tl, String main, String sub, boolean rtl, boolean full) {
+        LinearLayout l = Ui.col(c);
+        if (full) l.setBackgroundColor(bg());
+        Ui.pad(l, 44, 34, 44, 34);
+        l.addView(topRow(c, label));
+        LinearLayout mid = Ui.col(c);
+        mid.setGravity(Gravity.CENTER);
+        if (orig != null) {
+            TextView o = Ui.text(c, orig, orig.length() < 40 ? 56 : 46, cText(), false);
+            o.setGravity(Gravity.CENTER);
+            o.setTextDirection(rtl ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
+            o.setLineSpacing(Ui.uf(8), 1);
+            mid.addView(o, Ui.lp(Ui.MATCH, Ui.WRAP));
+        }
+        if (tl != null) {
+            TextView t = Ui.text(c, tl, 17, cSub(), false);
+            t.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.ITALIC));
+            t.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams tl2 = Ui.lp(Ui.MATCH, Ui.WRAP);
+            tl2.topMargin = Ui.u(orig != null ? 18 : 0);
+            mid.addView(t, tl2);
+        }
+        if (main != null) {
+            TextView m = Ui.text(c, main, orig == null ? 32 : 25, cText2(), false);
+            m.setGravity(Gravity.CENTER);
+            m.setLineSpacing(Ui.uf(5), 1);
+            LinearLayout.LayoutParams ml = Ui.lp(Ui.MATCH, Ui.WRAP);
+            ml.topMargin = Ui.u(orig != null || tl != null ? 18 : 0);
+            mid.addView(m, ml);
+        }
+        l.addView(mid, Ui.weight(1, false));
+        if (sub != null && !sub.isEmpty()) {
+            TextView s = Ui.text(c, sub, 13, cMuted(), false);
+            s.setGravity(Gravity.CENTER);
+            l.addView(s, Ui.lp(Ui.MATCH, Ui.WRAP));
+        }
+        return l;
+    }
+
+    private static View split(Context c, String label, String orig, String tl, String main, String sub) {
+        LinearLayout l = Ui.row(c);
+        l.setBackgroundColor(bg());
+        LinearLayout left = Ui.col(c);
+        left.setGravity(Gravity.CENTER);
+        left.setBackgroundColor(inv() ? 0xFFD7EEE1 : 0xFF0F3D26);
+        Ui.pad(left, 34, 30, 34, 30);
+        TextView o = Ui.text(c, orig, orig.length() < 40 ? 50 : 40, inv() ? 0xFF0B2E1E : Ui.TEXT, false);
+        o.setGravity(Gravity.CENTER);
+        o.setTextDirection(View.TEXT_DIRECTION_RTL);
+        o.setLineSpacing(Ui.uf(8), 1);
+        left.addView(o, Ui.lp(Ui.MATCH, Ui.WRAP));
+        l.addView(left, Ui.weight(1, true));
+        LinearLayout right = Ui.col(c);
+        Ui.pad(right, 34, 30, 40, 30);
+        right.addView(topRow(c, label));
+        LinearLayout mid = Ui.col(c);
+        mid.setGravity(Gravity.CENTER_VERTICAL);
+        if (main != null) {
+            TextView m = Ui.text(c, main, 24, cText(), false);
+            m.setLineSpacing(Ui.uf(5), 1);
+            mid.addView(m);
+        }
+        if (tl != null) {
+            TextView t = Ui.text(c, tl, 15, cSub(), false);
+            t.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.ITALIC));
+            LinearLayout.LayoutParams tll = Ui.lp(Ui.MATCH, Ui.WRAP);
+            tll.topMargin = Ui.u(16);
+            mid.addView(t, tll);
+        }
+        right.addView(mid, Ui.weight(1, false));
+        if (sub != null) right.addView(Ui.text(c, sub, 13, cMuted(), false));
+        l.addView(right, Ui.weight(1, true));
+        return l;
+    }
+
+    private static View card(Context c, String label, String orig, String tl, String main, String sub, boolean rtl) {
+        FrameLayout f = new FrameLayout(c);
+        f.setBackgroundColor(inv() ? 0x44000000 : 0xB3000000);
+        View inner = stacked(c, label, orig, tl, main, sub, rtl, false);
+        inner.setBackground(inv() ? Ui.round(0xFFFFFFFF, 24) : Themes.card(Ui.CARD, 24));
+        Ui.pad(inner, 34, 26, 34, 26);
+        // shrink fonts slightly for the card
+        f.addView(inner, Panels.centered(640, 380));
+        return f;
+    }
+}

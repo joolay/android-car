@@ -1,0 +1,470 @@
+package com.carbox.launcher;
+
+import android.accessibilityservice.AccessibilityService;
+import android.content.Context;
+import android.graphics.PixelFormat;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewConfiguration;
+import android.view.WindowManager;
+import android.view.accessibility.AccessibilityEvent;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+
+/**
+ * Floating back button over other apps (hidden on the home screen). Tap = Back, which also returns
+ * home from an app's first page; hold = Home; drag to move. Uses an accessibility service because
+ * that is the only way Android lets an app press Back for another app.
+ */
+public class BackButtonService extends AccessibilityService {
+    static BackButtonService I;
+    private WindowManager wm;
+    private FrameLayout button;
+    private WindowManager.LayoutParams lp;
+    private boolean visible;      // an app (not home) is on screen
+    private boolean awake;        // shown because the screen was touched recently
+    static final long SHOW_MS = 4000;
+    private final Runnable sleep = () -> setAwake(false);
+
+    @Override
+    protected void onServiceConnected() {
+        I = this;
+        // settings first: when the box starts, this service starts before the launcher has opened
+        // them, and saving anything earlier crashed the service (so the button never appeared)
+        Prefs.init(this);
+        Ui.init((Context) this);
+        Prefs.put("fb_connected_at", System.currentTimeMillis()); // shows in Settings that it really started
+        try {
+            About.catchCrashes(this);
+            Apps.init(this);
+        } catch (Exception ignored) {
+        }
+        wm = (WindowManager) getSystemService(WINDOW_SERVICE);
+    }
+
+    /** "tab": a slim tab that sticks to the left or right edge (magnetised); "round": the floating circle. */
+    static boolean isTab() {
+        return !"round".equals(Prefs.str("fb_style", "tab"));
+    }
+
+    private int bw, bh; // button size in pixels
+
+    /** The tab's shape: rounded on the side facing the screen, flat against the edge. */
+    private void styleTab(boolean left) {
+        float r = Ui.uf(14);
+        android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+        g.setColor(0xD9171C24);
+        g.setStroke(Ui.u(1), 0x40FFFFFF);
+        g.setCornerRadii(left ? new float[]{0, 0, r, r, r, r, 0, 0} : new float[]{r, r, 0, 0, 0, 0, r, r});
+        button.setBackground(g);
+    }
+
+    private int screenW() {
+        android.graphics.Point scr = new android.graphics.Point();
+        wm.getDefaultDisplay().getRealSize(scr);
+        return scr.x;
+    }
+
+    static int sizeDu() {
+        String s = Prefs.str("fb_size", "m");
+        return "s".equals(s) ? 48 : "l".equals(s) ? 72 : 60;
+    }
+
+    private void build() {
+        if (button != null) {
+            try {
+                wm.removeView(button);
+            } catch (Exception ignored) {
+            }
+        }
+        int size = Ui.u(sizeDu());
+        boolean tab = isTab();
+        bw = tab ? Math.round(size * 0.48f) : size;
+        bh = tab ? Math.round(size * 1.15f) : size;
+        button = new FrameLayout(this);
+        ImageView iv = Ui.icon(this, R.drawable.ic_back, Ui.TEXT);
+        if (tab) {
+            styleTab(!"right".equals(Prefs.str("fb_side", "left")));
+            button.addView(iv, new FrameLayout.LayoutParams(Math.round(bw * 0.7f), Math.round(bw * 0.7f), Gravity.CENTER));
+        } else {
+            android.graphics.drawable.GradientDrawable bg = Ui.oval(0xD1171C24);
+            bg.setStroke(Ui.u(2), 0x40FFFFFF);
+            button.setBackground(bg);
+            button.setElevation(Ui.uf(6));
+            button.addView(iv, new FrameLayout.LayoutParams(size / 2, size / 2, Gravity.CENTER));
+        }
+        // FLAG_WATCH_OUTSIDE_TOUCH tells us when the screen is touched anywhere (the touch still goes to the app)
+        lp = new WindowManager.LayoutParams(bw, bh, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                PixelFormat.TRANSLUCENT);
+        lp.gravity = Gravity.TOP | Gravity.START;
+        // keep it on screen: a position saved on another screen size could put it out of sight
+        android.graphics.Point scr = new android.graphics.Point();
+        wm.getDefaultDisplay().getRealSize(scr);
+        lp.x = tab ? ("right".equals(Prefs.str("fb_side", "left")) ? scr.x - bw : 0) : Math.max(0, Math.min(scr.x - size, Prefs.num("fb_x", Ui.u(14))));
+        lp.y = Math.max(0, Math.min(scr.y - bh, Prefs.num("fb_y", Ui.u(206))));
+        button.setOnTouchListener(new Touch());
+        button.setVisibility(visible ? View.VISIBLE : View.GONE);
+        try {
+            wm.addView(button, lp);
+        } catch (Exception e) {
+            button = null;
+        }
+    }
+
+    /** Called from Settings when size or on/off changes. */
+    static void refresh() {
+        // nothing to redraw: the button is Android's own
+    }
+
+    private void setVisible(boolean v) {
+        visible = v;
+        if (!v) {
+            awake = false;
+            if (menu != null) closeMenu();
+        }
+        apply();
+    }
+
+    /** Wake the button for a few seconds after any touch. */
+    private void setAwake(boolean a) {
+        awake = a;
+        Ui.ui.removeCallbacks(sleep);
+        if (a) Ui.ui.postDelayed(sleep, SHOW_MS);
+        apply();
+    }
+
+    static boolean onlyOnTouch() {
+        return Prefs.flag("fb_touch", false);
+    }
+
+    /**
+     * Shown: full size and opaque. Asleep: a 1-pixel invisible window that only listens for touches,
+     * so nothing is blocked and the next tap on the app wakes the button.
+     */
+    private void apply() {
+        if (button == null) return;
+        boolean on = visible && Prefs.flag("fb_on", true);
+        button.setVisibility(on ? View.VISIBLE : View.GONE);
+        if (!on) return;
+        boolean show = awake || !onlyOnTouch() || isTab(); // the tab is always there (it's slim)
+        int w = show ? bw : 1, h = show ? bh : 1;
+        if (lp.width != w || lp.height != h) {
+            lp.width = w;
+            lp.height = h;
+            try {
+                wm.updateViewLayout(button, lp);
+            } catch (Exception ignored) {
+            }
+        }
+        button.animate().cancel();
+        if (show) {
+            button.setAlpha(button.getAlpha() < 0.05f ? 0f : button.getAlpha());
+            button.animate().alpha(1f).setDuration(Ui.ms(150)).start();
+        } else button.setAlpha(0f);
+    }
+
+    @Override
+    public void onAccessibilityEvent(AccessibilityEvent e) {
+        int t = e.getEventType();
+        try {
+            BtAuto.onEvent(this, e); // BT Phone only: calls in, calls out
+        } catch (Exception ignored) {
+        }
+        if (t == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED || t == AccessibilityEvent.TYPE_WINDOWS_CHANGED) return;
+        if ((t == AccessibilityEvent.TYPE_VIEW_CLICKED || t == AccessibilityEvent.TYPE_VIEW_SCROLLED) && visible && onlyOnTouch()) {
+            setAwake(true);
+            return;
+        }
+        if (t != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || e.getPackageName() == null) return;
+        String pkg = e.getPackageName().toString();
+        if (pkg.equals(getPackageName())) {
+            setVisible(false); // the home screen (and our own panels)
+            return;
+        }
+        // ignore pop-ups that don't change the app on screen: system UI, keyboards
+        if (pkg.equals("com.android.systemui") || isKeyboard(pkg)) return;
+        if (isOtherLauncher(pkg)) {
+            setVisible(false);
+            return;
+        }
+        setVisible(true);
+    }
+
+    private java.util.Set<String> keyboards;
+    private long keyboardsAt;
+
+    /** Is this a keyboard app? (the list is read at most once a minute) */
+    private boolean isKeyboard(String pkg) {
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (keyboards == null || now - keyboardsAt > 60000) {
+            keyboards = new java.util.HashSet<>();
+            keyboardsAt = now;
+            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null) for (android.view.inputmethod.InputMethodInfo i : imm.getEnabledInputMethodList()) keyboards.add(i.getPackageName());
+        }
+        return keyboards.contains(pkg);
+    }
+
+    private boolean isOtherLauncher(String pkg) {
+        android.content.Intent h = new android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME);
+        for (android.content.pm.ResolveInfo r : getPackageManager().queryIntentActivities(h, 0))
+            if (r.activityInfo != null && pkg.equals(r.activityInfo.packageName)) return true;
+        return false;
+    }
+
+    @Override
+    public void onInterrupt() {
+    }
+
+    @Override
+    public void onDestroy() {
+        if (button != null) {
+            try {
+                wm.removeView(button);
+            } catch (Exception ignored) {
+            }
+        }
+        if (I == this) I = null;
+        super.onDestroy();
+    }
+
+    // ------------------------------------------------------------------ hold menu
+
+    private FrameLayout menu;
+    private final java.util.List<View> menuItems = new java.util.ArrayList<>();
+    private final java.util.List<String> menuIds = new java.util.ArrayList<>();
+    private String hot;
+
+    /** 3–8 buttons in a circle around the back button. */
+    private void openMenu() {
+        openMenu(false);
+    }
+
+    private boolean fromTab;
+
+    /** fromTab: opened by Android's accessibility tab, so centre on the screen and put Back in the middle. */
+    private void openMenu(boolean tab) {
+        closeMenu();
+        fromTab = tab;
+        Ui.ui.removeCallbacks(sleep); // keep the back button up while the menu is open
+        android.graphics.Point screen = new android.graphics.Point();
+        wm.getDefaultDisplay().getRealSize(screen);
+        int item = Ui.u(64), radius = Ui.u(118), reach = radius + item / 2 + Ui.u(26);
+        // centre on the back button, pulled in from the edges so the whole circle fits
+        int cx = Math.max(reach, Math.min(screen.x - reach, tab ? screen.x / 2 : lp.x + bw / 2));
+        int cy = Math.max(reach, Math.min(screen.y - reach, tab ? screen.y / 2 : lp.y + bh / 2));
+
+        menu = new FrameLayout(this);
+        menu.setBackgroundColor(0x8C000000);
+        menu.setOnClickListener(v -> closeMenu());
+        java.util.List<String> ids = QuickActions.chosen();
+        menuItems.clear();
+        menuIds.clear();
+        for (int i = 0; i < ids.size(); i++) {
+            Object[] a = QuickActions.find(ids.get(i));
+            double ang = -Math.PI / 2 + i * 2 * Math.PI / ids.size();
+            int x = (int) (cx + radius * Math.cos(ang)), y = (int) (cy + radius * Math.sin(ang));
+            FrameLayout b = new FrameLayout(this);
+            b.setBackground(Ui.oval((Integer) a[3]));
+            b.setElevation(Ui.uf(6));
+            b.addView(Ui.icon(this, (Integer) a[2], Ui.TEXT), new FrameLayout.LayoutParams(Ui.u(28), Ui.u(28), Gravity.CENTER));
+            final String id = (String) a[0];
+            b.setOnClickListener(v -> {
+                closeMenu();
+                runAction(id);
+            });
+            FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(item, item, Gravity.TOP | Gravity.START);
+            bl.leftMargin = x - item / 2;
+            bl.topMargin = y - item / 2;
+            menu.addView(b, bl);
+            menuItems.add(b);
+            menuIds.add(id);
+            android.widget.TextView t = Ui.text(this, (String) a[1], 12, Ui.TEXT, false);
+            t.setGravity(Gravity.CENTER);
+            t.setShadowLayer(Ui.uf(3), 0, Ui.uf(1), 0xFF000000);
+            FrameLayout.LayoutParams tl = new FrameLayout.LayoutParams(Ui.u(110), android.view.ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START);
+            tl.leftMargin = x - Ui.u(55);
+            tl.topMargin = y + item / 2 + Ui.u(3);
+            menu.addView(t, tl);
+        }
+        // centre: close
+        FrameLayout close = new FrameLayout(this);
+        android.graphics.drawable.GradientDrawable cbg = Ui.oval(0xFF171C24);
+        cbg.setStroke(Ui.u(2), 0x59FFFFFF);
+        close.setBackground(cbg);
+        close.addView(Ui.icon(this, tab ? R.drawable.ic_back : R.drawable.ic_x, Ui.TEXT), new FrameLayout.LayoutParams(Ui.u(26), Ui.u(26), Gravity.CENTER));
+        close.setOnClickListener(v -> {
+            closeMenu();
+            if (fromTab) performGlobalAction(GLOBAL_ACTION_BACK); // middle = Back when opened from the tab
+        });
+        FrameLayout.LayoutParams cl = new FrameLayout.LayoutParams(Ui.u(60), Ui.u(60), Gravity.TOP | Gravity.START);
+        cl.leftMargin = cx - Ui.u(30);
+        cl.topMargin = cy - Ui.u(30);
+        menu.addView(close, cl);
+
+        WindowManager.LayoutParams mlp = new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT);
+        mlp.gravity = Gravity.TOP | Gravity.START;
+        try {
+            wm.addView(menu, mlp);
+            menu.setAlpha(0f);
+            menu.animate().alpha(1f).setDuration(Ui.ms(120)).start();
+        } catch (Exception e) {
+            menu = null;
+        }
+    }
+
+    private void runAction(String id) {
+        try {
+            QuickActions.run(this, id);
+        } catch (Throwable t) {
+            About.record(this, "back button action " + id, t);
+        }
+    }
+
+    /** While still holding: light up the button under the finger. */
+    private void highlight(float rx, float ry) {
+        hot = null;
+        if (menu == null) return;
+        for (int i = 0; i < menuItems.size(); i++) {
+            View v = menuItems.get(i);
+            int[] p = new int[2];
+            v.getLocationOnScreen(p);
+            float cx = p[0] + v.getWidth() / 2f, cy = p[1] + v.getHeight() / 2f;
+            boolean on = Math.hypot(rx - cx, ry - cy) < v.getWidth() * 0.75f;
+            v.setScaleX(on ? 1.18f : 1f);
+            v.setScaleY(on ? 1.18f : 1f);
+            if (on) hot = menuIds.get(i);
+        }
+    }
+
+    private void closeMenu() {
+        hot = null;
+        if (menu != null) {
+            try {
+                wm.removeView(menu);
+            } catch (Exception ignored) {
+            }
+            menu = null;
+        }
+        if (onlyOnTouch() && awake) setAwake(true); // restart the fade timer
+    }
+
+    /** Tap = Back, hold = Home, drag = move (position remembered). */
+    private final class Touch implements View.OnTouchListener {
+        private float downX, downY;
+        private int startX, startY;
+        private boolean moved, held;
+        private final int slop = ViewConfiguration.get(BackButtonService.this).getScaledTouchSlop();
+        private final Runnable hold = () -> {
+            held = true;
+            try {
+                button.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                openMenu();
+            } catch (Throwable t) {
+                // never let the menu take the button down: note it for Settings > About and go Home instead
+                About.record(BackButtonService.this, "back button hold menu", t);
+                try {
+                    closeMenu();
+                } catch (Throwable ignored) {
+                }
+                held = false;
+                performGlobalAction(GLOBAL_ACTION_HOME);
+            }
+        };
+
+        @Override
+        public boolean onTouch(View v, MotionEvent e) {
+            if (e.getActionMasked() == MotionEvent.ACTION_OUTSIDE) {
+                if (onlyOnTouch()) setAwake(true);
+                return false;
+            }
+            if (onlyOnTouch() && !awake) return false;
+            if (onlyOnTouch()) setAwake(true); // keep it up while you use it
+            switch (e.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    downX = e.getRawX();
+                    downY = e.getRawY();
+                    startX = lp.x;
+                    startY = lp.y;
+                    moved = false;
+                    held = false;
+                    v.setAlpha(0.7f);
+                    Ui.ui.postDelayed(hold, 600);
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                    if (held) {
+                        highlight(e.getRawX(), e.getRawY());
+                        return true;
+                    }
+                    float dx = e.getRawX() - downX, dy = e.getRawY() - downY;
+                    if (!moved && Math.hypot(dx, dy) > slop * 2) {
+                        moved = true;
+                        Ui.ui.removeCallbacks(hold);
+                    }
+                    if (moved) {
+                        lp.x = Math.max(0, startX + (int) dx);
+                        lp.y = Math.max(0, startY + (int) dy);
+                        wm.updateViewLayout(button, lp);
+                    }
+                    return true;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    v.setAlpha(1f);
+                    Ui.ui.removeCallbacks(hold);
+                    if (held) {
+                        // slid onto a menu button and let go: run it; otherwise the menu stays open for a tap
+                        if (e.getActionMasked() == MotionEvent.ACTION_UP && hot != null) {
+                            String id = hot;
+                            closeMenu();
+                            runAction(id);
+                        }
+                        return true;
+                    }
+                    if (moved) {
+                        Prefs.put("fb_y", lp.y);
+                        if (isTab()) snap(); // magnetised: jumps to the nearer edge
+                        else Prefs.put("fb_x", lp.x);
+                    } else if (e.getActionMasked() == MotionEvent.ACTION_UP) {
+                        performGlobalAction(GLOBAL_ACTION_BACK);
+                    }
+                    return true;
+            }
+            return false;
+        }
+    }
+
+    /** Let go of the tab: it slides to the nearer side edge and sticks there. */
+    private void snap() {
+        int sw = screenW();
+        boolean left = lp.x + bw / 2 < sw / 2;
+        Prefs.put("fb_side", left ? "left" : "right");
+        styleTab(left);
+        android.animation.ValueAnimator a = android.animation.ValueAnimator.ofInt(lp.x, left ? 0 : sw - bw);
+        a.setDuration(Ui.ms(220));
+        a.setInterpolator(new android.view.animation.OvershootInterpolator(1.4f));
+        a.addUpdateListener(v -> {
+            lp.x = (int) v.getAnimatedValue();
+            try {
+                wm.updateViewLayout(button, lp);
+            } catch (Exception ignored) {
+            }
+        });
+        a.start();
+    }
+
+    /** "Display over other apps" granted. */
+    static boolean overlay(Context c) {
+        return android.provider.Settings.canDrawOverlays(c);
+    }
+
+    static boolean enabled(Context c) {
+        String s = android.provider.Settings.Secure.getString(c.getContentResolver(), android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        return s != null && s.contains(c.getPackageName() + "/");
+    }
+}
