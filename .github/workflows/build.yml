@@ -61,6 +61,8 @@ jobs:
           git fetch --tags --force -q || true
           MAJOR=$(cat "$DIR/version-major.txt" 2>/dev/null || echo 0)
           LAST=$(git tag -l "v$MAJOR.*-alpha" | sed -E "s/^v$MAJOR\.([0-9]+)-alpha$/\1/" | grep -E '^[0-9]+$' | sort -n | tail -1)
+          FLOOR=$(cat "$DIR/version-floor.txt" 2>/dev/null || echo 0)
+          [ "${LAST:--1}" -lt "$FLOOR" ] && LAST=$FLOOR
           NEXT=$(( ${LAST:--1} + 1 ))
           echo "VER=$MAJOR.$NEXT" >> "$GITHUB_ENV"
           echo "Building $MAJOR.$NEXT alpha"

@@ -1,3 +1,4 @@
+0.52: Moved to a new home (updates now come from the new repo); no other changes
 0.51: Reset button on the Drive widget; a drive within 15 min of the last one stays the same trip; vector map retries when the internet comes up; street name and music start wait for the internet
 0.50: Street names on the map from further out; map still turns if the GPS gives no heading; street name under the area is more reliable; map style refreshes daily
 0.49: Download video wallpapers in the app (Settings → Wallpaper, 480p); hold-and-drag NESW rotates the map; map cubes to Drive widget; street strip on mini map; tile drawer grows from All apps; phone tab spacing; data meter options removed
