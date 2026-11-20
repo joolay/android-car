@@ -12,7 +12,7 @@ Package `com.carbox.launcher`, plain Java Android views (no XML layouts, no Andr
 - Versions: `version-major.txt` (currently 0) + next number from existing `v<major>.<n>-alpha` tags,
   e.g. 0.14-alpha → 0.15-alpha. Only change the major when the owner says it's a major update.
 - After a compile, check the run (`gh run watch`), read errors from the check-run annotations
-  (`gh api repos/joolay/CarLauncher/check-runs/<job id>/annotations`), fix, push again.
+  (`gh api repos/joolay/android-car/check-runs/<job id>/annotations`), fix, push again.
 - Speak plainly to the owner: what changed and how to use it, not class names.
 - **Before every compile**, fetch the newest logs (run crashes.yml, fetch the `crashes` branch, unzip the latest
   `logs/*autolog-*.zip` / `*logs-*.zip`, read `crashes.jsonl`) and look for useful information: errors, the music
@@ -66,7 +66,7 @@ Ticker at the top of the middle column (hidden: map/tiles take its space, tiles 
 - The app sends crash reports (About.sendPending, switch in Settings → About) to ntfy.sh topic
   `carlauncher-crash-4d6dd33614e4914e`. `.github/workflows/crashes.yml` (hourly, or run it by hand)
   copies them into branch `crashes`, file `crashes.jsonl` (id, time, title, message).
-- To read them: `gh api -X POST repos/joolay/CarLauncher/actions/workflows/crashes.yml/dispatches -f ref=main` (gh workflow run fails here: no GraphQL), wait ~40 s, then
+- To read them: `gh api -X POST repos/joolay/android-car/actions/workflows/crashes.yml/dispatches -f ref=main` (gh workflow run fails here: no GraphQL), wait ~40 s, then
   `git fetch origin +crashes:refs/remotes/origin/crashes && git show origin/crashes:crashes.jsonl` (the `+` matters: the branch is rewritten, without it the fetch silently keeps an old copy).
 - Logs (`Trace`, Settings → System → Logs, on by default): the last 3 days are always kept on the box
   (events-<day>.log + the app's own logcat per start, pruned at each start). "Send the last 3 days" zips and PUTs

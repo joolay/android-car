@@ -19,13 +19,13 @@ import java.net.URL;
  * newer APK and installs it once the car is parked (Android shows its own "Update" confirmation).
  */
 final class Updater {
-    private static final String REPO = "joolay/CarLauncher";
+    private static final String REPO = "joolay/android-car";
     static final String KEY = "upd_key", AUTO = "upd_auto";
     /**
      * TEMPORARY, the owner's own box only: read-only key for this private project, built in so nothing
      * needs typing. REMOVE before the app goes on the Play Store (and cancel this key on GitHub).
      */
-    private static final String BUILT_IN_KEY = "REMOVED";
+    private static final String BUILT_IN_KEY = "";
 
     /** The key typed in Settings, else the built-in one. */
     static String key() {
@@ -67,7 +67,7 @@ final class Updater {
         h.setInstanceFollowRedirects(false); // the download moves to GitHub's file store, which mustn't get the key
         h.setConnectTimeout(20000);
         h.setReadTimeout(60000);
-        if (key != null) h.setRequestProperty("Authorization", "Bearer " + key);
+        if (key != null && !key.isEmpty()) h.setRequestProperty("Authorization", "Bearer " + key);
         h.setRequestProperty("Accept", accept);
         h.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
         return h;
